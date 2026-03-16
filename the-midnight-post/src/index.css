@@ -11,3 +11,28 @@ body {
   background-color: var(--color-paper);
   color: var(--color-ink);
 }
+
+@keyframes gold-shimmer {
+  0% { transform: translateX(-150%) skewX(-12deg); }
+  100% { transform: translateX(150%) skewX(-12deg); }
+}
+
+.shimmer-gold {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-gold::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(212, 175, 55, 0.12) 40%,
+    rgba(212, 175, 55, 0.22) 50%,
+    rgba(212, 175, 55, 0.12) 60%,
+    transparent 100%
+  );
+  animation: gold-shimmer 2.8s ease-in-out infinite;
+}

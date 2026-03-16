@@ -6,8 +6,17 @@ import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
 import { useSound } from '../components/SoundContext';
 import { MentorReply } from '../services/ai';
-import { X, Feather, Flower2, Cross, Brush, Loader2 } from 'lucide-react';
+import { X, Feather, Flower2, Cross, Brush } from 'lucide-react';
 
+
+const WAITING_PHRASES = [
+  "당신의 마음에 귀 기울이고 있습니다.",
+  "오래된 책장을 넘기며 지혜를 찾고 있습니다.",
+  "촛불 아래 붓을 들고 있습니다.",
+  "깊은 사유 끝에 말씀을 가다듬고 있습니다.",
+  "먹을 갈며 마음을 정돈하고 있습니다.",
+  "당신의 하루를 조용히 헤아리고 있습니다.",
+];
 
 const MENTORS = {
   hyewoon: { 
@@ -44,8 +53,17 @@ export default function Envelopes() {
   const [replies, setReplies] = useState<MentorReply[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedReply, setSelectedReply] = useState<MentorReply | null>(null);
+  const [phraseIndex, setPhraseIndex] = useState(0);
   const [justArrived, setJustArrived] = useState<string[]>([]);
   const prevRepliesRef = React.useRef<MentorReply[]>([]);
+
+  useEffect(() => {
+    if (replies.length >= Object.keys(MENTORS).length) return;
+    const interval = setInterval(() => {
+      setPhraseIndex((prev) => (prev + 1) % WAITING_PHRASES.length);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [replies.length]);
 
   useEffect(() => {
     if (prevRepliesRef.current.length > 0 && replies.length > prevRepliesRef.current.length) {
@@ -95,8 +113,25 @@ export default function Envelopes() {
 
   return (
     <div className="w-full max-w-4xl flex flex-col items-center">
-      <h1 className="text-3xl font-serif mb-12">The Four Envelopes</h1>
-      <p className="opacity-60 italic text-sm mb-16">네 명의 현자가 당신에게 보내는 위로의 편지입니다.</p>
+      <h1 className="text-3xl font-serif mb-6">The Four Envelopes</h1>
+      <p className="opacity-60 italic text-sm mb-8">네 명의 현자가 당신에게 보내는 위로의 편지입니다.</p>
+
+      {replies.length < Object.keys(MENTORS).length && (
+        <div className="h-10 flex items-center justify-center mb-10">
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={phraseIndex}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.7 }}
+              className="font-serif italic text-sm text-[#8B7355] tracking-wide text-center px-4"
+            >
+              — {WAITING_PHRASES[phraseIndex]} —
+            </motion.p>
+          </AnimatePresence>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 w-full">
         {(Object.keys(MENTORS) as Array<keyof typeof MENTORS>).map((mentorId, index) => {
@@ -111,18 +146,30 @@ export default function Envelopes() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="relative flex flex-col items-center justify-center p-8 bg-[#FAFAFA]/50 border border-[#E5E0D8]/50 shadow-sm h-72 overflow-hidden"
+                className="shimmer-gold relative flex flex-col items-center justify-center p-8 bg-[#FAF8F4] border border-[#E5E0D8]/60 shadow-sm h-72"
               >
                 <div className="absolute top-2 left-2 w-6 h-6 border-t border-l border-[#D4AF37]/20 pointer-events-none" />
                 <div className="absolute top-2 right-2 w-6 h-6 border-t border-r border-[#D4AF37]/20 pointer-events-none" />
                 <div className="absolute bottom-2 left-2 w-6 h-6 border-b border-l border-[#D4AF37]/20 pointer-events-none" />
                 <div className="absolute bottom-2 right-2 w-6 h-6 border-b border-r border-[#D4AF37]/20 pointer-events-none" />
 
-                <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${mentor.color} opacity-20 p-1 mb-8 relative flex items-center justify-center`}>
-                  <Loader2 className="w-6 h-6 text-ink/40 animate-spin" />
+                <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${mentor.color} opacity-15 p-1 mb-6 relative flex items-center justify-center`}>
+                  <div className="absolute inset-1 rounded-full border border-[#D4AF37]/20" />
+                  {React.cloneElement(mentor.icon as React.ReactElement, { className: "w-7 h-7 text-[#D4AF37]/30" })}
                 </div>
 
-                <h3 className="font-serif text-lg font-bold mb-2 text-ink/40">{mentor.name}</h3>
+                <h3 className="font-serif text-lg font-bold mb-6 text-ink/30">{mentor.name}</h3>
+
+                <div className="flex items-center gap-2">
+                  {[0, 1, 2].map((i) => (
+                    <motion.div
+                      key={i}
+                      className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]/60"
+                      animate={{ opacity: [0.2, 1, 0.2], scale: [0.7, 1.2, 0.7] }}
+                      transition={{ duration: 1.8, repeat: Infinity, delay: i * 0.35, ease: "easeInOut" }}
+                    />
+                  ))}
+                </div>
               </motion.div>
             );
           }
