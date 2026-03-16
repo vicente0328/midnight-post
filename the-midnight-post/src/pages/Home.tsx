@@ -42,7 +42,7 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAnimation, setShowAnimation] = useState(false);
   const [greeting, setGreeting] = useState('');
-  const { user, signIn } = useAuth();
+  const { user, setShowAuthModal } = useAuth();
   const { setTyping } = useSound();
   const navigate = useNavigate();
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -70,7 +70,7 @@ export default function Home() {
     e.preventDefault();
     if (!content.trim()) return;
     if (!user) {
-      await signIn();
+      setShowAuthModal(true);
       return;
     }
 

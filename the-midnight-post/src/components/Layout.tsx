@@ -1,10 +1,11 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import AuthModal from './AuthModal';
 import { LogOut, BookOpen, PenTool } from 'lucide-react';
 
 export default function Layout() {
-  const { user, signIn, signOut } = useAuth();
+  const { user, setShowAuthModal, signOut } = useAuth();
 
   return (
     <div className="min-h-screen flex flex-col items-center w-full max-w-4xl mx-auto px-4 py-8">
@@ -30,7 +31,7 @@ export default function Layout() {
               </button>
             </>
           ) : (
-            <button onClick={signIn} className="hover:opacity-70 transition-opacity">
+            <button onClick={() => setShowAuthModal(true)} className="hover:opacity-70 transition-opacity">
               Login
             </button>
           )}
@@ -40,6 +41,8 @@ export default function Layout() {
       <main className="flex-1 w-full flex flex-col items-center justify-center">
         <Outlet />
       </main>
+
+      <AuthModal />
 
       <footer className="w-full text-center mt-12 pt-4 border-t border-ink/10 text-xs opacity-50 uppercase tracking-widest">
         &copy; {new Date().getFullYear()} The Midnight Post. All rights reserved.
