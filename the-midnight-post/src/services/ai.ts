@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
+import { getRecentKnowledge, KnowledgeEntry } from './knowledge';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, dangerouslyAllowBrowser: true });
@@ -12,6 +13,15 @@ export interface MentorReply {
   advice: string;
 }
 
+function buildKnowledgeContext(entries: KnowledgeEntry[]): string {
+  if (entries.length === 0) return '';
+  const selected = entries.slice(0, 6); // 최대 6개 활용
+  return `\n\n[지식 데이터베이스 — 편지 작성 시 아래 자료를 적극 활용하세요]\n` +
+    selected.map((k, i) =>
+      `${i + 1}. "${k.quote}"\n   출처: ${k.source}\n   번역: ${k.translation}\n   활용 맥락: ${k.context}`
+    ).join('\n\n');
+}
+
 export async function generateSingleMentorReply(content: string, mentorId: 'hyewoon' | 'benedicto' | 'theodore' | 'yeonam'): Promise<MentorReply> {
   const mentorDescriptions = {
     hyewoon: "혜운(慧雲) 스님: 비움과 머무름의 수행자. 초기 불교/선불교. 집착을 버리고 현재에 머무름. 간결한 하십시오체.",
@@ -20,6 +30,9 @@ export async function generateSingleMentorReply(content: string, mentorId: 'hyew
     yeonam: "연암 선생: 순리와 조화의 선비. 유교/도가 철학. 중용과 자연의 섭리. 예스럽고 품격 있는 문체."
   };
 
+  const knowledgeEntries = await getRecentKnowledge(mentorId, 5).catch(() => []);
+  const knowledgeContext = buildKnowledgeContext(knowledgeEntries);
+
   const prompt = `
 사용자가 밤에 쓴 한 줄의 일기입니다: "${content}"
 
@@ -27,9 +40,9 @@ export async function generateSingleMentorReply(content: string, mentorId: 'hyew
 
 멘토 정보:
 ${mentorDescriptions[mentorId]}
-
+${knowledgeContext}
 [작성 지침]
-1. 명언 (quote, source, translation): 이 사람의 마음에 조용히 스며들 수 있는, 희소하고 깊이 있는 원문을 고르세요. 유명하고 뻔한 구절은 피하세요.
+1. 명언 (quote, source, translation): 위 지식 데이터베이스에 있는 자료를 우선적으로 활용하세요. 데이터베이스에 적합한 것이 없을 때만 새로 찾으세요. 유명하고 뻔한 구절은 피하세요.
 
 2. 편지 본문 (advice): 아래 세 흐름을 자연스럽게 이어주세요.
    - 도입: 명언과 연결된 짧고 아름다운 일화나 비유 하나. 옛이야기를 듣는 듯 따뜻하게.
