@@ -45,39 +45,45 @@ const MENTORS = {
   }
 };
 
+// 항상 고정 순서로 4칸 유지 — 레이아웃 흔들림 방지
+const MENTOR_ORDER = ['hyewoon', 'benedicto', 'theodore', 'yeonam'] as const;
+
 export default function Envelopes() {
   const { entryId } = useParams();
   const { user } = useAuth();
   const { playArrivalSound } = useSound();
   const navigate = useNavigate();
   const [replies, setReplies] = useState<MentorReply[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedReply, setSelectedReply] = useState<MentorReply | null>(null);
   const [phraseIndex, setPhraseIndex] = useState(0);
-  const [justArrived, setJustArrived] = useState<string[]>([]);
-  const prevRepliesRef = React.useRef<MentorReply[]>([]);
+  // 페이지 전환 완료 후 애니메이션 시작 — 전환 중 글리치 방지
+  const [ready, setReady] = useState(false);
+
+  // 도착 순서 추적 (stagger delay 계산용)
   const arrivalOrderRef = React.useRef<string[]>([]);
+  const prevRepliesRef = React.useRef<MentorReply[]>([]);
+
+  // 페이지 마운트 후 짧은 대기 후 애니메이션 허용
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), 80);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
-    if (replies.length >= Object.keys(MENTORS).length) return;
+    if (replies.length >= MENTOR_ORDER.length) return;
     const interval = setInterval(() => {
       setPhraseIndex((prev) => (prev + 1) % WAITING_PHRASES.length);
     }, 3500);
     return () => clearInterval(interval);
   }, [replies.length]);
 
+  // 새 편지 도착 감지 → 사운드만 재생 (glow 제거하여 클래스 전환 글리치 방지)
   useEffect(() => {
     if (prevRepliesRef.current.length > 0 && replies.length > prevRepliesRef.current.length) {
-      const newReplies = replies.filter(r => !prevRepliesRef.current.find(pr => pr.mentorId === r.mentorId));
-      if (newReplies.length > 0) {
-        playArrivalSound();
-        const newMentorIds = newReplies.map(r => r.mentorId);
-        setJustArrived(prev => [...prev, ...newMentorIds]);
-        
-        setTimeout(() => {
-          setJustArrived(prev => prev.filter(id => !newMentorIds.includes(id)));
-        }, 3000);
-      }
+      const newReplies = replies.filter(
+        r => !prevRepliesRef.current.find(pr => pr.mentorId === r.mentorId)
+      );
+      if (newReplies.length > 0) playArrivalSound();
     }
     prevRepliesRef.current = replies;
   }, [replies, playArrivalSound]);
@@ -86,88 +92,87 @@ export default function Envelopes() {
     if (!user || !entryId) return;
 
     const q = query(
-      collection(db, 'replies'), 
+      collection(db, 'replies'),
       where('uid', '==', user.uid),
       where('entryId', '==', entryId)
     );
 
-    // Use onSnapshot for real-time updates
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedReplies: MentorReply[] = [];
       snapshot.forEach((doc) => {
         fetchedReplies.push(doc.data() as MentorReply);
       });
-      // Track arrival order (first seen = first displayed)
+      // 도착 순서 기록 (한 번 기록되면 바뀌지 않음)
       fetchedReplies.forEach(r => {
         if (!arrivalOrderRef.current.includes(r.mentorId)) {
           arrivalOrderRef.current = [...arrivalOrderRef.current, r.mentorId];
         }
       });
       setReplies(fetchedReplies);
-      setLoading(false);
     }, (error) => {
       console.error("Error listening to replies:", error);
-      setLoading(false);
     });
 
     return () => unsubscribe();
   }, [entryId, user]);
-
-  const handleOpenLetter = (reply: MentorReply) => {
-    setSelectedReply(reply);
-  };
 
   return (
     <div className="w-full max-w-4xl flex flex-col items-center">
       <h1 className="text-3xl font-serif mb-6">The Four Envelopes</h1>
       <p className="opacity-60 italic text-sm mb-8">네 명의 현자가 당신에게 보내는 위로의 편지입니다.</p>
 
-      {replies.length < Object.keys(MENTORS).length && (
-        <div className="h-10 flex items-center justify-center mb-10">
-          <AnimatePresence mode="wait">
+      {/* 대기 문구 — min-h로 공간 고정, 사라질 때 레이아웃 안 흔들림 */}
+      <div className="min-h-[2.5rem] flex items-center justify-center mb-10">
+        <AnimatePresence mode="wait">
+          {replies.length < MENTOR_ORDER.length && (
             <motion.p
               key={phraseIndex}
-              initial={{ opacity: 0, y: 6 }}
+              initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.7 }}
+              exit={{ opacity: 0, y: -5 }}
+              transition={{ duration: 0.8, ease: 'easeInOut' }}
               className="font-serif italic text-sm text-[#8B7355] tracking-wide text-center px-4"
             >
               — {WAITING_PHRASES[phraseIndex]} —
             </motion.p>
-          </AnimatePresence>
-        </div>
-      )}
+          )}
+        </AnimatePresence>
+      </div>
 
+      {/* 항상 4칸 고정 그리드 — 카드 추가로 인한 리플로우 없음 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 w-full">
-        {arrivalOrderRef.current.map((mentorId) => {
-          const mentor = MENTORS[mentorId as keyof typeof MENTORS];
+        {MENTOR_ORDER.map((mentorId) => {
+          const mentor = MENTORS[mentorId];
           const reply = replies.find(r => r.mentorId === mentorId);
-          if (!reply || !mentor) return null;
-
-          const isNew = justArrived.includes(mentorId);
+          const hasArrived = !!reply;
+          // 도착 순서 기반 stagger: 연속 도착해도 순차적으로 부드럽게
+          const arrivalIdx = arrivalOrderRef.current.indexOf(mentorId);
+          const staggerDelay = ready && arrivalIdx >= 0 ? arrivalIdx * 0.18 : 0;
 
           return (
             <motion.div
-              key={reply.mentorId}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: "spring", stiffness: 200, damping: 20 }}
-              onClick={() => handleOpenLetter(reply)}
-              className={`cursor-pointer group relative flex flex-col items-center justify-center p-8 bg-[#FAFAFA] transition-all duration-1000 h-72 overflow-hidden ${
-                isNew
-                  ? 'border-[#D4AF37] shadow-[0_0_40px_rgba(212,175,55,0.4)]'
-                  : 'border-[#E5E0D8] shadow-md hover:shadow-xl'
-              }`}
+              key={mentorId}
+              initial={{ opacity: 0, y: 14 }}
+              animate={ready && hasArrived ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 }}
+              transition={{
+                duration: 1.1,
+                ease: [0.22, 1, 0.36, 1],
+                delay: staggerDelay,
+              }}
+              onClick={() => reply && setSelectedReply(reply)}
+              // 도착 전엔 포인터 이벤트 차단, 공간은 유지
+              className={`relative flex flex-col items-center justify-center p-8 bg-[#FAFAFA] border border-[#E5E0D8] shadow-md h-72 overflow-hidden
+                ${hasArrived ? 'cursor-pointer group hover:shadow-xl transition-shadow duration-700' : 'pointer-events-none'}`}
             >
               <div className="absolute top-2 left-2 w-6 h-6 border-t border-l border-[#D4AF37]/40 pointer-events-none" />
               <div className="absolute top-2 right-2 w-6 h-6 border-t border-r border-[#D4AF37]/40 pointer-events-none" />
               <div className="absolute bottom-2 left-2 w-6 h-6 border-b border-l border-[#D4AF37]/40 pointer-events-none" />
               <div className="absolute bottom-2 right-2 w-6 h-6 border-b border-r border-[#D4AF37]/40 pointer-events-none" />
 
-              <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${mentor.color} p-1 shadow-lg mb-8 group-hover:scale-110 transition-transform duration-500 relative flex items-center justify-center`}>
-                <div className="absolute inset-1 rounded-full border border-[#D4AF37]/50"></div>
-                <div className="absolute inset-2 rounded-full border border-dashed border-[#D4AF37]/40"></div>
+              <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${mentor.color} p-1 shadow-lg mb-8 relative flex items-center justify-center
+                ${hasArrived ? 'group-hover:scale-110 transition-transform duration-500' : ''}`}>
+                <div className="absolute inset-1 rounded-full border border-[#D4AF37]/50" />
+                <div className="absolute inset-2 rounded-full border border-dashed border-[#D4AF37]/40" />
                 {mentor.icon}
               </div>
 
