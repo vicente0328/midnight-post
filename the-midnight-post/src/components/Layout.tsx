@@ -11,7 +11,7 @@ export default function Layout() {
       <header className="w-full flex justify-between items-center mb-12 border-b border-ink/10 pb-4">
         <Link to="/" className="font-bold tracking-widest uppercase">
           <span className="hidden sm:inline text-2xl">The Midnight Post</span>
-          <span className="sm:hidden text-lg">TMP</span>
+          <span className="sm:hidden text-base">The Midnight Post</span>
         </Link>
         <nav className="flex gap-4 items-center text-sm tracking-widest uppercase">
           {user ? (
