@@ -156,7 +156,7 @@ export default function Home() {
     >
       <div className="text-center mb-12">
         <h1 className="text-3xl font-serif mb-4">The Desk</h1>
-        <p className="opacity-60 italic text-sm">지친 밤, 당신의 마음을 한 줄로 남겨주세요.</p>
+        <p className="opacity-60 italic text-sm break-keep">지친 밤, 당신의 마음을 한 줄로 남겨주세요.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="w-full flex flex-col items-center">
@@ -166,7 +166,7 @@ export default function Home() {
             onChange={handleTextChange}
             maxLength={100}
             placeholder={greeting}
-            className="w-full h-40 bg-transparent border-b-2 border-ink/20 resize-none focus:outline-none focus:border-ink/60 transition-colors p-4 text-center text-xl font-serif leading-relaxed"
+            className="w-full h-40 bg-transparent border-b-2 border-ink/20 resize-none focus:outline-none focus:border-ink/60 transition-colors p-4 text-center text-xl font-serif leading-relaxed break-keep"
             disabled={isSubmitting}
           />
           <div className="absolute bottom-2 right-2 text-xs opacity-40 font-mono">
