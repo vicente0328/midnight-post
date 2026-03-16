@@ -66,57 +66,6 @@ const MENTOR_SPACES = {
 
 type SpaceKey = keyof typeof MENTOR_SPACES;
 
-// ─── Typewriter component ─────────────────────────────────────────────────────
-
-function TypewriterText({
-  text,
-  speed = 32,
-  onComplete,
-}: {
-  text: string;
-  speed?: number;
-  onComplete?: () => void;
-}) {
-  const [displayed, setDisplayed] = useState('');
-  const [finished, setFinished] = useState(false);
-  const calledRef = useRef(false);
-
-  useEffect(() => {
-    setDisplayed('');
-    setFinished(false);
-    calledRef.current = false;
-    let i = 0;
-    const timer = setInterval(() => {
-      if (i < text.length) {
-        setDisplayed(text.slice(0, i + 1));
-        i++;
-      } else {
-        clearInterval(timer);
-        if (!calledRef.current) {
-          calledRef.current = true;
-          setFinished(true);
-          onComplete?.();
-        }
-      }
-    }, speed);
-    return () => clearInterval(timer);
-  }, [text, speed]);
-
-  return (
-    <span>
-      {displayed}
-      {!finished && (
-        <motion.span
-          animate={{ opacity: [1, 0, 1] }}
-          transition={{ duration: 0.9, repeat: Infinity }}
-          className="inline-block ml-0.5"
-        >
-          ·
-        </motion.span>
-      )}
-    </span>
-  );
-}
 
 // ─── Opacity fade helper ──────────────────────────────────────────────────────
 
@@ -197,13 +146,13 @@ function LoadingOverlay({
   onDone: () => void;
 }) {
   const space = MENTOR_SPACES[spaceKey];
-  const [typingDone, setTypingDone] = useState(false);
+  const [textDone, setTextDone] = useState(false);
 
   useEffect(() => {
-    if (!typingDone) return;
+    if (!textDone) return;
     const t = setTimeout(onDone, 1000);
     return () => clearTimeout(t);
-  }, [typingDone, onDone]);
+  }, [textDone, onDone]);
 
   return (
     <motion.div
@@ -236,20 +185,17 @@ function LoadingOverlay({
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.9, duration: 0.6 }}
+        transition={{ delay: 0.9, duration: 2.4, ease: 'easeIn' }}
+        onAnimationComplete={() => setTextDone(true)}
         className="font-serif text-sm md:text-base leading-[2.2] max-w-md italic"
-        style={{ color: 'rgba(244,241,234,0.75)' }}
+        style={{ color: 'rgba(244,241,234,0.75)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}
       >
-        <TypewriterText
-          text={space.loadingText}
-          speed={38}
-          onComplete={() => setTypingDone(true)}
-        />
+        {space.loadingText}
       </motion.p>
 
       {/* Fade-in ornament when done */}
       <motion.div
-        animate={{ opacity: typingDone ? 0.5 : 0 }}
+        animate={{ opacity: textDone ? 0.5 : 0 }}
         transition={{ duration: 1 }}
         className="mt-10 flex items-center gap-2.5"
       >
