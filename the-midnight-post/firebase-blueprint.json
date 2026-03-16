@@ -1,0 +1,59 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "Entry": {
+      "title": "Entry",
+      "description": "A user's midnight diary entry",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "content": { "type": "string" },
+        "emotion": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["pending", "replied"] }
+      },
+      "required": ["uid", "content", "createdAt", "status"]
+    },
+    "Reply": {
+      "title": "Reply",
+      "description": "A mentor's reply to an entry",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "entryId": { "type": "string" },
+        "mentorId": { "type": "string", "enum": ["hyewoon", "benedicto", "theodore", "yeonam"] },
+        "quote": { "type": "string" },
+        "source": { "type": "string" },
+        "translation": { "type": "string" },
+        "advice": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "entryId", "mentorId", "quote", "translation", "advice", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Stores user profiles"
+    },
+    "/entries/{entryId}": {
+      "schema": { "$ref": "#/entities/Entry" },
+      "description": "Stores user diary entries"
+    },
+    "/replies/{replyId}": {
+      "schema": { "$ref": "#/entities/Reply" },
+      "description": "Stores mentor replies"
+    }
+  }
+}
