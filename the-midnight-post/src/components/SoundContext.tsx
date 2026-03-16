@@ -99,35 +99,35 @@ function createLFO(ctx: AudioContext, hz: number, depth: number, target: AudioPa
 function startRain(ctx: AudioContext): { stop: () => void } {
   const master = ctx.createGain();
   master.gain.setValueAtTime(0, ctx.currentTime);
-  master.gain.linearRampToValueAtTime(0.9, ctx.currentTime + 2.5);
+  master.gain.linearRampToValueAtTime(0.65, ctx.currentTime + 3);  // softer, slower fade-in
   master.connect(ctx.destination);
 
-  // Layer 1 – main rainfall
+  // Layer 1 – main rainfall (pink noise, warm low-pass)
   const pinkBuf = createPinkNoiseBuffer(ctx, 6);
   const pink = createLoopSource(ctx, pinkBuf);
   const lpMain = ctx.createBiquadFilter();
-  lpMain.type = 'lowpass'; lpMain.frequency.value = 1800; lpMain.Q.value = 0.4;
+  lpMain.type = 'lowpass'; lpMain.frequency.value = 1400; lpMain.Q.value = 0.3; // softer cutoff
   const gMain = ctx.createGain(); gMain.gain.value = 0.55;
   pink.connect(lpMain); lpMain.connect(gMain); gMain.connect(master);
 
-  // Layer 2 – surface hiss / drizzle
+  // Layer 2 – gentle drizzle (lowered freq to avoid harshness)
   const wb1 = createWhiteNoiseBuffer(ctx, 4);
   const hiss = createLoopSource(ctx, wb1);
   const bpHiss = ctx.createBiquadFilter();
-  bpHiss.type = 'bandpass'; bpHiss.frequency.value = 4500; bpHiss.Q.value = 0.5;
-  const gHiss = ctx.createGain(); gHiss.gain.value = 0.18;
+  bpHiss.type = 'bandpass'; bpHiss.frequency.value = 3200; bpHiss.Q.value = 0.4; // less sharp
+  const gHiss = ctx.createGain(); gHiss.gain.value = 0.10;  // quieter
   hiss.connect(bpHiss); bpHiss.connect(gHiss); gHiss.connect(master);
 
-  // Layer 3 – low distant rumble
+  // Layer 3 – soft distant rumble
   const wb2 = createWhiteNoiseBuffer(ctx, 8);
   const rumble = createLoopSource(ctx, wb2);
   const lpRumble = ctx.createBiquadFilter();
-  lpRumble.type = 'lowpass'; lpRumble.frequency.value = 90;
-  const gRumble = ctx.createGain(); gRumble.gain.value = 0.12;
+  lpRumble.type = 'lowpass'; lpRumble.frequency.value = 80;
+  const gRumble = ctx.createGain(); gRumble.gain.value = 0.09;
   rumble.connect(lpRumble); lpRumble.connect(gRumble); gRumble.connect(master);
 
-  // LFO – gentle intensity breathing
-  const lfo = createLFO(ctx, 0.07, 0.07, master.gain);
+  // Very slow LFO – barely perceptible swell
+  const lfo = createLFO(ctx, 0.05, 0.04, master.gain);
 
   pink.start(); hiss.start(); rumble.start();
 
@@ -151,24 +151,28 @@ function startRain(ctx: AudioContext): { stop: () => void } {
 
 function triggerCrackle(ctx: AudioContext, dest: AudioNode, stopped: { v: boolean }) {
   if (stopped.v) return;
-  const dur = 0.012 + Math.random() * 0.045;
+  const dur = 0.025 + Math.random() * 0.06;  // longer, softer pops
   const n = Math.floor(ctx.sampleRate * dur);
   const buf = ctx.createBuffer(1, n, ctx.sampleRate);
   const d = buf.getChannelData(0);
-  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+  // smooth bell-curve envelope baked into buffer
+  for (let i = 0; i < n; i++) {
+    const env = Math.sin((i / n) * Math.PI);
+    d[i] = (Math.random() * 2 - 1) * env;
+  }
 
   const src = ctx.createBufferSource();
   src.buffer = buf;
 
   const bp = ctx.createBiquadFilter();
   bp.type = 'bandpass';
-  bp.frequency.value = 600 + Math.random() * 1800;
-  bp.Q.value = 1.5 + Math.random() * 2;
+  bp.frequency.value = 300 + Math.random() * 700;  // lower, warmer frequencies
+  bp.Q.value = 0.6 + Math.random() * 0.8;          // softer resonance
 
   const g = ctx.createGain();
-  const vol = 0.04 + Math.random() * 0.18;
+  const vol = 0.02 + Math.random() * 0.07;          // much quieter
   g.gain.setValueAtTime(vol, ctx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+  g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur + 0.03);
 
   src.connect(bp); bp.connect(g); g.connect(dest);
   src.start();
@@ -179,42 +183,42 @@ function startFire(ctx: AudioContext): { stop: () => void } {
 
   const master = ctx.createGain();
   master.gain.setValueAtTime(0, ctx.currentTime);
-  master.gain.linearRampToValueAtTime(0.85, ctx.currentTime + 2.5);
+  master.gain.linearRampToValueAtTime(0.62, ctx.currentTime + 3);  // softer, slower
   master.connect(ctx.destination);
 
-  // Layer 1 – deep crackle base
+  // Layer 1 – deep crackle base (warm low end)
   const bb1 = createBrownNoiseBuffer(ctx, 5);
   const base = createLoopSource(ctx, bb1);
   const bpBase = ctx.createBiquadFilter();
-  bpBase.type = 'bandpass'; bpBase.frequency.value = 220; bpBase.Q.value = 0.7;
-  const gBase = ctx.createGain(); gBase.gain.value = 0.6;
+  bpBase.type = 'bandpass'; bpBase.frequency.value = 200; bpBase.Q.value = 0.5; // wider, softer
+  const gBase = ctx.createGain(); gBase.gain.value = 0.50;
   base.connect(bpBase); bpBase.connect(gBase); gBase.connect(master);
 
   // Layer 2 – mid warmth
   const bb2 = createBrownNoiseBuffer(ctx, 7);
   const mid = createLoopSource(ctx, bb2);
   const bpMid = ctx.createBiquadFilter();
-  bpMid.type = 'bandpass'; bpMid.frequency.value = 700; bpMid.Q.value = 0.9;
-  const gMid = ctx.createGain(); gMid.gain.value = 0.3;
+  bpMid.type = 'bandpass'; bpMid.frequency.value = 600; bpMid.Q.value = 0.6;
+  const gMid = ctx.createGain(); gMid.gain.value = 0.22;
   mid.connect(bpMid); bpMid.connect(gMid); gMid.connect(master);
 
-  // Layer 3 – flame hiss
+  // Layer 3 – very subtle flame breath (lowered, quieter)
   const wb = createWhiteNoiseBuffer(ctx, 4);
   const flame = createLoopSource(ctx, wb);
   const bpFlame = ctx.createBiquadFilter();
-  bpFlame.type = 'bandpass'; bpFlame.frequency.value = 1400; bpFlame.Q.value = 1.2;
-  const gFlame = ctx.createGain(); gFlame.gain.value = 0.12;
+  bpFlame.type = 'bandpass'; bpFlame.frequency.value = 1000; bpFlame.Q.value = 0.7;
+  const gFlame = ctx.createGain(); gFlame.gain.value = 0.07;  // very subtle
   flame.connect(bpFlame); bpFlame.connect(gFlame); gFlame.connect(master);
 
-  // LFO – fire flicker breathing
-  const lfo = createLFO(ctx, 0.12, 0.1, master.gain);
+  // Slow, barely-perceptible LFO – gentle fire breathing
+  const lfo = createLFO(ctx, 0.07, 0.06, master.gain);
 
   base.start(); mid.start(); flame.start();
 
-  // Crackle scheduler
+  // Crackle scheduler – less frequent for calm ambiance
   const scheduleCrackle = () => {
     if (stopped.v) return;
-    const delay = 180 + Math.random() * 520;
+    const delay = 400 + Math.random() * 1100;  // 0.4–1.5s between crackles
     setTimeout(() => {
       triggerCrackle(ctx, master, stopped);
       scheduleCrackle();
@@ -250,7 +254,7 @@ function playRustle(ctx: AudioContext) {
 
   const g = ctx.createGain();
   g.gain.setValueAtTime(0, ctx.currentTime);
-  g.gain.linearRampToValueAtTime(0.22, ctx.currentTime + 0.08);   // soft attack
+  g.gain.linearRampToValueAtTime(0.14, ctx.currentTime + 0.12);   // very soft attack
   g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur); // long decay
 
   src.connect(hp); hp.connect(bp); bp.connect(g); g.connect(ctx.destination);
@@ -279,10 +283,10 @@ function playLetterArrival(ctx: AudioContext) {
     src.start(startAt);
   };
 
-  // First burst: envelope opening / paper unfolding
-  makeRustleBurst(ctx.currentTime,        0.28, 3200, 0.30);
-  // Second burst: letter settling on surface
-  makeRustleBurst(ctx.currentTime + 0.35, 0.18, 2600, 0.18);
+  // First burst: gentle paper unfold
+  makeRustleBurst(ctx.currentTime,        0.32, 2800, 0.16);
+  // Second burst: soft settle
+  makeRustleBurst(ctx.currentTime + 0.40, 0.22, 2400, 0.10);
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────
