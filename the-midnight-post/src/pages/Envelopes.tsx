@@ -217,6 +217,24 @@ export default function Envelopes() {
   );
 }
 
+// Split a paragraph into dialogue and non-dialogue segments
+// Matches "…" (straight double quotes) and "…" / "…" (curly quotes)
+function splitDialogue(text: string): { text: string; isDialogue: boolean }[] {
+  const regex = /("([^"]*?)"|"([^"]*?)")/g;
+  const segments: { text: string; isDialogue: boolean }[] = [];
+  let last = 0;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    const before = text.slice(last, match.index).trim();
+    if (before) segments.push({ text: before, isDialogue: false });
+    segments.push({ text: match[0], isDialogue: true });
+    last = match.index + match[0].length;
+  }
+  const after = text.slice(last).trim();
+  if (after) segments.push({ text: after, isDialogue: false });
+  return segments.length > 0 ? segments : [{ text, isDialogue: false }];
+}
+
 function LetterModal({ reply, onClose }: { reply: MentorReply; onClose: () => void }) {
   const mentor = MENTORS[reply.mentorId];
   
@@ -293,12 +311,17 @@ function LetterModal({ reply, onClose }: { reply: MentorReply; onClose: () => vo
             {reply.advice.split('\n').map((paragraph, index) => {
               if (!paragraph.trim()) return null;
               const isFirstParagraph = index === 0;
+              const segments = splitDialogue(paragraph);
               return (
                 <p
                   key={index}
                   className={`mb-5 md:mb-7 ${isFirstParagraph ? 'sm:first-letter:text-5xl sm:first-letter:font-bold sm:first-letter:text-[#D4AF37] sm:first-letter:mr-2 sm:first-letter:float-left sm:first-letter:leading-none sm:first-letter:mt-2' : ''}`}
                 >
-                  {paragraph}
+                  {segments.map((seg, si) =>
+                    seg.isDialogue
+                      ? <span key={si} className="block mt-1 mb-1">{seg.text}</span>
+                      : <span key={si}>{seg.text}</span>
+                  )}
                 </p>
               );
             })}
