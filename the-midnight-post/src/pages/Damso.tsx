@@ -31,7 +31,7 @@ const MENTOR_SPACES = {
     spaceName: '청명각(淸明閣)',
     loadingText:
       '혜운 스님이 정진하시는 청명각으로 발걸음을 옮깁니다. 은은한 향나무 냄새가 코끝을 스치고, 대나무 숲을 흔드는 바람 소리가 마음의 먼지를 씻어냅니다. 스님이 내어주시는 따뜻한 찻잔의 온기를 느끼며 잠시 숨을 고르십시오.',
-    placeholder: '찻잔을 내려놓으며 조용히 말씀드립니다…',
+    placeholder: '찻잔을 내려놓으며 말씀드립니다',
     bg: '#f8f6f1',
     accent: '#7c6a50',
   },
@@ -40,7 +40,7 @@ const MENTOR_SPACES = {
     spaceName: '고해소',
     loadingText:
       '신부님이 당신을 기다리시는 고해소로 향합니다. 흔들리는 작은 촛불이 당신의 그림자를 다정하게 감싸 안으며, 이곳은 당신의 모든 진심이 안전하게 지켜질 성소임을 말해줍니다. 무거운 짐을 내려놓고 고요한 평화를 마주해 보세요.',
-    placeholder: '촛불 앞에서 솔직하게 마음을 꺼냅니다…',
+    placeholder: '촛불 앞에서 솔직하게 말씀드립니다',
     bg: '#f8f5f2',
     accent: '#7a3030',
   },
@@ -49,7 +49,7 @@ const MENTOR_SPACES = {
     spaceName: '서재',
     loadingText:
       '지적인 잉크 향과 오래된 가죽 책 냄새가 가득한 테오도르의 개인 서재로 초대받았습니다. 명료한 이성의 불빛 아래서 당신의 고민을 객관화해 볼 시간입니다. 날카로운 통찰이 당신의 삶을 다시 설계할 이정표가 되어줄 것입니다.',
-    placeholder: '책상 맞은편에 앉아 생각을 정리합니다…',
+    placeholder: '생각을 정리하며 말씀드립니다',
     bg: '#f5f6f8',
     accent: '#3a4a5c',
   },
@@ -58,7 +58,7 @@ const MENTOR_SPACES = {
     spaceName: '취락헌(聚樂軒)',
     loadingText:
       '벗을 반기는 호탕한 웃음소리가 들려오는 취락헌의 문이 열립니다. 세상의 격식은 잠시 마당에 던져두고, 달빛 아래 술잔을 부딪치듯 진솔한 이야기를 나누러 오십시오. 자연의 순리에 몸을 맡긴 채 나누는 대화는 당신을 자유롭게 할 것입니다.',
-    placeholder: '마루에 걸터앉아 솔직하게 이야기합니다…',
+    placeholder: '마루에 걸터앉아 이야기합니다',
     bg: '#f4f7f4',
     accent: '#2d5a3d',
   },
@@ -647,7 +647,7 @@ export default function Damso() {
                     placeholder={space.placeholder}
                     rows={2}
                     disabled={isSending || !!animatingId}
-                    className="flex-1 font-serif bg-transparent outline-none resize-none leading-relaxed transition-colors duration-300 py-2"
+                    className="flex-1 font-serif bg-transparent outline-none resize-none leading-relaxed transition-colors duration-300 py-2 placeholder:text-xs placeholder:tracking-wide"
                     style={{
                       fontSize: '16px', // iOS 자동 확대 방지
                       color: 'rgba(44,42,41,0.85)',
