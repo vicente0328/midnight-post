@@ -83,12 +83,6 @@ export default function Archive() {
                   {entry.content}
                 </p>
                 
-                <div className="mt-4 flex gap-2 opacity-30 group-hover:opacity-60 transition-opacity">
-                  <span className="text-xs">🪷</span>
-                  <span className="text-xs">✝️</span>
-                  <span className="text-xs">🖋️</span>
-                  <span className="text-xs">🖌️</span>
-                </div>
               </div>
             </Link>
           </motion.div>
