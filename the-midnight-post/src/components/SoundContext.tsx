@@ -235,18 +235,7 @@ function startFire(ctx: AudioContext): { stop: () => void } {
 
 // ── One-shot sounds ───────────────────────────────────────────────────────────
 
-function playChime(ctx: AudioContext) {
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(880, ctx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.8);
-  gain.gain.setValueAtTime(0.25, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-  osc.connect(gain); gain.connect(ctx.destination);
-  osc.start(); osc.stop(ctx.currentTime + 0.8);
-}
-
+// Single paper rustle burst (for page turn)
 function playRustle(ctx: AudioContext) {
   const n = Math.floor(ctx.sampleRate * 0.15);
   const buf = ctx.createBuffer(1, n, ctx.sampleRate);
@@ -259,6 +248,34 @@ function playRustle(ctx: AudioContext) {
   g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
   src.connect(bp); bp.connect(g); g.connect(ctx.destination);
   src.start();
+}
+
+// Letter arrival: soft unfold → brief settle (two gentle rustle bursts)
+function playLetterArrival(ctx: AudioContext) {
+  const makeRustleBurst = (startAt: number, dur: number, freq: number, vol: number) => {
+    const n = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+
+    const src = ctx.createBufferSource(); src.buffer = buf;
+
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = 0.6;
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, startAt);
+    g.gain.linearRampToValueAtTime(vol, startAt + dur * 0.15);
+    g.gain.exponentialRampToValueAtTime(0.001, startAt + dur);
+
+    src.connect(hp); hp.connect(bp); bp.connect(g); g.connect(ctx.destination);
+    src.start(startAt);
+  };
+
+  // First burst: envelope opening / paper unfolding
+  makeRustleBurst(ctx.currentTime,        0.28, 3200, 0.30);
+  // Second burst: letter settling on surface
+  makeRustleBurst(ctx.currentTime + 0.35, 0.18, 2600, 0.18);
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────
@@ -295,7 +312,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
   };
 
   const playPageTurn = () => { const c = ctx(); if (c) playRustle(c); };
-  const playArrivalSound = () => { const c = ctx(); if (c) playChime(c); };
+  const playArrivalSound = () => { const c = ctx(); if (c) playLetterArrival(c); };
   const setTyping = (_: boolean) => {};
 
   return (
