@@ -271,9 +271,9 @@ function LetterModal({ reply, onClose }: { reply: MentorReply; onClose: () => vo
             </p>
 
             <div className="flex items-center justify-center gap-3 mb-5 opacity-60">
-              <div className="h-px w-12 bg-gradient-to-r from-transparent via-ink/40 to-transparent"></div>
-              {reply.source && <span className="text-xs sm:text-sm tracking-wider">{reply.source}</span>}
-              <div className="h-px w-12 bg-gradient-to-r from-transparent via-ink/40 to-transparent"></div>
+              <div className="h-px flex-1 max-w-[48px] bg-gradient-to-r from-transparent via-ink/40 to-transparent"></div>
+              {reply.source && <span className="text-xs sm:text-sm tracking-wider whitespace-nowrap shrink-0">{reply.source}</span>}
+              <div className="h-px flex-1 max-w-[48px] bg-gradient-to-r from-transparent via-ink/40 to-transparent"></div>
             </div>
 
             <p className="text-sm sm:text-base md:text-lg leading-relaxed text-ink/70 mx-auto">
