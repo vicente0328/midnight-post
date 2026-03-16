@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# raw ASMR source files (processed versions are in the-midnight-post/public/)
+/*.mp3
