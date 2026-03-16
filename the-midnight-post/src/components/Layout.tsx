@@ -9,20 +9,24 @@ export default function Layout() {
   return (
     <div className="min-h-screen flex flex-col items-center w-full max-w-4xl mx-auto px-4 py-8">
       <header className="w-full flex justify-between items-center mb-12 border-b border-ink/10 pb-4">
-        <Link to="/" className="text-2xl font-bold tracking-widest uppercase">
-          The Midnight Post
+        <Link to="/" className="font-bold tracking-widest uppercase">
+          <span className="hidden sm:inline text-2xl">The Midnight Post</span>
+          <span className="sm:hidden text-lg">TMP</span>
         </Link>
-        <nav className="flex gap-6 items-center text-sm tracking-widest uppercase">
+        <nav className="flex gap-4 items-center text-sm tracking-widest uppercase">
           {user ? (
             <>
-              <Link to="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
-                <PenTool size={16} /> Desk
+              <Link to="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Desk">
+                <PenTool size={16} />
+                <span className="hidden sm:inline">Desk</span>
               </Link>
-              <Link to="/archive" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
-                <BookOpen size={16} /> Archive
+              <Link to="/archive" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Archive">
+                <BookOpen size={16} />
+                <span className="hidden sm:inline">Archive</span>
               </Link>
-              <button onClick={signOut} className="flex items-center gap-2 hover:opacity-70 transition-opacity">
-                <LogOut size={16} /> Logout
+              <button onClick={signOut} className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Logout">
+                <LogOut size={16} />
+                <span className="hidden sm:inline">Logout</span>
               </button>
             </>
           ) : (
