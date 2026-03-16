@@ -78,10 +78,11 @@ export default function Archive() {
       .finally(() => setLoadingEntries(false));
   }, [user]);
 
-  // 담소 목록 — 탭 전환 시 최초 1회 로드
+  // 담소 목록 — 탭 전환 시 매번 로드
   const fetchSessions = useCallback(() => {
-    if (!user || sessionsFetched) return;
+    if (!user) return;
     setLoadingSessions(true);
+    setSessionsFetched(false);
     getDocs(query(collection(db, 'damso_sessions'), where('uid', '==', user.uid)))
       .then(snap => {
         const list: SessionDoc[] = [];
@@ -92,7 +93,7 @@ export default function Archive() {
       })
       .catch(console.error)
       .finally(() => setLoadingSessions(false));
-  }, [user, sessionsFetched]);
+  }, [user]);
 
   const handleTabChange = (t: Tab) => {
     setTab(t);

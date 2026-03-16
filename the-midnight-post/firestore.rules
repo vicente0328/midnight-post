@@ -97,8 +97,7 @@ service cloud.firestore {
       allow read: if isDocOwner();
       allow create: if isAuthenticated() && uidUnchanged() &&
                     request.resource.data.entryId is string &&
-                    request.resource.data.mentorId in ['hyewoon', 'benedicto', 'theodore', 'yeonam'] &&
-                    request.resource.data.startedAt is timestamp;
+                    request.resource.data.mentorId in ['hyewoon', 'benedicto', 'theodore', 'yeonam'];
       allow update: if isDocOwner() && uidNotModified();
       allow delete: if isDocOwner();
     }

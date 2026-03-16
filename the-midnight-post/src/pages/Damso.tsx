@@ -353,7 +353,6 @@ export default function Damso() {
         entryId,
         mentorId,
         startedAt: serverTimestamp(),
-        endedAt: null,
       });
       sessionIdRef.current = sessionRef.id;
 
