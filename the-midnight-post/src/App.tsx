@@ -7,6 +7,7 @@ import Layout from './components/Layout';
 import Home from './pages/Home';
 import Envelopes from './pages/Envelopes';
 import Archive from './pages/Archive';
+import Damso from './pages/Damso';
 import { triggerDailyKnowledgeGeneration } from './services/knowledge';
 
 export default function App() {
@@ -26,6 +27,8 @@ export default function App() {
               <Route path="envelopes/:entryId" element={<Envelopes />} />
               <Route path="archive" element={<Archive />} />
             </Route>
+            {/* 담소: 전체화면 소설 인터페이스 — Layout 밖에 배치 */}
+            <Route path="damso/:entryId/:mentorId" element={<Damso />} />
           </Routes>
         </Router>
       </SoundProvider>

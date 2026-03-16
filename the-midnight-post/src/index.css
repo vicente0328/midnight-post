@@ -12,6 +12,21 @@ body {
   color: var(--color-ink);
 }
 
+/* 담소: 소설 인터페이스 스크롤바 숨김 */
+.damso-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.damso-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* 담소 textarea placeholder */
+.damso-input::placeholder {
+  font-style: italic;
+  opacity: 0.35;
+}
+
 @keyframes gold-shimmer {
   0% { transform: translateX(-150%) skewX(-12deg); }
   100% { transform: translateX(150%) skewX(-12deg); }

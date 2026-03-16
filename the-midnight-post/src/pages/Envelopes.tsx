@@ -6,7 +6,7 @@ import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
 import { useSound } from '../components/SoundContext';
 import { MentorReply } from '../services/ai';
-import { X, Feather, Flower2, Cross, Brush } from 'lucide-react';
+import { X, Feather, Flower2, Cross, Brush, MessageCircle } from 'lucide-react';
 
 
 const WAITING_PHRASES = [
@@ -180,7 +180,14 @@ export default function Envelopes() {
 
       <AnimatePresence>
         {selectedReply && (
-          <LetterModal reply={selectedReply} onClose={() => setSelectedReply(null)} />
+          <LetterModal
+            reply={selectedReply}
+            onClose={() => setSelectedReply(null)}
+            onStartDamso={(mentorId) => {
+              setSelectedReply(null);
+              navigate(`/damso/${entryId}/${mentorId}`);
+            }}
+          />
         )}
       </AnimatePresence>
     </div>
@@ -205,7 +212,15 @@ function splitDialogue(text: string): { text: string; isDialogue: boolean }[] {
   return segments.length > 0 ? segments : [{ text, isDialogue: false }];
 }
 
-function LetterModal({ reply, onClose }: { reply: MentorReply; onClose: () => void }) {
+function LetterModal({
+  reply,
+  onClose,
+  onStartDamso,
+}: {
+  reply: MentorReply;
+  onClose: () => void;
+  onStartDamso: (mentorId: string) => void;
+}) {
   const mentor = MENTORS[reply.mentorId];
   
   return (
@@ -301,6 +316,27 @@ function LetterModal({ reply, onClose }: { reply: MentorReply; onClose: () => vo
           <div className="mt-8 md:mt-24 text-right opacity-60 italic">
             <p className="text-sm sm:text-lg">당신의 평안을 기원하며,</p>
             <p className="text-base sm:text-xl mt-1 sm:mt-2 font-bold">{mentor.name} 드림</p>
+          </div>
+
+          {/* 담소 나누기 버튼 */}
+          <div className="mt-8 md:mt-14 flex justify-center">
+            <div className="flex items-center gap-4">
+              <div className="w-8 h-px bg-[#D4AF37]/30" />
+              <button
+                onClick={() => onStartDamso(reply.mentorId)}
+                className="group flex items-center gap-2.5 font-serif text-xs sm:text-sm italic opacity-50 hover:opacity-90 transition-all duration-500 tracking-wide"
+              >
+                <MessageCircle
+                  size={14}
+                  strokeWidth={1.5}
+                  className="group-hover:text-[#D4AF37] transition-colors duration-500"
+                />
+                <span className="group-hover:text-[#D4AF37] transition-colors duration-500">
+                  {mentor.name}와 담소 나누기
+                </span>
+              </button>
+              <div className="w-8 h-px bg-[#D4AF37]/30" />
+            </div>
           </div>
         </div>
       </motion.div>
