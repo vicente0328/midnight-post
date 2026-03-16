@@ -8,14 +8,6 @@ import { useSound } from '../components/SoundContext';
 import { MentorReply } from '../services/ai';
 import { X, Feather, Flower2, Cross, Brush, Loader2 } from 'lucide-react';
 
-const LOADING_PHRASES = [
-  "마음을 비우는 중입니다...",
-  "당신의 하루를 헤아려보고 있습니다...",
-  "조용히 촛불을 밝히는 중입니다...",
-  "위로의 문장을 고르고 있습니다...",
-  "당신의 감정에 귀 기울이고 있습니다...",
-  "깊은 생각에 잠겨 있습니다..."
-];
 
 const MENTORS = {
   hyewoon: { 
@@ -52,16 +44,8 @@ export default function Envelopes() {
   const [replies, setReplies] = useState<MentorReply[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedReply, setSelectedReply] = useState<MentorReply | null>(null);
-  const [phraseIndex, setPhraseIndex] = useState(0);
   const [justArrived, setJustArrived] = useState<string[]>([]);
   const prevRepliesRef = React.useRef<MentorReply[]>([]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPhraseIndex((prev) => (prev + 1) % LOADING_PHRASES.length);
-    }, 3500);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     if (prevRepliesRef.current.length > 0 && replies.length > prevRepliesRef.current.length) {
@@ -139,20 +123,6 @@ export default function Envelopes() {
                 </div>
 
                 <h3 className="font-serif text-lg font-bold mb-2 text-ink/40">{mentor.name}</h3>
-                <div className="h-6 relative w-full flex justify-center items-center overflow-hidden">
-                  <AnimatePresence mode="wait">
-                    <motion.p
-                      key={phraseIndex}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.5 }}
-                      className="text-[10px] opacity-50 uppercase tracking-widest text-center absolute w-full"
-                    >
-                      {LOADING_PHRASES[phraseIndex]}
-                    </motion.p>
-                  </AnimatePresence>
-                </div>
               </motion.div>
             );
           }
@@ -217,22 +187,22 @@ function LetterModal({ reply, onClose }: { reply: MentorReply; onClose: () => vo
         exit={{ scale: 0.95, y: 20, opacity: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-3xl bg-[#fdfbf7] p-10 md:p-20 shadow-[0_0_60px_rgba(0,0,0,0.5)] overflow-y-auto max-h-[90vh] letter-scroll border border-[#D4AF37]/20"
+        className="relative w-full max-w-3xl bg-[#fdfbf7] p-6 sm:p-10 md:p-20 shadow-[0_0_60px_rgba(0,0,0,0.5)] overflow-y-auto max-h-[90vh] letter-scroll border border-[#D4AF37]/20"
         style={{ 
           backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
           boxShadow: 'inset 0 0 100px rgba(139, 115, 85, 0.1), 0 20px 60px rgba(0,0,0,0.4)'
         }}
       >
         {/* Elegant Close Button */}
-        <button 
-          onClick={onClose} 
-          className="absolute top-8 right-8 opacity-40 hover:opacity-100 transition-all duration-300 hover:rotate-90"
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 sm:top-8 sm:right-8 opacity-40 hover:opacity-100 transition-all duration-300 hover:rotate-90"
         >
           <X size={28} strokeWidth={1} />
         </button>
 
         {/* Header: Mentor Info */}
-        <div className="flex flex-col items-center mb-16">
+        <div className="flex flex-col items-center mb-8 md:mb-16">
           <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${mentor.color} p-1 shadow-md mb-6 relative flex items-center justify-center`}>
             <div className="absolute inset-1 rounded-full border border-[#D4AF37]/50"></div>
             {React.cloneElement(mentor.icon as React.ReactElement, { className: "w-6 h-6 text-[#D4AF37]" })}
@@ -243,52 +213,51 @@ function LetterModal({ reply, onClose }: { reply: MentorReply; onClose: () => vo
 
         <div className="font-serif text-ink/90">
           {/* Lyrical Quote Section */}
-          <div className="text-center mb-16 relative px-4 md:px-12">
+          <div className="text-center mb-8 md:mb-16 relative px-2 md:px-12">
             <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-8xl text-[#D4AF37]/15 font-serif leading-none select-none">"</span>
-            
-            <p className="text-2xl md:text-3xl leading-relaxed italic text-ink/90 mb-8 relative z-10 break-keep font-medium">
+
+            <p className="text-lg sm:text-2xl md:text-3xl leading-snug sm:leading-relaxed italic text-ink/90 mb-6 relative z-10 break-keep font-medium">
               {reply.quote}
             </p>
-            
-            <div className="flex items-center justify-center gap-4 mb-8 opacity-60">
+
+            <div className="flex items-center justify-center gap-4 mb-6 opacity-60">
               <div className="h-px w-16 bg-gradient-to-r from-transparent via-ink/40 to-transparent"></div>
               {reply.source && <span className="text-sm tracking-widest">{reply.source}</span>}
               <div className="h-px w-16 bg-gradient-to-r from-transparent via-ink/40 to-transparent"></div>
             </div>
-            
-            <p className="text-base md:text-lg leading-relaxed text-ink/70 max-w-xl mx-auto break-keep">
+
+            <p className="text-sm sm:text-base md:text-lg leading-relaxed text-ink/70 max-w-xl mx-auto break-keep">
               {reply.translation}
             </p>
           </div>
 
           {/* Elegant Divider */}
-          <div className="flex justify-center items-center gap-3 my-16 opacity-40">
+          <div className="flex justify-center items-center gap-3 my-8 md:my-16 opacity-40">
             <div className="w-1.5 h-1.5 rotate-45 bg-[#D4AF37]"></div>
             <div className="w-1 h-1 rotate-45 bg-[#D4AF37]/60"></div>
             <div className="w-1.5 h-1.5 rotate-45 bg-[#D4AF37]"></div>
           </div>
 
           {/* Advice Section with Drop Cap */}
-          <div className="space-y-8 text-lg md:text-xl leading-[2.2] text-ink/90 text-justify break-keep px-2 md:px-8">
+          <div className="space-y-4 md:space-y-6 text-base sm:text-lg md:text-xl leading-[1.9] sm:leading-[2.1] md:leading-[2.2] text-ink/90 text-justify break-keep px-0 md:px-8">
             {reply.advice.split('\n').map((paragraph, index) => {
               if (!paragraph.trim()) return null;
-              
-              // Apply Drop Cap to the first paragraph
+
               const isFirstParagraph = index === 0;
-              
+
               return (
-                <p 
-                  key={index} 
-                  className={`mb-8 ${isFirstParagraph ? 'first-letter:text-5xl first-letter:font-bold first-letter:text-[#D4AF37] first-letter:mr-2 first-letter:float-left first-letter:leading-none first-letter:mt-2' : ''}`}
+                <p
+                  key={index}
+                  className={`${isFirstParagraph ? 'first-letter:text-5xl first-letter:font-bold first-letter:text-[#D4AF37] first-letter:mr-2 first-letter:float-left first-letter:leading-none first-letter:mt-2' : ''}`}
                 >
                   {paragraph}
                 </p>
               );
             })}
           </div>
-          
+
           {/* Footer Signature */}
-          <div className="mt-24 text-right pr-8 opacity-60 italic">
+          <div className="mt-12 md:mt-24 text-right pr-2 md:pr-8 opacity-60 italic">
             <p className="text-lg">당신의 평안을 기원하며,</p>
             <p className="text-xl mt-2 font-bold">{mentor.name} 드림</p>
           </div>
