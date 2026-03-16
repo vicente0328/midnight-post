@@ -647,8 +647,9 @@ export default function Damso() {
                     placeholder={space.placeholder}
                     rows={2}
                     disabled={isSending || !!animatingId}
-                    className="flex-1 font-serif text-sm md:text-base bg-transparent outline-none resize-none leading-relaxed transition-colors duration-300 py-2"
+                    className="flex-1 font-serif bg-transparent outline-none resize-none leading-relaxed transition-colors duration-300 py-2"
                     style={{
+                      fontSize: '16px', // iOS 자동 확대 방지
                       color: 'rgba(44,42,41,0.85)',
                       borderBottom: `1px solid rgba(44,42,41,0.2)`,
                     }}
@@ -662,8 +663,12 @@ export default function Damso() {
                   <button
                     onClick={handleSend}
                     disabled={!inputValue.trim() || isSending || !!animatingId}
-                    className="font-serif text-xs italic pb-2 transition-colors duration-300 whitespace-nowrap"
-                    style={{ color: inputValue.trim() && !isSending && !animatingId ? space.accent : 'rgba(44,42,41,0.25)' }}
+                    className="font-serif italic transition-colors duration-300 whitespace-nowrap"
+                    style={{
+                      fontSize: '14px',
+                      padding: '14px 4px 14px 16px', // 터치 영역 확보
+                      color: inputValue.trim() && !isSending && !animatingId ? space.accent : 'rgba(44,42,41,0.25)',
+                    }}
                   >
                     전하다 →
                   </button>

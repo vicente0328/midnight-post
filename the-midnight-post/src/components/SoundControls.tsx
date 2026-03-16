@@ -1,9 +1,14 @@
 import React from 'react';
 import { CloudRain, Flame } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useSound } from './SoundContext';
 
 export default function SoundControls() {
   const { rainEnabled, fireEnabled, toggleRain, toggleFire } = useSound();
+  const { pathname } = useLocation();
+
+  // 담소 화면에서는 사운드 버튼 숨김 (UI 겹침 방지)
+  if (pathname.startsWith('/damso')) return null;
 
   return (
     <div className="fixed bottom-6 left-6 z-40 flex flex-col gap-3">

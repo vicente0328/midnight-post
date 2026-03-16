@@ -319,24 +319,25 @@ function LetterModal({
           </div>
 
           {/* 담소 나누기 버튼 */}
-          <div className="mt-8 md:mt-14 flex justify-center">
-            <div className="flex items-center gap-4">
-              <div className="w-8 h-px bg-[#D4AF37]/30" />
-              <button
-                onClick={() => onStartDamso(reply.mentorId)}
-                className="group flex items-center gap-2.5 font-serif text-xs sm:text-sm italic opacity-50 hover:opacity-90 transition-all duration-500 tracking-wide"
-              >
-                <MessageCircle
-                  size={14}
-                  strokeWidth={1.5}
-                  className="group-hover:text-[#D4AF37] transition-colors duration-500"
-                />
-                <span className="group-hover:text-[#D4AF37] transition-colors duration-500">
-                  {mentor.name}와 담소 나누기
-                </span>
-              </button>
-              <div className="w-8 h-px bg-[#D4AF37]/30" />
-            </div>
+          <div className="mt-10 md:mt-16 flex justify-center">
+            <button
+              onClick={() => onStartDamso(reply.mentorId)}
+              className="group relative flex items-center gap-3 font-serif text-sm sm:text-base tracking-wide transition-all duration-500 px-6 py-3 border border-[#D4AF37]/40 hover:border-[#D4AF37]/80 hover:bg-[#D4AF37]/5"
+            >
+              {/* 모서리 장식 */}
+              <span className="absolute top-1 left-1 w-2 h-2 border-t border-l border-[#D4AF37]/50 group-hover:border-[#D4AF37] transition-colors duration-500 pointer-events-none" />
+              <span className="absolute top-1 right-1 w-2 h-2 border-t border-r border-[#D4AF37]/50 group-hover:border-[#D4AF37] transition-colors duration-500 pointer-events-none" />
+              <span className="absolute bottom-1 left-1 w-2 h-2 border-b border-l border-[#D4AF37]/50 group-hover:border-[#D4AF37] transition-colors duration-500 pointer-events-none" />
+              <span className="absolute bottom-1 right-1 w-2 h-2 border-b border-r border-[#D4AF37]/50 group-hover:border-[#D4AF37] transition-colors duration-500 pointer-events-none" />
+              <MessageCircle
+                size={15}
+                strokeWidth={1.5}
+                className="text-[#D4AF37]/70 group-hover:text-[#D4AF37] transition-colors duration-500"
+              />
+              <span className="italic text-ink/60 group-hover:text-ink/90 transition-colors duration-500">
+                {mentor.name}와 담소 나누기
+              </span>
+            </button>
           </div>
         </div>
       </motion.div>
