@@ -48,7 +48,7 @@ const MENTORS = {
 export default function Envelopes() {
   const { entryId } = useParams();
   const { user } = useAuth();
-  const { playPageTurn, playArrivalSound } = useSound();
+  const { playArrivalSound } = useSound();
   const navigate = useNavigate();
   const [replies, setReplies] = useState<MentorReply[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +56,7 @@ export default function Envelopes() {
   const [phraseIndex, setPhraseIndex] = useState(0);
   const [justArrived, setJustArrived] = useState<string[]>([]);
   const prevRepliesRef = React.useRef<MentorReply[]>([]);
+  const arrivalOrderRef = React.useRef<string[]>([]);
 
   useEffect(() => {
     if (replies.length >= Object.keys(MENTORS).length) return;
@@ -96,6 +97,12 @@ export default function Envelopes() {
       snapshot.forEach((doc) => {
         fetchedReplies.push(doc.data() as MentorReply);
       });
+      // Track arrival order (first seen = first displayed)
+      fetchedReplies.forEach(r => {
+        if (!arrivalOrderRef.current.includes(r.mentorId)) {
+          arrivalOrderRef.current = [...arrivalOrderRef.current, r.mentorId];
+        }
+      });
       setReplies(fetchedReplies);
       setLoading(false);
     }, (error) => {
@@ -107,7 +114,6 @@ export default function Envelopes() {
   }, [entryId, user]);
 
   const handleOpenLetter = (reply: MentorReply) => {
-    playPageTurn();
     setSelectedReply(reply);
   };
 
@@ -134,47 +140,11 @@ export default function Envelopes() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 w-full">
-        {(Object.keys(MENTORS) as Array<keyof typeof MENTORS>).map((mentorId, index) => {
-          const mentor = MENTORS[mentorId];
+        {arrivalOrderRef.current.map((mentorId) => {
+          const mentor = MENTORS[mentorId as keyof typeof MENTORS];
           const reply = replies.find(r => r.mentorId === mentorId);
+          if (!reply || !mentor) return null;
 
-          if (!reply) {
-            // Skeleton / Loading State
-            return (
-              <motion.div
-                key={`loading-${mentorId}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="shimmer-gold relative flex flex-col items-center justify-center p-8 bg-[#FAF8F4] border border-[#E5E0D8]/60 shadow-sm h-72"
-              >
-                <div className="absolute top-2 left-2 w-6 h-6 border-t border-l border-[#D4AF37]/20 pointer-events-none" />
-                <div className="absolute top-2 right-2 w-6 h-6 border-t border-r border-[#D4AF37]/20 pointer-events-none" />
-                <div className="absolute bottom-2 left-2 w-6 h-6 border-b border-l border-[#D4AF37]/20 pointer-events-none" />
-                <div className="absolute bottom-2 right-2 w-6 h-6 border-b border-r border-[#D4AF37]/20 pointer-events-none" />
-
-                <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${mentor.color} opacity-15 p-1 mb-6 relative flex items-center justify-center`}>
-                  <div className="absolute inset-1 rounded-full border border-[#D4AF37]/20" />
-                  {React.cloneElement(mentor.icon as React.ReactElement, { className: "w-7 h-7 text-[#D4AF37]/30" })}
-                </div>
-
-                <h3 className="font-serif text-lg font-bold mb-6 text-ink/30">{mentor.name}</h3>
-
-                <div className="flex items-center gap-2">
-                  {[0, 1, 2].map((i) => (
-                    <motion.div
-                      key={i}
-                      className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]/60"
-                      animate={{ opacity: [0.2, 1, 0.2], scale: [0.7, 1.2, 0.7] }}
-                      transition={{ duration: 1.8, repeat: Infinity, delay: i * 0.35, ease: "easeInOut" }}
-                    />
-                  ))}
-                </div>
-              </motion.div>
-            );
-          }
-
-          // Loaded State
           const isNew = justArrived.includes(mentorId);
 
           return (
@@ -185,8 +155,8 @@ export default function Envelopes() {
               transition={{ type: "spring", stiffness: 200, damping: 20 }}
               onClick={() => handleOpenLetter(reply)}
               className={`cursor-pointer group relative flex flex-col items-center justify-center p-8 bg-[#FAFAFA] transition-all duration-1000 h-72 overflow-hidden ${
-                isNew 
-                  ? 'border-[#D4AF37] shadow-[0_0_40px_rgba(212,175,55,0.4)]' 
+                isNew
+                  ? 'border-[#D4AF37] shadow-[0_0_40px_rgba(212,175,55,0.4)]'
                   : 'border-[#E5E0D8] shadow-md hover:shadow-xl'
               }`}
             >

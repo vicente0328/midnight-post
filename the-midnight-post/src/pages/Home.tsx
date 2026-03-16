@@ -5,7 +5,7 @@ import { useAuth } from '../components/AuthContext';
 import { useSound } from '../components/SoundContext';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { generateSingleMentorReply } from '../services/ai';
+import { generateSingleMentorReply, rankMentors } from '../services/ai';
 
 const MENTOR_NAMES = {
   hyewoon: '혜운 스님',
@@ -87,31 +87,31 @@ export default function Home() {
         status: 'replied'
       });
 
-      // 2. Fire off generation in the background (do not await)
-      const mentors: ('hyewoon' | 'benedicto' | 'theodore' | 'yeonam')[] = ['hyewoon', 'benedicto', 'theodore', 'yeonam'];
-      
-      mentors.forEach(async (mentorId) => {
-        try {
-          const reply = await generateSingleMentorReply(content, mentorId);
-          
-          const replyData: any = {
-            uid: user.uid,
-            entryId: entryRef.id,
-            mentorId: reply.mentorId,
-            quote: reply.quote,
-            translation: reply.translation,
-            advice: reply.advice,
-            createdAt: serverTimestamp()
-          };
-          
-          if (reply.source) {
-            replyData.source = reply.source;
+      // 2. Fire off generation in relevance order (staggered so most relevant starts first)
+      const rankedMentors = rankMentors(content.trim());
+
+      rankedMentors.forEach((mentorId, index) => {
+        setTimeout(async () => {
+          try {
+            const reply = await generateSingleMentorReply(content, mentorId);
+
+            const replyData: any = {
+              uid: user.uid,
+              entryId: entryRef.id,
+              mentorId: reply.mentorId,
+              quote: reply.quote,
+              translation: reply.translation,
+              advice: reply.advice,
+              createdAt: serverTimestamp()
+            };
+
+            if (reply.source) replyData.source = reply.source;
+
+            await addDoc(collection(db, 'replies'), replyData);
+          } catch (error) {
+            console.error(`Failed to generate reply for ${mentorId}:`, error);
           }
-          
-          await addDoc(collection(db, 'replies'), replyData);
-        } catch (error) {
-          console.error(`Failed to generate reply for ${mentorId}:`, error);
-        }
+        }, index * 150); // 150ms stagger — most relevant starts first
       });
 
       // 3. Navigate to envelopes immediately after a short "Sent" animation
