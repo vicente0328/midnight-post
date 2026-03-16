@@ -1,6 +1,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import Anthropic from "@anthropic-ai/sdk";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, dangerouslyAllowBrowser: true });
 
 export interface MentorReply {
   mentorId: 'hyewoon' | 'benedicto' | 'theodore' | 'yeonam';
@@ -62,11 +64,29 @@ ${mentorDescriptions[mentorId]}
 
     const text = response.text;
     if (!text) throw new Error("No response from AI");
-    
+
     return JSON.parse(text) as MentorReply;
-  } catch (error) {
-    console.error(`Error generating reply for ${mentorId}:`, error);
-    throw error;
+  } catch (geminiError) {
+    console.warn(`Gemini failed for ${mentorId}, falling back to Claude:`, geminiError);
+
+    try {
+      const claudeResponse = await anthropic.messages.create({
+        model: "claude-opus-4-6",
+        max_tokens: 2048,
+        messages: [{ role: "user", content: prompt + "\n\nJSON 형식으로만 응답하세요." }],
+      });
+
+      const text = claudeResponse.content[0].type === "text" ? claudeResponse.content[0].text : null;
+      if (!text) throw new Error("No response from Claude");
+
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("No JSON found in Claude response");
+
+      return JSON.parse(jsonMatch[0]) as MentorReply;
+    } catch (claudeError) {
+      console.error(`Claude fallback also failed for ${mentorId}:`, claudeError);
+      throw claudeError;
+    }
   }
 }
 
