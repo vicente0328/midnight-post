@@ -234,7 +234,7 @@ function LetterModal({ reply, onClose }: { reply: MentorReply; onClose: () => vo
         exit={{ scale: 0.95, y: 20, opacity: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-3xl bg-[#fdfbf7] p-6 sm:p-10 md:p-20 shadow-[0_0_60px_rgba(0,0,0,0.5)] overflow-y-auto max-h-[90vh] letter-scroll border border-[#D4AF37]/20"
+        className="relative w-full max-w-3xl bg-[#fdfbf7] p-5 sm:p-10 md:p-20 shadow-[0_0_60px_rgba(0,0,0,0.5)] overflow-y-auto max-h-[95vh] letter-scroll border border-[#D4AF37]/20"
         style={{ 
           backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
           boxShadow: 'inset 0 0 100px rgba(139, 115, 85, 0.1), 0 20px 60px rgba(0,0,0,0.4)'
@@ -249,53 +249,51 @@ function LetterModal({ reply, onClose }: { reply: MentorReply; onClose: () => vo
         </button>
 
         {/* Header: Mentor Info */}
-        <div className="flex flex-col items-center mb-8 md:mb-16">
-          <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${mentor.color} p-1 shadow-md mb-6 relative flex items-center justify-center`}>
+        <div className="flex flex-col items-center mb-6 md:mb-16">
+          <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br ${mentor.color} p-1 shadow-md mb-4 relative flex items-center justify-center`}>
             <div className="absolute inset-1 rounded-full border border-[#D4AF37]/50"></div>
-            {React.cloneElement(mentor.icon as React.ReactElement, { className: "w-6 h-6 text-[#D4AF37]" })}
+            {React.cloneElement(mentor.icon as React.ReactElement, { className: "w-5 h-5 sm:w-6 sm:h-6 text-[#D4AF37]" })}
           </div>
-          <h2 className="font-serif text-2xl font-bold tracking-widest text-ink/90">{mentor.name}</h2>
-          <p className="text-xs opacity-50 uppercase tracking-[0.3em] mt-2">{mentor.title}</p>
+          <h2 className="font-serif text-xl sm:text-2xl font-bold tracking-wider sm:tracking-widest text-ink/90">{mentor.name}</h2>
+          <p className="text-[10px] sm:text-xs opacity-50 uppercase tracking-[0.2em] sm:tracking-[0.3em] mt-1 sm:mt-2">{mentor.title}</p>
         </div>
 
         <div className="font-serif text-ink/90">
           {/* Lyrical Quote Section */}
-          <div className="text-center mb-8 md:mb-16 relative px-2 md:px-12">
-            <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-8xl text-[#D4AF37]/15 font-serif leading-none select-none">"</span>
+          <div className="text-center mb-6 md:mb-16 relative px-0 md:px-12">
+            <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-7xl sm:text-8xl text-[#D4AF37]/15 font-serif leading-none select-none">"</span>
 
-            <p className="text-lg sm:text-2xl md:text-3xl leading-snug sm:leading-relaxed italic text-ink/90 mb-6 relative z-10 break-keep font-medium">
+            <p className="text-base sm:text-2xl md:text-3xl leading-relaxed italic text-ink/90 mb-5 relative z-10 font-medium">
               {reply.quote}
             </p>
 
-            <div className="flex items-center justify-center gap-4 mb-6 opacity-60">
-              <div className="h-px w-16 bg-gradient-to-r from-transparent via-ink/40 to-transparent"></div>
-              {reply.source && <span className="text-sm tracking-widest">{reply.source}</span>}
-              <div className="h-px w-16 bg-gradient-to-r from-transparent via-ink/40 to-transparent"></div>
+            <div className="flex items-center justify-center gap-3 mb-5 opacity-60">
+              <div className="h-px w-12 bg-gradient-to-r from-transparent via-ink/40 to-transparent"></div>
+              {reply.source && <span className="text-xs sm:text-sm tracking-wider">{reply.source}</span>}
+              <div className="h-px w-12 bg-gradient-to-r from-transparent via-ink/40 to-transparent"></div>
             </div>
 
-            <p className="text-sm sm:text-base md:text-lg leading-relaxed text-ink/70 max-w-xl mx-auto break-keep">
+            <p className="text-sm sm:text-base md:text-lg leading-relaxed text-ink/70 mx-auto">
               {reply.translation}
             </p>
           </div>
 
           {/* Elegant Divider */}
-          <div className="flex justify-center items-center gap-3 my-8 md:my-16 opacity-40">
+          <div className="flex justify-center items-center gap-3 my-6 md:my-16 opacity-40">
             <div className="w-1.5 h-1.5 rotate-45 bg-[#D4AF37]"></div>
             <div className="w-1 h-1 rotate-45 bg-[#D4AF37]/60"></div>
             <div className="w-1.5 h-1.5 rotate-45 bg-[#D4AF37]"></div>
           </div>
 
-          {/* Advice Section with Drop Cap */}
-          <div className="space-y-4 md:space-y-6 text-base sm:text-lg md:text-xl leading-[1.9] sm:leading-[2.1] md:leading-[2.2] text-ink/90 text-justify break-keep px-0 md:px-8">
+          {/* Advice Section */}
+          <div className="text-[15px] sm:text-lg md:text-xl leading-[1.85] sm:leading-[2.1] md:leading-[2.2] text-ink/90 md:text-justify md:break-keep px-0 md:px-8">
             {reply.advice.split('\n').map((paragraph, index) => {
               if (!paragraph.trim()) return null;
-
               const isFirstParagraph = index === 0;
-
               return (
                 <p
                   key={index}
-                  className={`${isFirstParagraph ? 'first-letter:text-5xl first-letter:font-bold first-letter:text-[#D4AF37] first-letter:mr-2 first-letter:float-left first-letter:leading-none first-letter:mt-2' : ''}`}
+                  className={`mb-5 md:mb-7 ${isFirstParagraph ? 'sm:first-letter:text-5xl sm:first-letter:font-bold sm:first-letter:text-[#D4AF37] sm:first-letter:mr-2 sm:first-letter:float-left sm:first-letter:leading-none sm:first-letter:mt-2' : ''}`}
                 >
                   {paragraph}
                 </p>
@@ -304,9 +302,9 @@ function LetterModal({ reply, onClose }: { reply: MentorReply; onClose: () => vo
           </div>
 
           {/* Footer Signature */}
-          <div className="mt-12 md:mt-24 text-right pr-2 md:pr-8 opacity-60 italic">
-            <p className="text-lg">당신의 평안을 기원하며,</p>
-            <p className="text-xl mt-2 font-bold">{mentor.name} 드림</p>
+          <div className="mt-8 md:mt-24 text-right opacity-60 italic">
+            <p className="text-sm sm:text-lg">당신의 평안을 기원하며,</p>
+            <p className="text-base sm:text-xl mt-1 sm:mt-2 font-bold">{mentor.name} 드림</p>
           </div>
         </div>
       </motion.div>
