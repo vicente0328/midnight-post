@@ -311,16 +311,32 @@ export default function Damso() {
   const messageOrderRef = useRef(0);
   const sessionStartRef = useRef<number | null>(null);
   const shouldCloseRef = useRef(false);
+  // 사용자가 위로 스크롤 중이면 자동 스크롤 하지 않음
+  const isNearBottomRef = useRef(true);
 
   // openingReady: set once AI generates the opening
   const [openingData, setOpeningData] = useState<{ stageDirection: string; mentorGreeting: string } | null>(null);
   // overlayDone: set once loading overlay fades out
   const [overlayDone, setOverlayDone] = useState(false);
 
-  // Auto-scroll on new messages / typing
-  useEffect(() => {
+  // 스크롤 위치 감지 — 사용자가 위로 올리면 자동 스크롤 멈춤
+  const handleScroll = useCallback(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    if (!el) return;
+    isNearBottomRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 120;
+  }, []);
+
+  // 새 메시지 도착 시 자동 스크롤
+  // behavior: 'smooth' 제거 — 반복 호출 시 iOS Safari/Chrome에서 scroll이 멈추는 버그 방지
+  useEffect(() => {
+    if (!isNearBottomRef.current) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    // rAF으로 DOM 반영 후 스크롤
+    const id = requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+    return () => cancelAnimationFrame(id);
   }, [messages]);
 
   // Fetch entry + create session + generate opening in background
@@ -545,6 +561,7 @@ export default function Damso() {
             <div
               ref={scrollRef}
               className="flex-1 overflow-y-auto damso-scroll"
+              onScroll={handleScroll}
               style={{
                 padding: '2.5rem 1.5rem 1rem',
                 WebkitOverflowScrolling: 'touch',
