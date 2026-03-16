@@ -234,10 +234,13 @@ function LetterModal({ reply, onClose }: { reply: MentorReply; onClose: () => vo
         exit={{ scale: 0.95, y: 20, opacity: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-3xl bg-[#fdfbf7] p-5 sm:p-10 md:p-20 shadow-[0_0_60px_rgba(0,0,0,0.5)] overflow-y-auto max-h-[95vh] letter-scroll border border-[#D4AF37]/20"
-        style={{ 
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        className="relative w-full max-w-3xl bg-[#fdfbf7] p-5 sm:p-10 md:p-20 shadow-[0_0_60px_rgba(0,0,0,0.5)] overflow-y-auto overscroll-contain max-h-[95vh] letter-scroll border border-[#D4AF37]/20"
+        style={{
           backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
-          boxShadow: 'inset 0 0 100px rgba(139, 115, 85, 0.1), 0 20px 60px rgba(0,0,0,0.4)'
+          boxShadow: 'inset 0 0 100px rgba(139, 115, 85, 0.1), 0 20px 60px rgba(0,0,0,0.4)',
+          WebkitOverflowScrolling: 'touch',
         }}
       >
         {/* Elegant Close Button */}
