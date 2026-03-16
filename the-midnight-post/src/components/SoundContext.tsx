@@ -235,18 +235,25 @@ function startFire(ctx: AudioContext): { stop: () => void } {
 
 // ── One-shot sounds ───────────────────────────────────────────────────────────
 
-// Single paper rustle burst (for page turn)
+// Calm paper unfold (for opening a letter) – slow rise, long gentle decay
 function playRustle(ctx: AudioContext) {
-  const n = Math.floor(ctx.sampleRate * 0.15);
+  const dur = 0.55;
+  const n = Math.floor(ctx.sampleRate * dur);
   const buf = ctx.createBuffer(1, n, ctx.sampleRate);
   const d = buf.getChannelData(0);
   for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+
   const src = ctx.createBufferSource(); src.buffer = buf;
-  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 3000; bp.Q.value = 0.8;
+
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1200;
+  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2800; bp.Q.value = 0.5;
+
   const g = ctx.createGain();
-  g.gain.setValueAtTime(0.35, ctx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-  src.connect(bp); bp.connect(g); g.connect(ctx.destination);
+  g.gain.setValueAtTime(0, ctx.currentTime);
+  g.gain.linearRampToValueAtTime(0.22, ctx.currentTime + 0.08);   // soft attack
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur); // long decay
+
+  src.connect(hp); hp.connect(bp); bp.connect(g); g.connect(ctx.destination);
   src.start();
 }
 
