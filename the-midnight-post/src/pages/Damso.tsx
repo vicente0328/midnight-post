@@ -142,40 +142,42 @@ function MessageBlock({
   isAnimating: boolean;
   onAnimationComplete?: () => void;
 }) {
+  const calledRef = useRef(false);
+
+  const handleAnimationComplete = () => {
+    if (isAnimating && !calledRef.current) {
+      calledRef.current = true;
+      onAnimationComplete?.();
+    }
+  };
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: targetOpacity, y: 0 }}
-      transition={{ duration: 0.9, ease: 'easeOut' }}
+      transition={{ duration: isAnimating ? 1.6 : 0.8, ease: 'easeOut' }}
+      onAnimationComplete={handleAnimationComplete}
       className="mb-7 md:mb-9"
     >
       {message.type === 'stage_direction' && (
         <p className="font-serif text-sm md:text-[0.95rem] italic text-center leading-loose"
-          style={{ color: 'rgba(44,42,41,0.55)' }}>
+          style={{ color: 'rgba(44,42,41,0.55)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
           {message.content}
         </p>
       )}
 
       {message.type === 'mentor' && (
         <p className="font-serif text-base md:text-lg leading-[2] md:leading-[2.1]"
-          style={{ color: 'rgba(44,42,41,0.9)' }}>
+          style={{ color: 'rgba(44,42,41,0.9)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
           <span className="font-bold">{mentorName}:</span>
           {' '}
-          {isAnimating ? (
-            <TypewriterText
-              text={`"${message.content}"`}
-              speed={32}
-              onComplete={onAnimationComplete}
-            />
-          ) : (
-            `"${message.content}"`
-          )}
+          "{message.content}"
         </p>
       )}
 
       {message.type === 'user' && (
         <p className="font-serif text-base md:text-lg leading-[2] md:leading-[2.1]"
-          style={{ color: 'rgba(44,42,41,0.75)' }}>
+          style={{ color: 'rgba(44,42,41,0.75)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
           <span className="font-semibold" style={{ opacity: 0.6 }}>나:</span>
           {' '}
           {message.content}
