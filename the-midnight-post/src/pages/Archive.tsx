@@ -92,6 +92,9 @@ export default function Archive() {
   // 삭제 확인
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  // 편지 카드 펼치기
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   // 책갈피 상세 모달
   const [selectedBookmark, setSelectedBookmark] = useState<BookmarkDoc | null>(null);
 
@@ -185,6 +188,7 @@ export default function Archive() {
 
   const handleTabChange = (t: Tab) => {
     setConfirmDeleteId(null);
+    setExpandedId(null);
     setTab(t);
     if (t === 'damso' && !sessionsFetched) fetchSessions();
     if (t === 'bookmarks' && !bookmarksFetched) fetchBookmarks();
@@ -237,24 +241,53 @@ export default function Archive() {
                 transition={{ delay: index * 0.05, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                 className="group relative"
               >
-                <Link to={`/envelopes/${entry.id}`} className="block h-full">
-                  <div className="relative flex flex-col justify-between p-6 border border-ink/20 bg-[#fdfbf7] shadow-sm hover:shadow-md transition-shadow duration-500 h-48">
-                    <div className="absolute top-2 left-2 right-2 bottom-2 border border-ink/5 pointer-events-none" />
-                    <div className="flex justify-between items-start mb-4">
-                      <span className="text-xs font-mono opacity-50">
-                        {entry.createdAt ? format(entry.createdAt.toDate(), 'yyyy.MM.dd') : '—'}
-                      </span>
-                      <span className="text-[10px] uppercase tracking-widest opacity-40">
-                        {entry.emotion !== 'unknown' ? entry.emotion : ''}
-                      </span>
-                    </div>
-                    <p className="font-serif text-lg leading-relaxed line-clamp-3 opacity-80 group-hover:opacity-100 transition-opacity duration-300">
-                      {entry.content}
-                    </p>
+                <div
+                  onClick={() => {
+                    if (confirmDeleteId) return;
+                    if (expandedId === entry.id) {
+                      setExpandedId(null);
+                    } else {
+                      setExpandedId(entry.id);
+                    }
+                  }}
+                  className={`relative flex flex-col p-6 border border-ink/20 bg-[#fdfbf7] shadow-sm transition-shadow duration-500 cursor-pointer ${
+                    expandedId === entry.id ? '' : 'h-48 hover:shadow-md'
+                  }`}
+                >
+                  <div className="absolute top-2 left-2 right-2 bottom-2 border border-ink/5 pointer-events-none" />
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="text-xs font-mono opacity-50">
+                      {entry.createdAt ? format(entry.createdAt.toDate(), 'yyyy.MM.dd') : '—'}
+                    </span>
+                    <span className="text-[10px] uppercase tracking-widest opacity-40">
+                      {entry.emotion !== 'unknown' ? entry.emotion : ''}
+                    </span>
                   </div>
-                </Link>
+                  <p className={`font-serif text-lg leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity duration-300 ${
+                    expandedId === entry.id ? '' : 'line-clamp-3'
+                  }`}>
+                    {entry.content}
+                  </p>
+                  {expandedId === entry.id && (
+                    <div className="mt-6 flex items-center justify-between">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setExpandedId(null); }}
+                        className="text-[10px] opacity-35 hover:opacity-60 transition-opacity font-mono tracking-widest uppercase"
+                      >
+                        접기
+                      </button>
+                      <Link
+                        to={`/envelopes/${entry.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-serif text-sm italic opacity-60 hover:opacity-100 transition-opacity"
+                      >
+                        멘토들의 답장 읽기 →
+                      </Link>
+                    </div>
+                  )}
+                </div>
                 {confirmDeleteId === entry.id ? (
-                  <div className="absolute top-2 right-2 flex items-center gap-2 bg-[#fdfbf7] border border-ink/20 px-2 py-1 shadow-sm">
+                  <div className="absolute top-2 right-2 flex items-center gap-2 bg-[#fdfbf7] border border-ink/20 px-2 py-1 shadow-sm z-10">
                     <span className="text-[10px] opacity-60">삭제할까요?</span>
                     <button
                       onClick={() => deleteEntry(entry.id)}
@@ -267,7 +300,7 @@ export default function Archive() {
                   </div>
                 ) : (
                   <button
-                    onClick={(e) => { e.preventDefault(); setConfirmDeleteId(entry.id); }}
+                    onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(entry.id); }}
                     className="absolute top-2 right-2 opacity-20 hover:opacity-70 transition-opacity duration-200"
                   >
                     <Trash2 size={14} strokeWidth={1.5} />
