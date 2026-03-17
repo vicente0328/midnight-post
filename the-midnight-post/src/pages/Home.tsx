@@ -208,7 +208,7 @@ export default function Home() {
       if (isCrisis) {
         setCrisisEntryId(entryRef.id);
       } else {
-        setTimeout(() => navigate('/study'), 1500);
+        setTimeout(() => navigate(`/envelopes/${entryRef.id}`), 1500);
       }
     } catch (error) {
       console.error('Error submitting entry:', error);
