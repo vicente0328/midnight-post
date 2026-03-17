@@ -5,6 +5,7 @@ import { useAuth } from '../components/AuthContext';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Feather, Flower2, Cross, Brush, Bookmark, Trash2 } from 'lucide-react';
+import { ShareCardButton } from '../utils/shareCard';
 
 // ── 멘토 정보 ─────────────────────────────────────────────────────────────────
 
@@ -295,6 +296,19 @@ function BookmarkModal({
           <div className="mt-8 md:mt-24 text-right opacity-60 italic">
             <p className="text-sm sm:text-lg">당신의 평안을 기원하며,</p>
             <p className="text-base sm:text-xl mt-1 sm:mt-2 font-bold">{mentor.name} 드림</p>
+          </div>
+
+          {/* 공유 카드 */}
+          <div className="mt-10 md:mt-14 flex flex-col items-center gap-3">
+            <div className="h-px w-full bg-ink/8" />
+            <div className="mt-3">
+              <ShareCardButton
+                mentorName={mentor.name}
+                quote={bookmark.quote}
+                source={bookmark.source}
+                translation={bookmark.translation}
+              />
+            </div>
           </div>
         </div>
       </motion.div>

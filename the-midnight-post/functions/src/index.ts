@@ -237,7 +237,7 @@ ${knowledgeContext}
 
     const claude = getClaude();
     const claudeResponse = await claude.messages.create({
-      model: 'claude-opus-4-6',
+      model: 'claude-sonnet-4-6',
       max_tokens: 2048,
       messages: [{ role: 'user', content: prompt + '\n\nJSON 형식으로만 응답하세요.' }],
     });
@@ -298,7 +298,7 @@ JSON만 응답하세요.`;
   } catch {
     const claude = getClaude();
     const resp = await claude.messages.create({
-      model: 'claude-opus-4-6',
+      model: 'claude-sonnet-4-6',
       max_tokens: 512,
       messages: [{ role: 'user', content: prompt }],
     });
@@ -365,7 +365,7 @@ JSON만 응답하세요.`;
   } catch {
     const claude = getClaude();
     const resp = await claude.messages.create({
-      model: 'claude-opus-4-6',
+      model: 'claude-sonnet-4-6',
       max_tokens: 768,
       messages: [{ role: 'user', content: prompt }],
     });
@@ -434,7 +434,7 @@ JSON만 응답하세요.`;
   } catch {
     const claude = getClaude();
     const resp = await claude.messages.create({
-      model: 'claude-opus-4-6',
+      model: 'claude-sonnet-4-6',
       max_tokens: 512,
       messages: [{ role: 'user', content: prompt }],
     });

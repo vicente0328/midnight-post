@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Flower2, Cross, Feather, Brush, Trash2, Bookmark } from 'lucide-react';
+import { ShareCardButton } from '../utils/shareCard';
 
 // ── 멘토 정보 ─────────────────────────────────────────────────────────────────
 
@@ -498,125 +499,6 @@ export default function Archive() {
   );
 }
 
-// ── 공유 카드 생성 (Canvas API) ───────────────────────────────────────────────
-
-async function generateShareCardBlob(
-  mentorName: string,
-  quote: string,
-  source: string,
-  translation: string,
-): Promise<Blob | null> {
-  await document.fonts.ready;
-
-  const W = 1080, H = 1080;
-  const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return null;
-
-  const PAPER = '#EDE6CC';
-  const INK = (a: number) => `rgba(26,18,8,${a})`;
-  const GOLD = 'rgba(148,112,28,0.65)';
-  const SERIF = "'Cormorant Garamond', 'Nanum Myeongjo', serif";
-  const PAD = 110;
-
-  // Background
-  ctx.fillStyle = PAPER;
-  ctx.fillRect(0, 0, W, H);
-
-  // Gold border lines (top + bottom only)
-  ctx.fillStyle = GOLD;
-  ctx.fillRect(0, 0, W, 2.5);
-  ctx.fillRect(0, H - 2.5, W, 2.5);
-
-  // Inner ink border (subtle)
-  ctx.strokeStyle = INK(0.07);
-  ctx.lineWidth = 1;
-  ctx.strokeRect(PAD * 0.55, PAD * 0.55, W - PAD * 1.1, H - PAD * 1.1);
-
-  let y = PAD + 60;
-
-  // Mentor name
-  ctx.font = `500 26px ${SERIF}`;
-  ctx.fillStyle = INK(0.38);
-  ctx.textAlign = 'center';
-  ctx.fillText(mentorName, W / 2, y);
-  y += 36;
-
-  // Thin divider
-  ctx.strokeStyle = INK(0.12);
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(PAD * 1.6, y);
-  ctx.lineTo(W - PAD * 1.6, y);
-  ctx.stroke();
-  y += 70;
-
-  // Quote (large italic, word-wrapped)
-  ctx.font = `italic 300 46px ${SERIF}`;
-  ctx.fillStyle = INK(0.82);
-  const maxW = W - PAD * 2;
-  const quoteLines = wrapCanvasText(ctx, `"${quote}"`, maxW);
-  for (const line of quoteLines) {
-    ctx.fillText(line, W / 2, y);
-    y += 64;
-  }
-  y += 16;
-
-  // Source
-  ctx.font = `300 22px ${SERIF}`;
-  ctx.fillStyle = INK(0.32);
-  ctx.fillText(`— ${source}`, W / 2, y);
-  y += 50;
-
-  // Thin divider
-  ctx.strokeStyle = INK(0.08);
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(PAD * 2, y);
-  ctx.lineTo(W - PAD * 2, y);
-  ctx.stroke();
-  y += 50;
-
-  // Translation (italic)
-  ctx.font = `italic 300 30px ${SERIF}`;
-  ctx.fillStyle = INK(0.52);
-  const transLines = wrapCanvasText(ctx, translation, maxW - 40);
-  for (const line of transLines) {
-    ctx.fillText(line, W / 2, y);
-    y += 46;
-  }
-
-  // Asterism
-  ctx.font = `300 22px serif`;
-  ctx.fillStyle = INK(0.2);
-  ctx.fillText('* * *', W / 2, H - PAD - 70);
-
-  // Watermark
-  ctx.font = `300 17px ${SERIF}`;
-  ctx.fillStyle = INK(0.25);
-  ctx.fillText('THE MIDNIGHT POST', W / 2, H - PAD - 30);
-
-  return new Promise(resolve => canvas.toBlob(b => resolve(b), 'image/png'));
-}
-
-function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-  const lines: string[] = [];
-  let line = '';
-  for (const char of text) {
-    const test = line + char;
-    if (ctx.measureText(test).width > maxWidth) {
-      if (line) lines.push(line);
-      line = char;
-    } else {
-      line = test;
-    }
-  }
-  if (line) lines.push(line);
-  return lines;
-}
-
 // ── 책갈피 상세 모달 ──────────────────────────────────────────────────────────
 
 function BookmarkModal({
@@ -629,46 +511,6 @@ function BookmarkModal({
   const mentor = MENTOR_INFO[bookmark.mentorId as MentorKey];
   if (!mentor) return null;
   const Icon = mentor.icon;
-  const [isGeneratingCard, setIsGeneratingCard] = useState(false);
-  const [cardUrl, setCardUrl] = useState<string | null>(null);
-
-  const handleShareCard = async () => {
-    setIsGeneratingCard(true);
-    try {
-      const blob = await generateShareCardBlob(
-        mentor.name,
-        bookmark.quote,
-        bookmark.source,
-        bookmark.translation,
-      );
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-
-      // Web Share API (mobile)
-      if (navigator.share && navigator.canShare?.({ files: [new File([blob], 'midnight-post.png', { type: 'image/png' })] })) {
-        await navigator.share({
-          files: [new File([blob], 'midnight-post.png', { type: 'image/png' })],
-          title: 'The Midnight Post',
-        });
-        URL.revokeObjectURL(url);
-      } else {
-        // Fallback: open preview
-        setCardUrl(url);
-      }
-    } catch (err) {
-      console.error('공유 카드 생성 실패:', err);
-    } finally {
-      setIsGeneratingCard(false);
-    }
-  };
-
-  const handleDownloadCard = () => {
-    if (!cardUrl) return;
-    const a = document.createElement('a');
-    a.href = cardUrl;
-    a.download = 'midnight-post-card.png';
-    a.click();
-  };
 
   return (
     <motion.div
@@ -757,36 +599,14 @@ function BookmarkModal({
           {/* 공유 카드 */}
           <div className="mt-10 md:mt-14 flex flex-col items-center gap-3">
             <div className="h-px w-full bg-ink/8" />
-            {!cardUrl ? (
-              <button
-                onClick={handleShareCard}
-                disabled={isGeneratingCard}
-                className="font-serif text-sm italic opacity-45 hover:opacity-80 transition-opacity disabled:opacity-20 mt-4"
-              >
-                {isGeneratingCard ? '카드 생성 중…' : '공유 카드 만들기 →'}
-              </button>
-            ) : (
-              <div className="w-full flex flex-col items-center gap-4 mt-4">
-                <img src={cardUrl} alt="공유 카드" className="w-full max-w-xs border border-ink/10 shadow-md" />
-                <div className="flex gap-4">
-                  <button
-                    onClick={handleDownloadCard}
-                    className="font-serif text-sm italic opacity-55 hover:opacity-90 transition-opacity border-b border-ink/20 pb-px"
-                  >
-                    이미지 저장
-                  </button>
-                  <button
-                    onClick={() => { URL.revokeObjectURL(cardUrl!); setCardUrl(null); }}
-                    className="font-serif text-sm italic opacity-30 hover:opacity-55 transition-opacity"
-                  >
-                    닫기
-                  </button>
-                </div>
-                <p className="text-[10px] opacity-30 font-serif italic text-center">
-                  인스타그램 스토리나 피드에 공유해보세요.
-                </p>
-              </div>
-            )}
+            <div className="mt-4">
+              <ShareCardButton
+                mentorName={mentor.name}
+                quote={bookmark.quote}
+                source={bookmark.source}
+                translation={bookmark.translation}
+              />
+            </div>
           </div>
 
         </div>
