@@ -130,8 +130,8 @@ export default function Envelopes() {
       <h1 className="text-3xl font-serif mb-6">The Four Envelopes</h1>
       <p className="opacity-60 italic text-sm mb-8">네 명의 현자가 당신에게 보내는 위로의 편지입니다.</p>
 
-      {/* 대기 문구 — min-h로 공간 고정, 사라질 때 레이아웃 안 흔들림 */}
-      <div className="min-h-[2.5rem] flex items-center justify-center mb-10">
+      {/* 대기 문구 + 지혜카드 링크 — min-h로 공간 고정 */}
+      <div className="min-h-[5rem] flex flex-col items-center justify-center gap-4 mb-10">
         <AnimatePresence mode="wait">
           {replies.length < MENTOR_ORDER.length && (
             <motion.p
@@ -146,6 +146,20 @@ export default function Envelopes() {
             </motion.p>
           )}
         </AnimatePresence>
+        {replies.length < MENTOR_ORDER.length && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 2.5, duration: 1.2 }}
+          >
+            <button
+              onClick={() => navigate('/study')}
+              className="font-serif italic text-xs text-[#8B7355]/50 hover:text-[#8B7355]/90 transition-colors duration-500 border-b border-[#8B7355]/20 hover:border-[#8B7355]/50 pb-px"
+            >
+              기다리는 동안 오늘의 지혜 카드 읽으러 가기 →
+            </button>
+          </motion.div>
+        )}
       </div>
 
       {/* 항상 4칸 고정 그리드 — 카드 추가로 인한 리플로우 없음 */}
