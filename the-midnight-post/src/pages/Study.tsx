@@ -123,7 +123,7 @@ function Lobby({ onEnter }: { onEnter: (id: MentorKey) => void }) {
       <div className="text-center mb-12">
         <h1 className="text-3xl font-serif mb-4">Mentor's Library</h1>
         <p className="opacity-60 italic text-sm break-keep max-w-xs mx-auto leading-relaxed" style={{ textWrap: 'balance' } as React.CSSProperties}>
-          네 개의 문 — 각자의 지혜가 깃든 공간으로 들어가 보세요.
+          각자의 방에 불이 켜져 있습니다.
         </p>
         {isAdmin && (
           <button
