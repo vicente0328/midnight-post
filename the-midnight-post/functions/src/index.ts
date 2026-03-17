@@ -153,7 +153,7 @@ const MENTOR_DOMAINS: Record<MentorId, string> = {
 
 // ── 1. 멘토 편지 생성 ─────────────────────────────────────────────────────────
 
-export const generateMentorReply = onCall(async (request) => {
+export const generateMentorReply = onCall({ timeoutSeconds: 300, memory: '512MiB' }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', '로그인이 필요합니다.');
 
   const { content, mentorId, writtenHour, knowledgeEntries = [], recentEntries = [] } = request.data as {
@@ -254,7 +254,7 @@ ${knowledgeContext}
 
 // ── 2. 담소 오프닝 ────────────────────────────────────────────────────────────
 
-export const generateDamsoOpening = onCall(async (request) => {
+export const generateDamsoOpening = onCall({ timeoutSeconds: 180, memory: '512MiB' }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', '로그인이 필요합니다.');
 
   const { mentorId, entryContent } = request.data as { mentorId: MentorId; entryContent: string };
@@ -311,7 +311,7 @@ JSON만 응답하세요.`;
 
 // ── 3. 담소 응답 ──────────────────────────────────────────────────────────────
 
-export const generateDamsoResponse = onCall(async (request) => {
+export const generateDamsoResponse = onCall({ timeoutSeconds: 180, memory: '512MiB' }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', '로그인이 필요합니다.');
 
   const { mentorId, entryContent, conversationHistory, userInput } = request.data as {
@@ -378,7 +378,7 @@ JSON만 응답하세요.`;
 
 // ── 4. 담소 클로징 ────────────────────────────────────────────────────────────
 
-export const generateDamsoClosing = onCall(async (request) => {
+export const generateDamsoClosing = onCall({ timeoutSeconds: 180, memory: '512MiB' }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', '로그인이 필요합니다.');
 
   const { mentorId, entryContent, conversationHistory, userInput } = request.data as {
