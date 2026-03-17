@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { collection, query, where, getDocs, doc, getDoc, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Flower2, Cross, Feather, Brush } from 'lucide-react';
+import { X, Flower2, Cross, Feather, Brush, Trash2 } from 'lucide-react';
 
 // ── 멘토 정보 ─────────────────────────────────────────────────────────────────
 
@@ -64,6 +64,35 @@ export default function Archive() {
 
   // 담소 리더
   const [selectedSession, setSelectedSession] = useState<SessionDoc | null>(null);
+
+  // 삭제 확인
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const deleteEntry = useCallback(async (entryId: string) => {
+    if (!user) return;
+    const repliesSnap = await getDocs(query(collection(db, 'replies'), where('entryId', '==', entryId)));
+    const batch = writeBatch(db);
+    repliesSnap.forEach(d => batch.delete(d.ref));
+    batch.delete(doc(db, 'entries', entryId));
+    await batch.commit();
+    setEntries(prev => prev.filter(e => e.id !== entryId));
+    setConfirmDeleteId(null);
+  }, [user]);
+
+  const deleteSession = useCallback(async (sessionId: string) => {
+    if (!user) return;
+    const messagesSnap = await getDocs(
+      query(collection(db, 'damso_messages'), where('uid', '==', user.uid))
+    );
+    const batch = writeBatch(db);
+    messagesSnap.forEach(d => {
+      if (d.data().sessionId === sessionId) batch.delete(d.ref);
+    });
+    batch.delete(doc(db, 'damso_sessions', sessionId));
+    await batch.commit();
+    setSessions(prev => prev.filter(s => s.id !== sessionId));
+    setConfirmDeleteId(null);
+  }, [user]);
 
   // 편지 목록 — 마운트 시 로드
   useEffect(() => {
@@ -150,7 +179,7 @@ export default function Archive() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                className="group"
+                className="group relative"
               >
                 <Link to={`/envelopes/${entry.id}`} className="block h-full">
                   <div className="relative flex flex-col justify-between p-6 border border-ink/20 bg-[#fdfbf7] shadow-sm hover:shadow-md transition-shadow duration-500 h-48">
@@ -168,6 +197,26 @@ export default function Archive() {
                     </p>
                   </div>
                 </Link>
+                {confirmDeleteId === entry.id ? (
+                  <div className="absolute top-2 right-2 flex items-center gap-2 bg-[#fdfbf7] border border-ink/20 px-2 py-1 shadow-sm">
+                    <span className="text-[10px] opacity-60">삭제할까요?</span>
+                    <button
+                      onClick={() => deleteEntry(entry.id)}
+                      className="text-[10px] text-red-700 hover:text-red-900 transition-colors"
+                    >확인</button>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="text-[10px] opacity-40 hover:opacity-70 transition-opacity"
+                    >취소</button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => { e.preventDefault(); setConfirmDeleteId(entry.id); }}
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-30 hover:!opacity-70 transition-opacity duration-200"
+                  >
+                    <Trash2 size={14} strokeWidth={1.5} />
+                  </button>
+                )}
               </motion.div>
             ))}
           </div>
@@ -210,10 +259,11 @@ export default function Archive() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.06, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                  className="group relative"
                 >
                   <button
                     onClick={() => setSelectedSession(session)}
-                    className="group w-full text-left relative flex flex-col justify-between p-6 border border-ink/15 bg-[#fdfbf7] shadow-sm hover:shadow-md transition-shadow duration-500 h-48"
+                    className="w-full text-left relative flex flex-col justify-between p-6 border border-ink/15 bg-[#fdfbf7] shadow-sm hover:shadow-md transition-shadow duration-500 h-48"
                   >
                     <div className="absolute top-2 left-2 right-2 bottom-2 border border-ink/5 pointer-events-none" />
 
@@ -245,6 +295,26 @@ export default function Archive() {
                       열어보기 →
                     </p>
                   </button>
+                  {confirmDeleteId === session.id ? (
+                    <div className="absolute top-2 right-2 flex items-center gap-2 bg-[#fdfbf7] border border-ink/20 px-2 py-1 shadow-sm">
+                      <span className="text-[10px] opacity-60">삭제할까요?</span>
+                      <button
+                        onClick={() => deleteSession(session.id)}
+                        className="text-[10px] text-red-700 hover:text-red-900 transition-colors"
+                      >확인</button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="text-[10px] opacity-40 hover:opacity-70 transition-opacity"
+                      >취소</button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteId(session.id)}
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-30 hover:!opacity-70 transition-opacity duration-200"
+                    >
+                      <Trash2 size={14} strokeWidth={1.5} />
+                    </button>
+                  )}
                 </motion.div>
               );
             })}

@@ -14,41 +14,85 @@ const MENTOR_NAMES = {
   yeonam: '연암 선생'
 };
 
-const GREETINGS = [
-  "오늘 하루는 어땠나요?",
-  "당신의 밤이 평안하기를 바랍니다.",
-  "오늘도 무사히 하루를 보낸 당신에게.",
-  "어떤 마음으로 이 밤을 맞이하고 있나요?",
-  "당신의 이야기를 들려주세요.",
-  "수고했어요, 오늘도.",
-  "마음속에 담아둔 말을 조용히 꺼내보세요.",
-  "이곳에서는 어떤 감정이든 괜찮습니다.",
-  "당신의 하루 끝에 작은 위로가 되기를.",
-  "조용히 타오르는 촛불처럼, 당신의 이야기를 듣겠습니다.",
-  "오늘 하루, 당신을 미소 짓게 한 것은 무엇인가요?",
-  "힘든 일은 잠시 내려놓고 쉬어가세요.",
-  "당신의 모든 순간을 존중합니다.",
-  "밤이 깊어가는 시간, 어떤 생각에 잠겨 있나요?",
-  "오늘 하루도 견뎌내느라 애썼습니다.",
-  "당신의 마음에 고요한 평화가 깃들기를.",
-  "누구에게도 하지 못한 말이 있다면 이곳에 남겨주세요.",
-  "당신의 발걸음이 머무는 이 밤.",
-  "천천히, 당신의 속도대로 이야기해주세요.",
-  "오늘 하루의 무게를 이곳에 덜어두세요."
-];
+const TIME_CONTENT: Record<string, { subtitle: string; greetings: string[] }> = {
+  dawn: {
+    subtitle: "새벽에 찾아온 당신의 마음을 한 줄로 남겨주세요.",
+    greetings: [
+      "이른 새벽, 무엇이 당신을 깨웠나요?",
+      "새벽의 고요 속에서 어떤 생각이 머무나요?",
+      "남들이 잠든 시간, 혼자 깨어있는 당신에게.",
+      "새벽빛이 스미기 전, 마음속 이야기를 나눠요.",
+      "당신의 모든 순간을 존중합니다.",
+    ],
+  },
+  morning: {
+    subtitle: "오늘 하루, 어떤 마음으로 시작하시나요?",
+    greetings: [
+      "좋은 아침입니다. 오늘은 어떤 하루를 보내실 건가요?",
+      "새로운 하루가 시작되었습니다. 오늘의 마음은 어떤가요?",
+      "아침의 첫 마음을 한 줄로 남겨주세요.",
+      "오늘 하루를 어떻게 맞이하고 싶으신가요?",
+      "천천히, 당신의 속도대로 이야기해주세요.",
+    ],
+  },
+  afternoon: {
+    subtitle: "오후의 한 자락, 당신의 이야기를 들려주세요.",
+    greetings: [
+      "오후의 햇살 속에서 어떤 생각이 스치나요?",
+      "하루의 중간, 잠시 마음을 들여다보세요.",
+      "오늘 하루는 지금까지 어떠신가요?",
+      "잠깐 멈추어, 당신의 마음을 살펴보세요.",
+      "마음속에 담아둔 말을 조용히 꺼내보세요.",
+    ],
+  },
+  evening: {
+    subtitle: "하루의 끝자락, 마음을 한 줄로 남겨주세요.",
+    greetings: [
+      "하루를 마무리하며 어떤 감정이 남아있나요?",
+      "저녁 노을처럼, 오늘 하루를 되돌아보세요.",
+      "수고한 하루를 함께 돌아봐요.",
+      "저녁이 왔습니다. 오늘 당신의 마음은 어땠나요?",
+      "이곳에서는 어떤 감정이든 괜찮습니다.",
+    ],
+  },
+  night: {
+    subtitle: "지친 밤, 당신의 마음을 한 줄로 남겨주세요.",
+    greetings: [
+      "오늘 하루는 어땠나요?",
+      "당신의 밤이 평안하기를 바랍니다.",
+      "밤이 깊어가는 시간, 어떤 생각에 잠겨 있나요?",
+      "누구에게도 하지 못한 말이 있다면 이곳에 남겨주세요.",
+      "오늘 하루도 견뎌내느라 애썼습니다.",
+      "당신의 발걸음이 머무는 이 밤.",
+      "오늘 하루의 무게를 이곳에 덜어두세요.",
+    ],
+  },
+};
+
+function getTimePeriod(hour: number): string {
+  if (hour >= 0 && hour < 5) return 'dawn';
+  if (hour < 12) return 'morning';
+  if (hour < 18) return 'afternoon';
+  if (hour < 21) return 'evening';
+  return 'night';
+}
 
 export default function Home() {
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAnimation, setShowAnimation] = useState(false);
   const [greeting, setGreeting] = useState('');
+  const [timePeriod, setTimePeriod] = useState('night');
   const { user, setShowAuthModal } = useAuth();
   const { setTyping } = useSound();
   const navigate = useNavigate();
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    setGreeting(GREETINGS[Math.floor(Math.random() * GREETINGS.length)]);
+    const period = getTimePeriod(new Date().getHours());
+    setTimePeriod(period);
+    const greetings = TIME_CONTENT[period].greetings;
+    setGreeting(greetings[Math.floor(Math.random() * greetings.length)]);
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       setTyping(false);
@@ -90,10 +134,11 @@ export default function Home() {
       // 2. Fire off generation in relevance order (staggered so most relevant starts first)
       const rankedMentors = rankMentors(content.trim());
 
+      const writtenHour = new Date().getHours();
       rankedMentors.forEach((mentorId, index) => {
         setTimeout(async () => {
           try {
-            const reply = await generateSingleMentorReply(content, mentorId);
+            const reply = await generateSingleMentorReply(content, mentorId, writtenHour);
 
             const replyData: any = {
               uid: user.uid,
@@ -156,7 +201,7 @@ export default function Home() {
     >
       <div className="text-center mb-12">
         <h1 className="text-3xl font-serif mb-4">The Desk</h1>
-        <p className="opacity-60 italic text-sm break-keep">지친 밤, 당신의 마음을 한 줄로 남겨주세요.</p>
+        <p className="opacity-60 italic text-sm break-keep">{TIME_CONTENT[timePeriod].subtitle}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="w-full flex flex-col items-center">
