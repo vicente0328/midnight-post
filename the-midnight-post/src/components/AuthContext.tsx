@@ -58,8 +58,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        const newUser = await ensureUserDoc(currentUser);
-        setIsNewUser(newUser);
+        try {
+          const newUser = await ensureUserDoc(currentUser);
+          setIsNewUser(newUser);
+        } catch (err) {
+          console.warn('ensureUserDoc failed (non-fatal):', err);
+        }
       } else {
         setIsNewUser(false);
       }
