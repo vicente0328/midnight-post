@@ -183,7 +183,7 @@ export default function Envelopes() {
                 </p>
                 <button
                   onClick={() => navigate('/study')}
-                  className="font-serif italic text-xs text-[#8B7355]/45 hover:text-[#8B7355]/80 transition-colors duration-500 border-b border-[#8B7355]/20 hover:border-[#8B7355]/50 pb-px mt-1"
+                  className="font-serif italic text-xs text-[#8B7355] hover:text-[#6b5a3e] transition-colors duration-300 border-b border-[#8B7355]/50 hover:border-[#6b5a3e] pb-px mt-1"
                 >
                   기다리는 동안 연구실을 방문해보세요 →
                 </button>
