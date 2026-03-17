@@ -7,7 +7,7 @@ import {
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase';
 
 interface AuthContextType {
@@ -15,6 +15,8 @@ interface AuthContextType {
   loading: boolean;
   showAuthModal: boolean;
   setShowAuthModal: (v: boolean) => void;
+  isNewUser: boolean;
+  markOnboarded: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
@@ -26,7 +28,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-async function ensureUserDoc(currentUser: User) {
+/** Returns true if this is a brand-new user that hasn't completed onboarding */
+async function ensureUserDoc(currentUser: User): Promise<boolean> {
   const userRef = doc(db, 'users', currentUser.uid);
   const userSnap = await getDoc(userRef);
   if (!userSnap.exists()) {
@@ -35,23 +38,45 @@ async function ensureUserDoc(currentUser: User) {
       email: currentUser.email,
       displayName: currentUser.displayName,
       createdAt: new Date(),
+      onboarded: false,
     });
+    return true; // brand-new user
   }
+  const data = userSnap.data();
+  return data?.onboarded === false; // returning user who hasn't finished onboarding
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) await ensureUserDoc(currentUser);
+      if (currentUser) {
+        const newUser = await ensureUserDoc(currentUser);
+        setIsNewUser(newUser);
+      } else {
+        setIsNewUser(false);
+      }
       setUser(currentUser);
       setLoading(false);
     });
     return unsubscribe;
   }, []);
+
+  const markOnboarded = async () => {
+    if (!user) return;
+    const userRef = doc(db, 'users', user.uid);
+    try {
+      await updateDoc(userRef, { onboarded: true });
+    } catch {
+      // fallback: rewrite full doc if updateDoc fails (e.g. field didn't exist)
+      await setDoc(userRef, { onboarded: true }, { merge: true });
+    }
+    setIsNewUser(false);
+  };
 
   const signInWithGoogle = async () => {
     await signInWithPopup(auth, googleProvider);
@@ -90,6 +115,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         showAuthModal,
         setShowAuthModal,
+        isNewUser,
+        markOnboarded,
         signInWithGoogle,
         signInWithEmail,
         signUpWithEmail,

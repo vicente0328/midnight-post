@@ -1,0 +1,27 @@
+{
+  "name": "midnight-post-functions",
+  "version": "1.0.0",
+  "description": "Firebase Functions for The Midnight Post — server-side AI generation",
+  "engines": {
+    "node": "20"
+  },
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "deploy": "npm run build && firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
+    "@google/genai": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "firebase-admin": "^13.4.0",
+    "firebase-functions": "^6.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "typescript": "~5.8.2"
+  },
+  "private": true
+}
