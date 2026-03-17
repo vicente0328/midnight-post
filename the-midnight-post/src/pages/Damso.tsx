@@ -312,8 +312,9 @@ export default function Damso() {
         sessionIdRef.current = sessionResult.value.id;
         console.log('[담소] 세션 생성 성공:', sessionResult.value.id, '/ uid:', user.uid);
       } else {
-        console.error('[담소] 세션 생성 실패 (Firestore 규칙 또는 네트워크 문제):', sessionResult.reason);
-        setSessionSaveFailed(true);
+        const err = sessionResult.reason;
+        console.error('[담소] 세션 생성 실패:', err?.code, err?.message, err);
+        setSessionSaveFailed(String(err?.code ?? err?.message ?? err));
       }
 
       if (openingResult.status === 'fulfilled') {

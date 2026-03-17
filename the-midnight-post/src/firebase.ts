@@ -14,6 +14,9 @@ const firebaseConfig = {
 const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_FIRESTORE_DB_ID;
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firestoreDatabaseId);
+// DB ID가 없으면 기본 DB 사용 (Vercel 등 env 미설정 환경 대응)
+export const db = firestoreDatabaseId
+  ? getFirestore(app, firestoreDatabaseId)
+  : getFirestore(app);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
