@@ -65,7 +65,7 @@ export default function Study() {
         {activeRoom ? (
           <RoomView mentorId={activeRoom} onBack={() => setActiveRoom(null)} />
         ) : (
-          <Lobby onEnter={setActiveRoom} />
+          <Lobby onEnter={setActiveRoom} isFirst={isFirstRender.current} />
         )}
       </motion.div>
     </div>
@@ -74,7 +74,7 @@ export default function Study() {
 
 // ── 입구 화면 ────────────────────────────────────────────────────────────────
 
-function Lobby({ onEnter }: { onEnter: (id: MentorKey) => void }) {
+function Lobby({ onEnter, isFirst }: { onEnter: (id: MentorKey) => void; isFirst: boolean }) {
   return (
     <div className="w-full flex flex-col items-center">
       <div className="text-center mb-12">
@@ -91,7 +91,7 @@ function Lobby({ onEnter }: { onEnter: (id: MentorKey) => void }) {
           return (
             <motion.button
               key={id}
-              initial={{ opacity: 0, y: 12 }}
+              initial={isFirst ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.08, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
               onClick={() => onEnter(id)}

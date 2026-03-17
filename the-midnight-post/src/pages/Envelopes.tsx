@@ -6,7 +6,7 @@ import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
 import { useSound } from '../components/SoundContext';
 import { MentorReply } from '../services/ai';
-import { X, Feather, Flower2, Cross, Brush, MessageCircle, Bookmark } from 'lucide-react';
+import { X, Feather, Flower2, Cross, Brush, MessageCircle, Bookmark, ChevronLeft } from 'lucide-react';
 
 
 const WAITING_PHRASES = [
@@ -118,6 +118,15 @@ export default function Envelopes() {
 
   return (
     <div className="w-full max-w-4xl flex flex-col items-center">
+      {/* 뒤로가기 */}
+      <button
+        onClick={() => navigate(-1)}
+        className="self-start flex items-center gap-2 mb-6 opacity-40 hover:opacity-80 transition-opacity duration-300 text-sm font-serif italic"
+      >
+        <ChevronLeft size={16} strokeWidth={1.5} />
+        돌아가기
+      </button>
+
       <h1 className="text-3xl font-serif mb-6">The Four Envelopes</h1>
       <p className="opacity-60 italic text-sm mb-8">네 명의 현자가 당신에게 보내는 위로의 편지입니다.</p>
 
