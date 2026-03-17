@@ -85,8 +85,10 @@ export default function Archive() {
     setLoadingSessions(true);
     setSessionsFetched(false);
     setSessionsError(false);
+    console.log('[Archive] 담소 세션 조회 시작 / uid:', user.uid);
     getDocs(query(collection(db, 'damso_sessions'), where('uid', '==', user.uid)))
       .then(snap => {
+        console.log('[Archive] 조회 결과:', snap.size, '개');
         const list: SessionDoc[] = [];
         snap.forEach(d => list.push({ id: d.id, ...d.data() } as SessionDoc));
         list.sort((a, b) => (b.startedAt?.toDate() ?? 0) - (a.startedAt?.toDate() ?? 0));
@@ -94,7 +96,7 @@ export default function Archive() {
         setSessionsFetched(true);
       })
       .catch(err => {
-        console.error('담소 기록 불러오기 실패:', err);
+        console.error('[Archive] 담소 기록 불러오기 실패:', err);
         setSessionsError(true);
       })
       .finally(() => setLoadingSessions(false));

@@ -94,7 +94,9 @@ service cloud.firestore {
 
     // 담소 세션 — 본인 데이터만 접근
     match /damso_sessions/{sessionId} {
-      allow read: if isDocOwner();
+      allow get: if isDocOwner();
+      // list 쿼리: where('uid','==',user.uid) 패턴을 명시적으로 허용
+      allow list: if isAuthenticated() && resource.data.uid == request.auth.uid;
       allow create: if isAuthenticated() && uidUnchanged() &&
                     request.resource.data.entryId is string &&
                     request.resource.data.mentorId in ['hyewoon', 'benedicto', 'theodore', 'yeonam'];
@@ -104,7 +106,8 @@ service cloud.firestore {
 
     // 담소 메시지 — 본인 데이터만 접근
     match /damso_messages/{messageId} {
-      allow read: if isDocOwner();
+      allow get: if isDocOwner();
+      allow list: if isAuthenticated() && resource.data.uid == request.auth.uid;
       allow create: if isAuthenticated() && uidUnchanged() &&
                     request.resource.data.sessionId is string &&
                     request.resource.data.type in ['stage_direction', 'mentor', 'user'] &&

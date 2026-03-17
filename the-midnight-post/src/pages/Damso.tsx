@@ -251,6 +251,7 @@ export default function Damso() {
   const [isSending, setIsSending] = useState(false);
   const [animatingId, setAnimatingId] = useState<string | null>(null);
   const [isEnding, setIsEnding] = useState(false);
+  const [sessionSaveFailed, setSessionSaveFailed] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationRef = useRef<DamsoConversationEntry[]>([]);
@@ -296,16 +297,30 @@ export default function Damso() {
       const content = entrySnap.exists() ? String(entrySnap.data().content ?? '') : '';
       entryContentRef.current = content;
 
-      const sessionRef = await addDoc(collection(db, 'damso_sessions'), {
-        uid: user.uid,
-        entryId,
-        mentorId,
-        startedAt: serverTimestamp(),
-      });
-      sessionIdRef.current = sessionRef.id;
+      // 세션 생성과 오프닝 생성을 병렬로 실행 — 한쪽 실패해도 다른 쪽은 진행
+      const [sessionResult, openingResult] = await Promise.allSettled([
+        addDoc(collection(db, 'damso_sessions'), {
+          uid: user.uid,
+          entryId,
+          mentorId,
+          startedAt: serverTimestamp(),
+        }),
+        generateDamsoOpening(mentorId as MentorId, content),
+      ]);
 
-      const opening = await generateDamsoOpening(mentorId as MentorId, content);
-      setOpeningData(opening);
+      if (sessionResult.status === 'fulfilled') {
+        sessionIdRef.current = sessionResult.value.id;
+        console.log('[담소] 세션 생성 성공:', sessionResult.value.id, '/ uid:', user.uid);
+      } else {
+        console.error('[담소] 세션 생성 실패 (Firestore 규칙 또는 네트워크 문제):', sessionResult.reason);
+        setSessionSaveFailed(true);
+      }
+
+      if (openingResult.status === 'fulfilled') {
+        setOpeningData(openingResult.value);
+      } else {
+        console.error('[담소] 오프닝 생성 실패:', openingResult.reason);
+      }
     };
 
     init().catch(console.error);
@@ -546,6 +561,14 @@ export default function Damso() {
                       />
                     ))}
                   </motion.div>
+                )}
+
+                {/* 세션 저장 실패 경고 */}
+                {sessionSaveFailed && (
+                  <p className="font-serif text-xs italic text-center mb-4"
+                    style={{ color: 'rgba(44,42,41,0.35)' }}>
+                    ※ 연결 문제로 이 대화는 기록보관소에 저장되지 않습니다.
+                  </p>
                 )}
 
                 {/* Spacer so last message isn't behind input */}
