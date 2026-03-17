@@ -53,11 +53,18 @@ export default function Envelopes() {
   const { user } = useAuth();
   const { playArrivalSound } = useSound();
   const navigate = useNavigate();
-  const [replies, setReplies] = useState<MentorReply[]>([]);
+  const [allReplies, setAllReplies] = useState<MentorReply[]>([]);
+  const [now, setNow] = useState(() => new Date());
   const [selectedReply, setSelectedReply] = useState<MentorReply | null>(null);
   const [phraseIndex, setPhraseIndex] = useState(0);
   // 페이지 전환 완료 후 애니메이션 시작 — 전환 중 글리치 방지
   const [ready, setReady] = useState(false);
+
+  // deliverAt 기준 필터링 — 5초마다 now 갱신
+  const replies = allReplies.filter(r => {
+    const deliverAt = (r as any).deliverAt?.toDate?.();
+    return !deliverAt || deliverAt <= now;
+  });
 
   // 도착 순서 추적 (stagger delay 계산용)
   const arrivalOrderRef = React.useRef<string[]>([]);
@@ -69,6 +76,12 @@ export default function Envelopes() {
     return () => clearTimeout(t);
   }, []);
 
+  // now 갱신 — 미래의 deliverAt이 지나면 카드 자동 표시
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     if (replies.length >= MENTOR_ORDER.length) return;
     const interval = setInterval(() => {
@@ -77,13 +90,13 @@ export default function Envelopes() {
     return () => clearInterval(interval);
   }, [replies.length]);
 
-  // 새 편지 도착 감지 → 사운드만 재생 (glow 제거하여 클래스 전환 글리치 방지)
+  // 새 편지 도착 감지 (deliverAt 기준) → 사운드 재생
   useEffect(() => {
     if (prevRepliesRef.current.length > 0 && replies.length > prevRepliesRef.current.length) {
-      const newReplies = replies.filter(
+      const newVisible = replies.filter(
         r => !prevRepliesRef.current.find(pr => pr.mentorId === r.mentorId)
       );
-      if (newReplies.length > 0) playArrivalSound();
+      if (newVisible.length > 0) playArrivalSound();
     }
     prevRepliesRef.current = replies;
   }, [replies, playArrivalSound]);
@@ -108,7 +121,7 @@ export default function Envelopes() {
           arrivalOrderRef.current = [...arrivalOrderRef.current, r.mentorId];
         }
       });
-      setReplies(fetchedReplies);
+      setAllReplies(fetchedReplies);
     }, (error) => {
       console.error("Error listening to replies:", error);
     });
@@ -172,18 +185,21 @@ export default function Envelopes() {
           const arrivalIdx = arrivalOrderRef.current.indexOf(mentorId);
           const staggerDelay = ready && arrivalIdx >= 0 ? arrivalIdx * 0.18 : 0;
 
+          // 카드 순서 기반 초기 등장 딜레이 (페이지 진입 시)
+          const cardIdx = MENTOR_ORDER.indexOf(mentorId);
+          const entranceDelay = ready ? cardIdx * 0.12 : 0;
+
           return (
             <motion.div
               key={mentorId}
               initial={{ opacity: 0, y: 14 }}
-              animate={ready && hasArrived ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 }}
+              animate={ready ? { opacity: hasArrived ? 1 : 0.45, y: 0 } : { opacity: 0, y: 14 }}
               transition={{
-                duration: 1.1,
+                duration: hasArrived ? 1.1 : 0.6,
                 ease: [0.22, 1, 0.36, 1],
-                delay: staggerDelay,
+                delay: hasArrived ? staggerDelay : entranceDelay,
               }}
               onClick={() => reply && setSelectedReply(reply)}
-              // 도착 전엔 포인터 이벤트 차단, 공간은 유지
               className={`relative flex flex-col items-center justify-center p-8 bg-[#FAFAFA] border border-[#E5E0D8] shadow-md h-72 overflow-hidden
                 ${hasArrived ? 'cursor-pointer group hover:shadow-xl transition-shadow duration-700' : 'pointer-events-none'}`}
             >
@@ -200,7 +216,11 @@ export default function Envelopes() {
               </div>
 
               <h3 className="font-serif text-lg font-bold mb-2 text-ink/90">{mentor.name}</h3>
-              <p className="text-[10px] opacity-60 uppercase tracking-widest text-center">{mentor.title}</p>
+              {hasArrived ? (
+                <p className="text-[10px] opacity-60 uppercase tracking-widest text-center">{mentor.title}</p>
+              ) : (
+                <p className="font-serif italic text-[11px] text-[#8B7355]/60 animate-pulse mt-1">편지를 쓰고 있습니다...</p>
+              )}
             </motion.div>
           );
         })}

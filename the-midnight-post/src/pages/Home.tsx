@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { useAuth } from '../components/AuthContext';
 import { useSound } from '../components/SoundContext';
 import { db } from '../firebase';
-import { collection, query, where, orderBy, limit, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, addDoc, getDocs, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { generateSingleMentorReply, rankMentors } from '../services/ai';
 
 // ── 위기 키워드 (클라이언트 사이드) ──────────────────────────────────────────
@@ -167,7 +167,19 @@ export default function Home() {
       // 3. Fire off letter generation (always, regardless of crisis)
       const rankedMentors = rankMentors(trimmed);
       const writtenHour = new Date().getHours();
+      const submittedAt = Date.now();
+
+      // 브라우저 알림 권한 요청 (비차단)
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+
       rankedMentors.forEach((mentorId, index) => {
+        // 멘토별 랜덤 발송 시간: 10초 ~ 10분
+        const minMs = 10 * 1000;
+        const maxMs = 10 * 60 * 1000;
+        const deliverAt = Timestamp.fromMillis(submittedAt + minMs + Math.random() * (maxMs - minMs));
+
         setTimeout(async () => {
           try {
             const reply = await generateSingleMentorReply(trimmed, mentorId, writtenHour, recentEntries);
@@ -179,6 +191,7 @@ export default function Home() {
               translation: reply.translation,
               advice: reply.advice,
               createdAt: serverTimestamp(),
+              deliverAt,
             };
             if (reply.source) replyData.source = reply.source;
             await addDoc(collection(db, 'replies'), replyData);
@@ -188,11 +201,14 @@ export default function Home() {
         }, index * 150);
       });
 
+      // 보류 중인 편지 entryId 저장 (Layout의 알림 감지용)
+      localStorage.setItem('pendingEntryId', entryRef.id);
+
       // 4. Route based on crisis
       if (isCrisis) {
         setCrisisEntryId(entryRef.id);
       } else {
-        setTimeout(() => navigate(`/envelopes/${entryRef.id}`), 1500);
+        setTimeout(() => navigate('/study'), 1500);
       }
     } catch (error) {
       console.error('Error submitting entry:', error);
@@ -279,8 +295,12 @@ export default function Home() {
             <span className="text-[8px] text-white/80 font-serif">M</span>
           </div>
         </div>
-        <div className="flex flex-col items-center space-y-4 min-h-[120px]">
-          <p className="text-lg font-serif italic opacity-70 tracking-widest mb-4">편지를 부쳤습니다...</p>
+        <div className="flex flex-col items-center space-y-4 min-h-[120px] text-center">
+          <p className="text-lg font-serif italic opacity-70 tracking-widest">편지를 부쳤습니다.</p>
+          <p className="text-sm font-serif opacity-40 leading-relaxed">
+            현자들이 고심하여 답장을 쓰고 있습니다.<br />
+            오늘의 지혜 카드를 읽으면서 쉬어가세요.
+          </p>
         </div>
       </motion.div>
     );
