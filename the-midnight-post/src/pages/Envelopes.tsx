@@ -200,6 +200,15 @@ export default function Envelopes() {
   );
 }
 
+// 한국어 조사 와/과 선택 (받침 있으면 '과', 없으면 '와')
+function waOrGwa(word: string): string {
+  const lastChar = word[word.length - 1];
+  const code = lastChar.charCodeAt(0);
+  if (code < 0xAC00 || code > 0xD7A3) return '와'; // 한글이 아니면 기본값
+  const jongseong = (code - 0xAC00) % 28;
+  return jongseong !== 0 ? '과' : '와';
+}
+
 // Split a paragraph into dialogue and non-dialogue segments
 // Matches "…" (straight double quotes) and "…" / "…" (curly quotes)
 function splitDialogue(text: string): { text: string; isDialogue: boolean }[] {
@@ -410,7 +419,7 @@ function LetterModal({
                 className="text-[#D4AF37]/70 group-hover:text-[#D4AF37] transition-colors duration-500"
               />
               <span className="italic text-ink/60 group-hover:text-ink/90 transition-colors duration-500">
-                {mentor.name}와 담소 나누기
+                {mentor.name}{waOrGwa(mentor.name)} 담소 나누기
               </span>
             </button>
           </div>

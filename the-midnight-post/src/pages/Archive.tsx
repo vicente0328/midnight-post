@@ -70,7 +70,11 @@ export default function Archive() {
 
   const deleteEntry = useCallback(async (entryId: string) => {
     if (!user) return;
-    const repliesSnap = await getDocs(query(collection(db, 'replies'), where('entryId', '==', entryId)));
+    const repliesSnap = await getDocs(query(
+      collection(db, 'replies'),
+      where('uid', '==', user.uid),
+      where('entryId', '==', entryId)
+    ));
     const batch = writeBatch(db);
     repliesSnap.forEach(d => batch.delete(d.ref));
     batch.delete(doc(db, 'entries', entryId));
@@ -163,9 +167,17 @@ export default function Archive() {
         ))}
       </div>
 
-      {/* ── 편지 탭 ── */}
+      {/* ── 탭 콘텐츠 ── */}
+      <AnimatePresence mode="wait">
       {tab === 'letters' && (
-        <>
+        <motion.div
+          key="letters"
+          initial={{ opacity: 0, x: -16 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -16 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full flex flex-col items-center"
+        >
           {loadingEntries && (
             <p className="font-serif italic opacity-40 animate-pulse">서재를 정리하는 중...</p>
           )}
@@ -220,12 +232,18 @@ export default function Archive() {
               </motion.div>
             ))}
           </div>
-        </>
+        </motion.div>
       )}
 
-      {/* ── 담소 탭 ── */}
       {tab === 'damso' && (
-        <>
+        <motion.div
+          key="damso"
+          initial={{ opacity: 0, x: 16 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 16 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full flex flex-col items-center"
+        >
           {loadingSessions && (
             <p className="font-serif italic opacity-40 animate-pulse">담소 기록을 불러오는 중...</p>
           )}
@@ -319,8 +337,9 @@ export default function Archive() {
               );
             })}
           </div>
-        </>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* ── 담소 리더 모달 ── */}
       <AnimatePresence>
