@@ -1,11 +1,13 @@
 import React from 'react';
-import { Outlet, Link } from 'react-router-dom';
+import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import AuthModal from './AuthModal';
 import { LogOut, BookOpen, PenTool, Bookmark, FlaskConical } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function Layout() {
   const { user, setShowAuthModal, signOut } = useAuth();
+  const location = useLocation();
 
   return (
     <div className="min-h-screen flex flex-col items-center w-full max-w-4xl mx-auto px-4 py-8">
@@ -47,7 +49,18 @@ export default function Layout() {
       </header>
 
       <main className="flex-1 w-full flex flex-col items-center justify-center">
-        <Outlet />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="w-full flex flex-col items-center"
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       <AuthModal />

@@ -107,18 +107,23 @@ export async function saveKnowledgeEntries(
   });
 }
 
-// 오늘 특정 멘토의 지식 (Study 페이지용)
+// 오늘 특정 멘토의 지식 — 없으면 최근 7일 이내 가장 최신 데이터 반환 (Study 페이지용)
 export async function getTodayKnowledge(
   mentorId: MentorId
 ): Promise<KnowledgeEntry[]> {
-  const today = new Date().toISOString().slice(0, 10);
-  try {
-    const snap = await getDoc(doc(db, 'mentor_knowledge', `${mentorId}_${today}`));
-    if (snap.exists()) {
-      const data = snap.data();
-      if (Array.isArray(data.entries)) return data.entries as KnowledgeEntry[];
-    }
-  } catch {}
+  for (let i = 0; i < 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    try {
+      const snap = await getDoc(doc(db, 'mentor_knowledge', `${mentorId}_${dateStr}`));
+      if (snap.exists()) {
+        const data = snap.data();
+        if (Array.isArray(data.entries) && data.entries.length > 0)
+          return data.entries as KnowledgeEntry[];
+      }
+    } catch {}
+  }
   return [];
 }
 
@@ -156,7 +161,7 @@ export async function triggerDailyKnowledgeGeneration(): Promise<void> {
 
   try {
     const lockSnap = await getDoc(lockRef);
-    if (lockSnap.exists()) return; // 이미 오늘 생성됨
+    if (lockSnap.exists() && lockSnap.data()?.status === 'done') return; // 이미 오늘 완료됨
 
     // 잠금 설정 (다른 클라이언트의 중복 생성 방지)
     await setDoc(lockRef, { status: 'generating', startedAt: serverTimestamp() });

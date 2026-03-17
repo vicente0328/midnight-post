@@ -194,11 +194,7 @@ export default function Home() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-2xl flex flex-col items-center"
-    >
+    <div className="w-full max-w-2xl flex flex-col items-center">
       <div className="text-center mb-12">
         <h1 className="text-3xl font-serif mb-4">The Desk</h1>
         <p className="opacity-60 italic text-sm break-keep">{TIME_CONTENT[timePeriod].subtitle}</p>
@@ -227,6 +223,6 @@ export default function Home() {
           {isSubmitting ? 'Writing...' : 'Send to Mentors'}
         </button>
       </form>
-    </motion.div>
+    </div>
   );
 }
