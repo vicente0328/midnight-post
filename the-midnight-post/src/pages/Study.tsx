@@ -16,7 +16,7 @@ const ROOMS = {
     icon: Flower2,
     color: 'from-stone-700 to-stone-900',
     accent: '#7c6a50',
-    ambience: '고요한 선원의 향내가 번진다. 빛이 창호지를 투과해 바닥에 내려앉는다.',
+    ambience: '고요한 선원의 향내가 번진다.\n빛이 창호지를 투과해 바닥에 내려앉는다.',
   },
   benedicto: {
     name: '베네딕토 신부',
@@ -25,7 +25,7 @@ const ROOMS = {
     icon: Cross,
     color: 'from-red-900 to-red-950',
     accent: '#7a3030',
-    ambience: '촛불이 흔들리며 작은 방을 밝힌다. 나무 향이 조용히 감돈다.',
+    ambience: '촛불이 흔들리며 작은 방을\n밝힌다. 나무 향이 조용히 감돈다.',
   },
   theodore: {
     name: '테오도르 교수',
@@ -34,7 +34,7 @@ const ROOMS = {
     icon: Feather,
     color: 'from-slate-800 to-slate-950',
     accent: '#3a4a5c',
-    ambience: '책들이 빼곡한 서가. 잉크 냄새와 오래된 종이 사이로 사유가 깃든다.',
+    ambience: '책들이 빼곡한 서가. 잉크 냄새와\n오래된 종이 사이로 사유가 깃든다.',
   },
   yeonam: {
     name: '연암 선생',
@@ -43,7 +43,7 @@ const ROOMS = {
     icon: Brush,
     color: 'from-emerald-900 to-emerald-950',
     accent: '#2d5a3d',
-    ambience: '먹빛 향기와 대나무 그림자. 창 너머 산이 숨을 고른다.',
+    ambience: '먹빛 향기와 대나무 그림자.\n창 너머 산이 숨을 고른다.',
   },
 } as const;
 
@@ -168,7 +168,7 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
       </div>
 
       {/* 분위기 묘사 */}
-      <p className="font-serif italic text-sm text-center opacity-50 mb-10 max-w-md break-keep">
+      <p className="font-serif italic text-sm text-center opacity-50 mb-10 max-w-md whitespace-pre-line break-keep" style={{ wordBreak: 'keep-all' }}>
         — {room.ambience} —
       </p>
 
