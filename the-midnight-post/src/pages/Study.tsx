@@ -1,6 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Feather, Flower2, Cross, Brush, X, ChevronLeft } from 'lucide-react';
+import { Feather, Flower2, Cross, Brush, X, ChevronLeft, Bookmark, BookmarkCheck } from 'lucide-react';
+import { collection, addDoc, getDocs, query, where, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useAuth } from '../components/AuthContext';
 import { getTodayKnowledge, KnowledgeEntry } from '../services/knowledge';
 
 // ── 멘토 연구실 정보 ─────────────────────────────────────────────────────────
@@ -238,6 +241,7 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
           <WisdomModal
             entry={selectedEntry}
             room={room}
+            mentorId={mentorId}
             onClose={() => setSelectedEntry(null)}
           />
         )}
@@ -251,18 +255,57 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
 function WisdomModal({
   entry,
   room,
+  mentorId,
   onClose,
 }: {
   entry: KnowledgeEntry;
   room: typeof ROOMS[MentorKey];
+  mentorId: MentorKey;
   onClose: () => void;
 }) {
   const Icon = room.icon;
+  const { user } = useAuth();
+  const [bookmarkId, setBookmarkId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // 이미 저장된 북마크인지 확인
+  const entryId = `wisdom_${mentorId}_${entry.source.replace(/[^a-zA-Z0-9가-힣]/g, '').slice(0, 30)}`;
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    getDocs(query(collection(db, 'bookmarks'), where('uid', '==', user.uid), where('entryId', '==', entryId)))
+      .then(snap => { if (!snap.empty) setBookmarkId(snap.docs[0].id); })
+      .catch(() => {});
+  }, [user, entryId]);
+
+  const toggleBookmark = async () => {
+    if (!user || saving) return;
+    setSaving(true);
+    try {
+      if (bookmarkId) {
+        await deleteDoc(doc(db, 'bookmarks', bookmarkId));
+        setBookmarkId(null);
+      } else {
+        const ref = await addDoc(collection(db, 'bookmarks'), {
+          uid: user.uid,
+          entryId,
+          mentorId,
+          quote: entry.quote,
+          source: entry.source,
+          translation: entry.translation,
+          advice: entry.context,
+          savedAt: serverTimestamp(),
+        });
+        setBookmarkId(ref.id);
+      }
+    } catch (e) { console.error(e); }
+    setSaving(false);
+  };
 
   return (
     <motion.div
@@ -288,13 +331,27 @@ function WisdomModal({
           WebkitOverflowScrolling: 'touch',
         }}
       >
-        {/* 닫기 */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 sm:top-6 sm:right-6 opacity-30 hover:opacity-80 transition-all duration-300 hover:rotate-90"
-        >
-          <X size={24} strokeWidth={1} />
-        </button>
+        {/* 상단 버튼 */}
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center gap-3">
+          {user && (
+            <button
+              onClick={toggleBookmark}
+              disabled={saving}
+              className={`transition-all duration-300 ${bookmarkId ? 'opacity-80 text-[#D4AF37]' : 'opacity-30 hover:opacity-70'}`}
+            >
+              {bookmarkId
+                ? <BookmarkCheck size={22} strokeWidth={1.5} />
+                : <Bookmark size={22} strokeWidth={1.5} />
+              }
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="opacity-30 hover:opacity-80 transition-all duration-300 hover:rotate-90"
+          >
+            <X size={24} strokeWidth={1} />
+          </button>
+        </div>
 
         {/* 멘토 헤더 */}
         <div className="flex items-center gap-4 mb-8">

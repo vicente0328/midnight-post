@@ -1,8 +1,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { db } from '../firebase';
 import {
-  doc, getDoc, setDoc, serverTimestamp
+  doc, getDoc, setDoc, deleteDoc, serverTimestamp
 } from 'firebase/firestore';
+
+// 자정 ~ 11:59 = 'am', 12:00 ~ 23:59 = 'pm'
+function getPeriod(): 'am' | 'pm' {
+  return new Date().getHours() < 12 ? 'am' : 'pm';
+}
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -221,27 +226,36 @@ ${MENTOR_DOMAINS[mentorId]}
 
 export async function saveKnowledgeEntries(
   mentorId: MentorId,
-  entries: KnowledgeEntry[]
+  entries: KnowledgeEntry[],
+  period?: 'am' | 'pm'
 ): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
-  await setDoc(doc(db, 'mentor_knowledge', `${mentorId}_${today}`), {
+  const p = period ?? getPeriod();
+  await setDoc(doc(db, 'mentor_knowledge', `${mentorId}_${today}_${p}`), {
     mentorId,
     date: today,
+    period: p,
     entries,
     generatedAt: serverTimestamp(),
   });
 }
 
-// 오늘 특정 멘토의 지식 — 없으면 최근 7일 fallback → 내장 fallback 자동 저장
+// 오늘 특정 멘토의 지식 — 현재 시간대 → 반대 시간대 → 구형 키 → 최근 7일 → 내장 fallback
 export async function getTodayKnowledge(
   mentorId: MentorId
 ): Promise<KnowledgeEntry[]> {
-  for (let i = 0; i < 7; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
+  const period = getPeriod();
+  const other = period === 'am' ? 'pm' : 'am';
+
+  // 현재 시간대 먼저
+  for (const key of [
+    `${mentorId}_${today}_${period}`,
+    `${mentorId}_${today}_${other}`,
+    `${mentorId}_${today}`, // 구형 키 호환
+  ]) {
     try {
-      const snap = await getDoc(doc(db, 'mentor_knowledge', `${mentorId}_${dateStr}`));
+      const snap = await getDoc(doc(db, 'mentor_knowledge', key));
       if (snap.exists()) {
         const data = snap.data();
         if (Array.isArray(data.entries) && data.entries.length > 0)
@@ -249,11 +263,27 @@ export async function getTodayKnowledge(
       }
     } catch {}
   }
-  // 7일 내 데이터 없음 → 내장 fallback을 오늘 날짜로 Firestore에 저장 후 반환
+
+  // 최근 7일 fallback
+  for (let i = 1; i < 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    for (const suffix of [`_am`, `_pm`, ``]) {
+      try {
+        const snap = await getDoc(doc(db, 'mentor_knowledge', `${mentorId}_${dateStr}${suffix}`));
+        if (snap.exists()) {
+          const data = snap.data();
+          if (Array.isArray(data.entries) && data.entries.length > 0)
+            return data.entries as KnowledgeEntry[];
+        }
+      } catch {}
+    }
+  }
+
+  // 내장 fallback
   const fallback = FALLBACK[mentorId];
-  try {
-    await saveKnowledgeEntries(mentorId, fallback);
-  } catch {}
+  try { await saveKnowledgeEntries(mentorId, fallback); } catch {}
   return fallback;
 }
 
@@ -282,12 +312,35 @@ export async function getRecentKnowledge(
   return allEntries;
 }
 
-// ── 일일 자동 생성 트리거 ────────────────────────────────────────────────────
-// 앱 로드 시 오늘 처음 실행되는 경우에만 생성 (Firestore 잠금으로 중복 방지)
+// ── 강제 재생성 ───────────────────────────────────────────────────────────────
+
+export async function forceRegenerateKnowledge(): Promise<void> {
+  const today = new Date().toISOString().slice(0, 10);
+  const mentors: MentorId[] = ['hyewoon', 'benedicto', 'theodore', 'yeonam'];
+
+  // 오늘 잠금 및 지식 문서 모두 삭제
+  for (const period of ['am', 'pm']) {
+    try { await deleteDoc(doc(db, 'meta', `knowledge_${today}_${period}`)); } catch {}
+    for (const mentorId of mentors) {
+      try { await deleteDoc(doc(db, 'mentor_knowledge', `${mentorId}_${today}_${period}`)); } catch {}
+    }
+  }
+  // 구형 키도 삭제
+  try { await deleteDoc(doc(db, 'meta', `knowledge_${today}`)); } catch {}
+  for (const mentorId of mentors) {
+    try { await deleteDoc(doc(db, 'mentor_knowledge', `${mentorId}_${today}`)); } catch {}
+  }
+
+  await triggerDailyKnowledgeGeneration();
+}
+
+// ── 자정/정오 자동 생성 트리거 ───────────────────────────────────────────────
+// 앱 로드 시 현재 시간대(am/pm)에 처음 실행되는 경우에만 생성 (Firestore 잠금으로 중복 방지)
 
 export async function triggerDailyKnowledgeGeneration(): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
-  const lockRef = doc(db, 'meta', `knowledge_${today}`);
+  const period = getPeriod();
+  const lockRef = doc(db, 'meta', `knowledge_${today}_${period}`);
 
   try {
     const lockSnap = await getDoc(lockRef);
@@ -312,13 +365,13 @@ export async function triggerDailyKnowledgeGeneration(): Promise<void> {
       mentors.map(async (mentorId) => {
         try {
           const existing = await getDoc(
-            doc(db, 'mentor_knowledge', `${mentorId}_${today}`)
+            doc(db, 'mentor_knowledge', `${mentorId}_${today}_${period}`)
           );
           if (existing.exists()) return; // 이미 있으면 skip
 
           const entries = await generateDailyKnowledge(mentorId);
-          await saveKnowledgeEntries(mentorId, entries);
-          console.log(`[Knowledge] ${mentorId} — ${entries.length}개 생성 완료`);
+          await saveKnowledgeEntries(mentorId, entries, period);
+          console.log(`[Knowledge] ${mentorId} ${period} — ${entries.length}개 생성 완료`);
         } catch (err) {
           console.error(`[Knowledge] ${mentorId} 생성 실패:`, err);
         }

@@ -6,7 +6,7 @@
 import React, { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { saveKnowledgeEntries, KnowledgeEntry } from '../services/knowledge';
+import { saveKnowledgeEntries, forceRegenerateKnowledge, KnowledgeEntry } from '../services/knowledge';
 import { useAuth } from '../components/AuthContext';
 
 type MentorId = 'hyewoon' | 'benedicto' | 'theodore' | 'yeonam';
@@ -145,6 +145,7 @@ export default function Seed() {
   const { user } = useAuth();
   const [status, setStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
   const [log, setLog] = useState<string[]>([]);
+  const [regenStatus, setRegenStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
 
   const addLog = (msg: string) => setLog(prev => [...prev, msg]);
 
@@ -174,6 +175,14 @@ export default function Seed() {
     })().catch(() => setStatus('error'));
   }, [user, status]);
 
+  const handleForceRegen = () => {
+    if (regenStatus === 'running') return;
+    setRegenStatus('running');
+    forceRegenerateKnowledge()
+      .then(() => setRegenStatus('done'))
+      .catch(() => setRegenStatus('error'));
+  };
+
   if (!user) return (
     <div className="font-serif italic opacity-50 text-center py-16">로그인 후 이용하세요.</div>
   );
@@ -186,6 +195,18 @@ export default function Seed() {
         {log.map((l, i) => <p key={i} className="opacity-75">{l}</p>)}
         {status === 'done' && <p className="text-green-700 font-bold mt-4">완료. /study에서 확인하세요.</p>}
         {status === 'error' && <p className="text-red-700">오류가 발생했습니다.</p>}
+      </div>
+
+      <div className="w-full border-t border-ink/10 pt-6 flex flex-col items-center gap-3">
+        <p className="font-serif text-sm opacity-50">AI로 지혜 카드 전체 재생성</p>
+        <button
+          onClick={handleForceRegen}
+          disabled={regenStatus === 'running'}
+          className="px-6 py-2 border border-ink/30 font-serif text-sm hover:bg-ink hover:text-paper transition-all duration-300 disabled:opacity-30"
+        >
+          {regenStatus === 'running' ? '생성 중...' : regenStatus === 'done' ? '완료 ✓' : regenStatus === 'error' ? '오류 발생' : '지혜 카드 재생성'}
+        </button>
+        {regenStatus === 'done' && <p className="text-xs opacity-50 font-serif">/study에서 확인하세요.</p>}
       </div>
     </div>
   );
