@@ -92,6 +92,9 @@ export default function Archive() {
   // 삭제 확인
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  // 책갈피 상세 모달
+  const [selectedBookmark, setSelectedBookmark] = useState<BookmarkDoc | null>(null);
+
   const deleteEntry = useCallback(async (entryId: string) => {
     if (!user) return;
     const repliesSnap = await getDocs(query(
@@ -395,7 +398,10 @@ export default function Archive() {
                   transition={{ delay: index * 0.05, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                   className="group relative"
                 >
-                  <div className="relative flex flex-col justify-between p-6 border border-ink/20 bg-[#fdfbf7] shadow-sm h-52">
+                  <button
+                    onClick={() => setSelectedBookmark(bm)}
+                    className="w-full text-left relative flex flex-col justify-between p-6 border border-ink/20 bg-[#fdfbf7] shadow-sm hover:shadow-md transition-shadow duration-500 h-52"
+                  >
                     <div className="absolute top-2 left-2 right-2 bottom-2 border border-ink/5 pointer-events-none" />
 
                     <div className="flex items-center gap-3 mb-3">
@@ -412,7 +418,7 @@ export default function Archive() {
                       "{bm.quote}"
                     </p>
                     <p className="text-xs opacity-50 line-clamp-2 leading-relaxed">{bm.translation}</p>
-                  </div>
+                  </button>
 
                   {confirmDeleteId === bm.id ? (
                     <div className="absolute top-2 right-2 flex items-center gap-2 bg-[#fdfbf7] border border-ink/20 px-2 py-1 shadow-sm z-10">
@@ -445,7 +451,119 @@ export default function Archive() {
           />
         )}
       </AnimatePresence>
+
+      {/* ── 책갈피 상세 모달 ── */}
+      <AnimatePresence>
+        {selectedBookmark && (
+          <BookmarkModal
+            bookmark={selectedBookmark}
+            onClose={() => setSelectedBookmark(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+// ── 책갈피 상세 모달 ──────────────────────────────────────────────────────────
+
+function BookmarkModal({
+  bookmark,
+  onClose,
+}: {
+  bookmark: BookmarkDoc;
+  onClose: () => void;
+}) {
+  const mentor = MENTOR_INFO[bookmark.mentorId as MentorKey];
+  if (!mentor) return null;
+  const Icon = mentor.icon;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.35 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/90 p-4 md:p-8 backdrop-blur-md"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, y: 20, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.95, y: 20, opacity: 0 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        onClick={e => e.stopPropagation()}
+        onTouchStart={e => e.stopPropagation()}
+        onTouchMove={e => e.stopPropagation()}
+        className="relative w-full max-w-3xl bg-[#fdfbf7] p-5 sm:p-10 md:p-16 shadow-[0_0_60px_rgba(0,0,0,0.5)] overflow-y-auto overscroll-contain max-h-[95vh] border border-[#D4AF37]/20"
+        style={{
+          backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
+          boxShadow: 'inset 0 0 100px rgba(139,115,85,0.1), 0 20px 60px rgba(0,0,0,0.4)',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
+        {/* 닫기 */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 sm:top-6 sm:right-6 opacity-40 hover:opacity-100 transition-all duration-300 hover:rotate-90"
+        >
+          <X size={26} strokeWidth={1} />
+        </button>
+
+        {/* 멘토 헤더 */}
+        <div className="flex flex-col items-center mb-8 md:mb-12">
+          <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br ${mentor.color} p-1 shadow-md mb-4 relative flex items-center justify-center`}>
+            <div className="absolute inset-1 rounded-full border border-[#D4AF37]/50" />
+            <Icon size={18} strokeWidth={1.5} className="text-[#D4AF37]" />
+          </div>
+          <h2 className="font-serif text-xl font-bold tracking-widest text-ink/90">{mentor.name}</h2>
+        </div>
+
+        <div className="font-serif text-ink/90">
+          {/* 명언 */}
+          <div className="text-center mb-8 md:mb-12 relative px-0 md:px-8">
+            <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-7xl text-[#D4AF37]/15 font-serif leading-none select-none">"</span>
+            <p className="text-base sm:text-xl md:text-2xl leading-relaxed italic text-ink/90 mb-4 relative z-10 font-medium">
+              {bookmark.quote}
+            </p>
+            {bookmark.source && (
+              <div className="flex items-center justify-center gap-3 mb-4 opacity-60">
+                <div className="h-px w-10 bg-ink/40" />
+                <span className="text-xs tracking-wider">{bookmark.source}</span>
+                <div className="h-px w-10 bg-ink/40" />
+              </div>
+            )}
+            <p className="text-sm sm:text-base leading-relaxed text-ink/70">
+              {bookmark.translation}
+            </p>
+          </div>
+
+          {/* 구분선 */}
+          <div className="flex justify-center items-center gap-3 my-6 md:my-10 opacity-40">
+            <div className="w-1.5 h-1.5 rotate-45 bg-[#D4AF37]" />
+            <div className="w-1 h-1 rotate-45 bg-[#D4AF37]/60" />
+            <div className="w-1.5 h-1.5 rotate-45 bg-[#D4AF37]" />
+          </div>
+
+          {/* 조언 */}
+          <div className="text-[15px] sm:text-lg leading-[1.85] sm:leading-[2.1] text-ink/90 px-0 md:px-4">
+            {bookmark.advice.split('\n').map((paragraph, index) => {
+              if (!paragraph.trim()) return null;
+              return (
+                <p key={index} className="mb-4 md:mb-6">
+                  {paragraph}
+                </p>
+              );
+            })}
+          </div>
+
+          {/* 서명 */}
+          <div className="mt-8 md:mt-16 text-right opacity-60 italic">
+            <p className="text-base sm:text-lg font-bold">{mentor.name} 드림</p>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 

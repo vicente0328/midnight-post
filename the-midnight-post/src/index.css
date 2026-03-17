@@ -12,6 +12,11 @@ body {
   color: var(--color-ink);
 }
 
+/* 모바일 300ms 터치 딜레이 제거 */
+button, a, [role="button"] {
+  touch-action: manipulation;
+}
+
 /* 담소: 소설 인터페이스 스크롤바 숨김 */
 .damso-scroll {
   scrollbar-width: none;
