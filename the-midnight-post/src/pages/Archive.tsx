@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { collection, query, where, getDocs, doc, getDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
@@ -70,8 +70,6 @@ function SkeletonCard({ height = 'h-48' }: { height?: string }) {
 export default function Archive() {
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>('letters');
-  const isFirstRender = useRef(true);
-  useEffect(() => { isFirstRender.current = false; }, []);
 
   // 편지 탭
   const [entries, setEntries] = useState<EntryDoc[]>([]);
@@ -199,35 +197,28 @@ export default function Archive() {
         {([
           { key: 'letters',   label: '편지 기록' },
           { key: 'damso',     label: '담소 기록' },
-          { key: 'bookmarks', label: '북마크'    },
+          { key: 'bookmarks', label: '책갈피'    },
         ] as { key: Tab; label: string }[]).map(({ key: t, label }) => (
           <button
             key={t}
             onClick={() => handleTabChange(t)}
-            className={`pb-3 font-serif text-sm tracking-widest uppercase transition-all duration-300 relative ${
-              tab === t ? 'opacity-90' : 'opacity-35 hover:opacity-55'
+            className={`pb-3 font-serif text-sm tracking-widest uppercase transition-opacity duration-200 relative ${
+              tab === t ? 'opacity-90' : 'opacity-35 hover:opacity-60'
             }`}
           >
             {label}
-            {tab === t && (
-              <motion.div
-                layoutId="tab-indicator"
-                className="absolute bottom-0 left-0 right-0 h-px bg-ink/50"
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
-              />
-            )}
+            {/* 탭 인디케이터 — CSS transition으로 layoutId 충돌 없이 */}
+            <div
+              className={`absolute bottom-0 left-0 right-0 h-px bg-ink/50 transition-opacity duration-200 ${
+                tab === t ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
           </button>
         ))}
       </div>
 
-      {/* ── 탭 콘텐츠 ── */}
-      <motion.div
-        key={tab}
-        initial={isFirstRender.current ? false : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.2, ease: 'easeOut' }}
-        className="w-full flex flex-col items-center"
-      >
+      {/* ── 탭 콘텐츠 — 즉시 전환 (애니메이션 없음, 레이아웃 점프 방지) ── */}
+      <div className="w-full flex flex-col items-center">
       {tab === 'letters' && (
         <div className="w-full flex flex-col items-center">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
@@ -274,7 +265,7 @@ export default function Archive() {
                 ) : (
                   <button
                     onClick={(e) => { e.preventDefault(); setConfirmDeleteId(entry.id); }}
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-30 hover:!opacity-70 transition-opacity duration-200"
+                    className="absolute top-2 right-2 opacity-20 hover:opacity-70 transition-opacity duration-200"
                   >
                     <Trash2 size={14} strokeWidth={1.5} />
                   </button>
@@ -369,7 +360,7 @@ export default function Archive() {
                   ) : (
                     <button
                       onClick={() => setConfirmDeleteId(session.id)}
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-30 hover:!opacity-70 transition-opacity duration-200"
+                      className="absolute top-2 right-2 opacity-20 hover:opacity-70 transition-opacity duration-200"
                     >
                       <Trash2 size={14} strokeWidth={1.5} />
                     </button>
@@ -432,7 +423,7 @@ export default function Archive() {
                   ) : (
                     <button
                       onClick={() => setConfirmDeleteId(bm.id)}
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-30 hover:!opacity-70 transition-opacity duration-200"
+                      className="absolute top-2 right-2 opacity-20 hover:opacity-70 transition-opacity duration-200"
                     >
                       <Trash2 size={14} strokeWidth={1.5} />
                     </button>
@@ -443,7 +434,7 @@ export default function Archive() {
           </div>
         </div>
       )}
-      </motion.div>
+      </div>
 
       {/* ── 담소 리더 모달 ── */}
       <AnimatePresence>

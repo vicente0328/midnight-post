@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { collection, query, where, onSnapshot, addDoc, deleteDoc, getDocs, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, setDoc, deleteDoc, getDocs, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
 import { useSound } from '../components/SoundContext';
@@ -243,34 +243,26 @@ function LetterModal({
   const [bookmarkDocId, setBookmarkDocId] = useState<string | null>(null);
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
 
-  // 이미 북마크됐는지 확인
+  // 책갈피 문서 ID — 예측 가능한 ID로 composite index 불필요
+  const bookmarkId = user ? `${user.uid}_${entryId}_${reply.mentorId}` : '';
+
+  // 이미 책갈피됐는지 확인 (getDoc — 인덱스 불필요)
   useEffect(() => {
-    if (!user) return;
-    getDocs(query(
-      collection(db, 'bookmarks'),
-      where('uid', '==', user.uid),
-      where('entryId', '==', entryId),
-      where('mentorId', '==', reply.mentorId)
-    )).then(snap => {
-      if (!snap.empty) setBookmarkDocId(snap.docs[0].id);
+    if (!user || !bookmarkId) return;
+    getDoc(doc(db, 'bookmarks', bookmarkId)).then(snap => {
+      setBookmarkDocId(snap.exists() ? snap.id : null);
     }).catch(() => {});
-  }, [user, entryId, reply.mentorId]);
+  }, [user, bookmarkId]);
 
   const toggleBookmark = useCallback(async () => {
-    if (!user || bookmarkLoading) return;
+    if (!user || bookmarkLoading || !bookmarkId) return;
     setBookmarkLoading(true);
     try {
       if (bookmarkDocId) {
-        const snap = await getDocs(query(
-          collection(db, 'bookmarks'),
-          where('uid', '==', user.uid),
-          where('entryId', '==', entryId),
-          where('mentorId', '==', reply.mentorId)
-        ));
-        for (const d of snap.docs) await deleteDoc(d.ref);
+        await deleteDoc(doc(db, 'bookmarks', bookmarkId));
         setBookmarkDocId(null);
       } else {
-        const docRef = await addDoc(collection(db, 'bookmarks'), {
+        await setDoc(doc(db, 'bookmarks', bookmarkId), {
           uid: user.uid,
           entryId,
           mentorId: reply.mentorId,
@@ -280,14 +272,14 @@ function LetterModal({
           advice: reply.advice,
           savedAt: serverTimestamp(),
         });
-        setBookmarkDocId(docRef.id);
+        setBookmarkDocId(bookmarkId);
       }
     } catch (e) {
       console.error('Bookmark error:', e);
     } finally {
       setBookmarkLoading(false);
     }
-  }, [user, bookmarkDocId, bookmarkLoading, entryId, reply]);
+  }, [user, bookmarkDocId, bookmarkLoading, bookmarkId, entryId, reply]);
 
   return (
     <motion.div

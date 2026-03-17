@@ -80,13 +80,16 @@ service cloud.firestore {
       allow delete: if isDocOwner();
     }
 
-    // 북마크 — 본인 데이터만 접근
+    // 책갈피 — 본인 데이터만 접근 (doc ID: uid_entryId_mentorId)
     match /bookmarks/{bookmarkId} {
-      allow read: if isDocOwner();
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
       allow create: if isAuthenticated() && uidUnchanged() &&
                     request.resource.data.entryId is string &&
                     request.resource.data.mentorId in ['hyewoon', 'benedicto', 'theodore', 'yeonam'];
-      allow delete: if isDocOwner();
+      allow update: if isAuthenticated() && uidNotModified() &&
+                    request.resource.data.entryId is string &&
+                    request.resource.data.mentorId in ['hyewoon', 'benedicto', 'theodore', 'yeonam'];
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
     }
 
     // 현자 지식 DB — 모든 인증 유저가 읽기 가능, 쓰기는 인증 유저만
