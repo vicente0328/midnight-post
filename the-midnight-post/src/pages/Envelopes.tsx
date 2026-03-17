@@ -416,7 +416,7 @@ function LetterModal({
           <div className="text-center mb-6 md:mb-16 relative px-0 md:px-12">
             <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-7xl sm:text-8xl text-[#D4AF37]/15 font-serif leading-none select-none">"</span>
 
-            <p className="text-base sm:text-2xl md:text-3xl leading-relaxed italic text-ink/90 mb-5 relative z-10 font-medium" style={{ textWrap: 'balance' } as React.CSSProperties}>
+            <p className="text-base sm:text-2xl md:text-3xl leading-relaxed italic text-ink/90 mb-5 relative z-10 font-medium break-keep" style={{ textWrap: 'balance' } as React.CSSProperties}>
               {reply.quote}
             </p>
 

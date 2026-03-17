@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Feather, Flower2, Cross, Brush, X, ChevronLeft, Bookmark, BookmarkCheck } from 'lucide-react';
-import { collection, addDoc, getDocs, query, where, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { Feather, Flower2, Cross, Brush, X, ChevronLeft, Bookmark, BookmarkCheck, PenLine, MessageCircle } from 'lucide-react';
+import { collection, addDoc, getDocs, query, where, orderBy, limit, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
 import { getTodayKnowledge, forceRegenerateKnowledge, KnowledgeEntry } from '../services/knowledge';
@@ -19,6 +20,7 @@ const ROOMS = {
     accent: '#7c6a50',
     accentRgb: '124,106,80',
     ambience: '고요한 선원의 향내가 번진다.\n빛이 창호지를 투과해 바닥에 내려앉는다.',
+    particle: '과',
   },
   benedicto: {
     name: '베네딕토 신부',
@@ -29,6 +31,7 @@ const ROOMS = {
     accent: '#7a3030',
     accentRgb: '122,48,48',
     ambience: '촛불이 흔들리며 작은 방을 밝힌다.\n나무 향이 조용히 감돈다.',
+    particle: '와',
   },
   theodore: {
     name: '테오도르 교수',
@@ -39,6 +42,7 @@ const ROOMS = {
     accent: '#3a4a5c',
     accentRgb: '58,74,92',
     ambience: '책들이 빼곡한 서가. 잉크 냄새와\n오래된 종이 사이로 사유가 깃든다.',
+    particle: '와',
   },
   yeonam: {
     name: '연암 선생',
@@ -49,6 +53,7 @@ const ROOMS = {
     accent: '#2d5a3d',
     accentRgb: '45,90,61',
     ambience: '먹빛 향기와 대나무 그림자.\n창 너머 산이 숨을 고른다.',
+    particle: '과',
   },
 } as const;
 
@@ -296,9 +301,12 @@ function DoorCard({
 function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => void }) {
   const room = ROOMS[mentorId];
   const Icon = room.icon;
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [entries, setEntries] = useState<KnowledgeEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEntry, setSelectedEntry] = useState<KnowledgeEntry | null>(null);
+  const [damsoLoading, setDamsoLoading] = useState(false);
 
   useEffect(() => {
     getTodayKnowledge(mentorId)
@@ -306,6 +314,32 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [mentorId]);
+
+  const handleDamso = async () => {
+    if (!user) return;
+    setDamsoLoading(true);
+    try {
+      const snap = await getDocs(
+        query(
+          collection(db, 'replies'),
+          where('uid', '==', user.uid),
+          where('mentorId', '==', mentorId),
+          orderBy('createdAt', 'desc'),
+          limit(1),
+        )
+      );
+      if (!snap.empty) {
+        const entryId = snap.docs[0].data().entryId;
+        navigate(`/damso/${entryId}/${mentorId}`);
+      } else {
+        navigate('/');
+      }
+    } catch {
+      navigate('/');
+    } finally {
+      setDamsoLoading(false);
+    }
+  };
 
   return (
     <div className="w-full flex flex-col items-center">
@@ -380,6 +414,39 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
             {room.ambience}
           </p>
         </div>
+      </div>
+
+      {/* ── 액션 버튼 ── */}
+      <div className="flex gap-3 w-full mb-10">
+        <button
+          onClick={() => navigate('/')}
+          className="flex-1 flex items-center justify-center gap-2 py-3 border font-serif text-sm italic transition-all duration-300"
+          style={{
+            borderColor: `rgba(${room.accentRgb},0.35)`,
+            color: `rgba(44,42,41,0.65)`,
+            backgroundColor: 'rgba(253,251,247,0.7)',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `rgba(${room.accentRgb},0.65)`; (e.currentTarget as HTMLElement).style.color = 'rgba(44,42,41,0.9)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `rgba(${room.accentRgb},0.35)`; (e.currentTarget as HTMLElement).style.color = 'rgba(44,42,41,0.65)'; }}
+        >
+          <PenLine size={14} strokeWidth={1.5} />
+          {room.name}께 편지 보내기
+        </button>
+        <button
+          onClick={handleDamso}
+          disabled={damsoLoading}
+          className="flex-1 flex items-center justify-center gap-2 py-3 border font-serif text-sm italic transition-all duration-300 disabled:opacity-40"
+          style={{
+            borderColor: `rgba(${room.accentRgb},0.35)`,
+            color: `rgba(44,42,41,0.65)`,
+            backgroundColor: 'rgba(253,251,247,0.7)',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `rgba(${room.accentRgb},0.65)`; (e.currentTarget as HTMLElement).style.color = 'rgba(44,42,41,0.9)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `rgba(${room.accentRgb},0.35)`; (e.currentTarget as HTMLElement).style.color = 'rgba(44,42,41,0.65)'; }}
+        >
+          <MessageCircle size={14} strokeWidth={1.5} />
+          {damsoLoading ? '연결 중…' : `${room.name}${room.particle} 담소 나누기`}
+        </button>
       </div>
 
       {/* 오늘의 지혜 레이블 */}
