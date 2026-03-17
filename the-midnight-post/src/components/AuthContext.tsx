@@ -35,13 +35,14 @@ async function ensureUserDoc(currentUser: User): Promise<boolean> {
   const userRef = doc(db, 'users', currentUser.uid);
   const userSnap = await getDoc(userRef);
   if (!userSnap.exists()) {
-    await setDoc(userRef, {
+    const userData: Record<string, unknown> = {
       uid: currentUser.uid,
       email: currentUser.email,
-      displayName: currentUser.displayName,
       createdAt: new Date(),
       onboarded: false,
-    });
+    };
+    if (currentUser.displayName) userData.displayName = currentUser.displayName;
+    await setDoc(userRef, userData);
     return true; // brand-new user
   }
   const data = userSnap.data();
