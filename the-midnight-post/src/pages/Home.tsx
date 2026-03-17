@@ -177,7 +177,7 @@ export default function Home() {
       rankedMentors.forEach((mentorId, index) => {
         // 멘토별 랜덤 발송 시간: 10초 ~ 10분
         const minMs = 10 * 1000;
-        const maxMs = 10 * 60 * 1000;
+        const maxMs = 3 * 60 * 1000;
         const deliverAt = Timestamp.fromMillis(submittedAt + minMs + Math.random() * (maxMs - minMs));
 
         setTimeout(async () => {
