@@ -38,7 +38,7 @@ const SAMPLE_LETTERS = [
     quote: '一切有爲法，如夢幻泡影',
     source: '금강경',
     translation: '모든 인연은 꿈이요, 환영이요, 거품이요, 그림자입니다.',
-    snippet: '도반이여, 지금 이 힘듦도 언젠가는 지나갈 것입니다. 강물이 바위를 만나 잠시 소용돌이치다 흘러가듯, 마음의 어둠도 그러합니다.',
+    snippet: '도반이여, 오늘 하루가 얼마나 무거웠는지 압니다. 그 무게를 이고 여기까지 걸어온 것만으로도 충분합니다. 강물은 바위를 만나도 돌아가며 흐르듯, 마음도 막히면 또 다른 길을 찾게 되어 있습니다. 지금의 이 어둠은 영원하지 않습니다. 오늘 밤은 그냥 쉬십시오.',
   },
   {
     id: 'benedicto',
@@ -47,7 +47,7 @@ const SAMPLE_LETTERS = [
     quote: 'Omnia tempus habent',
     source: '코헬렛 3:1',
     translation: '모든 것에는 때가 있습니다.',
-    snippet: '형제님, 지금 이 무거움은 당신이 약해서가 아닙니다. 오히려 진심으로 살고 있다는 증거입니다. 촛불이 바람 앞에 흔들릴수록 더 환하게 타오르듯이.',
+    snippet: '형제님, 오늘 하루가 참 힘드셨겠어요. 이렇게 마음을 꺼내주셔서 고맙습니다. 지금의 무거움은 당신이 약해서가 아닙니다. 오히려 진심으로 살고 있다는 증거입니다. 주님은 무너지는 사람을 멀리하지 않으십니다. 가장 낮은 곳에 가장 가까이 계십니다. 오늘 밤, 잠시 그 품에 기대어도 됩니다.',
   },
 ];
 
@@ -322,7 +322,7 @@ export default function OnboardingModal({ onClose, isInitial = false }: Props) {
 
               {/* ════ IV. 샘플 편지 미리보기 ════════════════════════════════ */}
               {step === 3 && (
-                <div style={{ paddingTop: '24px' }}>
+                <div style={{ paddingTop: '16px' }}>
                   <div style={{ textAlign: 'center' }}>
                     <PageTitle>{'이런 편지가\n도착합니다.'}</PageTitle>
                   </div>
@@ -349,16 +349,16 @@ export default function OnboardingModal({ onClose, isInitial = false }: Props) {
                     </p>
                   </div>
 
-                  {/* 샘플 편지 카드 2통 — snippet 없이 컴팩트하게 */}
-                  {SAMPLE_LETTERS.map(({ id, Icon, name, quote, source, translation }, i) => (
+                  {/* 샘플 편지 카드 2통 */}
+                  {SAMPLE_LETTERS.map(({ id, Icon, name, quote, source, translation, snippet }, i) => (
                     <div key={id}>
                       {i > 0 && <div style={{ height: '10px' }} />}
                       <div style={{
                         border: `1px solid ${MUTE}0.1)`,
                         background: 'rgba(255,255,255,0.35)',
-                        padding: '13px 14px',
+                        padding: '12px 14px',
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '7px' }}>
                           <Icon size={12} strokeWidth={1.2} color={INK} style={{ opacity: 0.45 }} />
                           <span style={{
                             fontFamily: SERIF, fontWeight: 500,
@@ -367,21 +367,30 @@ export default function OnboardingModal({ onClose, isInitial = false }: Props) {
                         </div>
                         <p style={{
                           fontFamily: SERIF, fontStyle: 'italic',
-                          fontSize: '0.76rem', color: INK, opacity: 0.65,
-                          lineHeight: 1.55, margin: '0 0 5px',
+                          fontSize: '0.74rem', color: INK, opacity: 0.62,
+                          lineHeight: 1.5, margin: '0 0 4px',
                         }}>
                           "{quote}"
                         </p>
                         <p style={{
                           fontSize: '9px', letterSpacing: '0.08em',
-                          color: INK, opacity: 0.3, fontFamily: SERIF, margin: 0,
+                          color: INK, opacity: 0.28, fontFamily: SERIF, margin: '0 0 9px',
                         }}>
                           {source} · {translation}
+                        </p>
+                        <div style={{ height: '1px', background: `${MUTE}0.08)`, marginBottom: '9px' }} />
+                        <p style={{
+                          fontFamily: SERIF, fontStyle: 'italic', fontWeight: 300,
+                          fontSize: '0.73rem', lineHeight: 1.8,
+                          color: INK, opacity: 0.55,
+                          wordBreak: 'keep-all', margin: 0,
+                        }}>
+                          {snippet}
                         </p>
                       </div>
                     </div>
                   ))}
-                  <div style={{ height: '16px' }} />
+                  <div style={{ height: '12px' }} />
                 </div>
               )}
 
