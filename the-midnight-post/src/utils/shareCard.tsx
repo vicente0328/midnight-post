@@ -80,22 +80,22 @@ export async function generateShareCardBlob(
 
   // ── Palette ───────────────────────────────────────────────────────────────
   const SERIF = "'Cormorant Garamond', 'Nanum Myeongjo', serif";
-  const INK   = (a: number) => `rgba(38,22,8,${a})`;   // warm sepia-black
+  const INK   = (a: number) => `rgba(44,42,41,${a})`;   // service ink (#2c2a29)
   const GOLD  = (a: number) => `rgba(148,108,22,${a})`; // antique gold
 
-  // ── Background: deep amber vellum ────────────────────────────────────────
+  // ── Background: service cream (#f4f1ea) with subtle warmth gradient ──────
   const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0,    '#EDD4A2');
-  bg.addColorStop(0.30, '#D9BC82');
-  bg.addColorStop(0.65, '#E4CB94');
-  bg.addColorStop(1,    '#C8A96A');
+  bg.addColorStop(0,    '#F8F5EE');
+  bg.addColorStop(0.35, '#F1EDE3');
+  bg.addColorStop(0.70, '#F5F1E8');
+  bg.addColorStop(1,    '#EDE8DC');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  // ── Warm age stain (top-left corner) ─────────────────────────────────────
-  const stain = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.55);
-  stain.addColorStop(0, 'rgba(90,55,10,0.12)');
-  stain.addColorStop(1, 'rgba(90,55,10,0)');
+  // ── Very subtle warm tint (center glow — aged paper feel) ────────────────
+  const stain = ctx.createRadialGradient(W * 0.5, H * 0.5, 0, W * 0.5, H * 0.5, W * 0.65);
+  stain.addColorStop(0, 'rgba(200,170,100,0.06)');
+  stain.addColorStop(1, 'rgba(200,170,100,0)');
   ctx.fillStyle = stain;
   ctx.fillRect(0, 0, W, H);
 
@@ -113,10 +113,10 @@ export async function generateShareCardBlob(
   }
   ctx.restore();
 
-  // ── Vignette ─────────────────────────────────────────────────────────────
-  const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.18, W / 2, H / 2, H * 0.72);
+  // ── Vignette — lighter on cream ──────────────────────────────────────────
+  const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.22, W / 2, H / 2, H * 0.74);
   vig.addColorStop(0, 'rgba(0,0,0,0)');
-  vig.addColorStop(1, 'rgba(22,12,2,0.32)');
+  vig.addColorStop(1, 'rgba(30,22,10,0.18)');
   ctx.fillStyle = vig;
   ctx.fillRect(0, 0, W, H);
 

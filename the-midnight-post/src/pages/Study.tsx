@@ -130,8 +130,8 @@ function Lobby({ onEnter }: { onEnter: (id: MentorKey) => void }) {
         </div>
         <p className="text-[9px] uppercase tracking-[0.38em] opacity-25 font-serif mb-3">Mentors' Study</p>
         <h1 className="text-3xl font-serif mb-3">멘토의 연구실</h1>
-        <p className="opacity-45 italic text-sm break-keep max-w-xs mx-auto leading-relaxed">
-          네 개의 문 — 각자의 지혜가 깃든 공간으로<br />들어가 보세요.
+        <p className="opacity-45 italic text-sm break-keep max-w-xs mx-auto leading-relaxed" style={{ textWrap: 'balance' } as React.CSSProperties}>
+          네 개의 문 — 각자의 지혜가 깃든 공간으로 들어가 보세요.
         </p>
         {isAdmin && (
           <button
