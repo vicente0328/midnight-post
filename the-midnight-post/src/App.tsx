@@ -11,6 +11,7 @@ import Library from './pages/Library';
 import Study from './pages/Study';
 import Account from './pages/Account';
 import Damso from './pages/Damso';
+import Seed from './pages/Seed';
 import { triggerDailyKnowledgeGeneration } from './services/knowledge';
 
 export default function App() {
@@ -32,6 +33,7 @@ export default function App() {
               <Route path="library" element={<Library />} />
               <Route path="study" element={<Study />} />
               <Route path="account" element={<Account />} />
+              <Route path="seed" element={<Seed />} />
             </Route>
             {/* 담소: 전체화면 소설 인터페이스 — Layout 밖에 배치 */}
             <Route path="damso/:entryId/:mentorId" element={<Damso />} />

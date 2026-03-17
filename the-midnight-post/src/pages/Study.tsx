@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Feather, Flower2, Cross, Brush, X, ChevronLeft } from 'lucide-react';
 import { getTodayKnowledge, KnowledgeEntry } from '../services/knowledge';
@@ -50,14 +50,16 @@ type MentorKey = keyof typeof ROOMS;
 
 export default function Study() {
   const [activeRoom, setActiveRoom] = useState<MentorKey | null>(null);
+  const isFirstRender = useRef(true);
+  useEffect(() => { isFirstRender.current = false; }, []);
 
   return (
     <div className="w-full max-w-4xl flex flex-col items-center">
       <motion.div
         key={activeRoom ?? 'lobby'}
-        initial={{ opacity: 0 }}
+        initial={isFirstRender.current ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.25, ease: 'easeOut' }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
         className="w-full flex flex-col items-center"
       >
         {activeRoom ? (
@@ -180,12 +182,6 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
           오늘의 지혜 — {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
         </p>
 
-        {loading && (
-          <p className="font-serif italic opacity-40 text-center animate-pulse py-8">
-            지혜를 불러오는 중…
-          </p>
-        )}
-
         {!loading && entries.length === 0 && (
           <p className="font-serif italic opacity-40 text-center py-8">
             오늘의 지혜가 아직 준비되지 않았습니다. 잠시 후 다시 방문해주세요.
@@ -193,7 +189,11 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {entries.map((entry, index) => (
+          {loading
+            ? [...Array(4)].map((_, i) => (
+                <div key={i} className="h-44 border border-ink/8 bg-[#fdfbf7] animate-pulse opacity-50" />
+              ))
+            : entries.map((entry, index) => (
             <motion.button
               key={index}
               initial={{ opacity: 0, y: 10 }}

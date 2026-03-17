@@ -161,7 +161,16 @@ export async function triggerDailyKnowledgeGeneration(): Promise<void> {
 
   try {
     const lockSnap = await getDoc(lockRef);
-    if (lockSnap.exists() && lockSnap.data()?.status === 'done') return; // 이미 오늘 완료됨
+    if (lockSnap.exists()) {
+      const data = lockSnap.data();
+      if (data?.status === 'done') return; // 이미 오늘 완료됨
+      // 'generating' 상태가 1시간 이상 지속되면 stuck으로 간주하고 재시도
+      if (data?.status === 'generating' && data?.startedAt) {
+        const startedMs = data.startedAt.toDate?.().getTime() ?? 0;
+        if (Date.now() - startedMs < 60 * 60 * 1000) return; // 아직 1시간 미경과 → 대기
+        // 1시간 초과 → stuck으로 간주, 아래에서 재시도
+      }
+    }
 
     // 잠금 설정 (다른 클라이언트의 중복 생성 방지)
     await setDoc(lockRef, { status: 'generating', startedAt: serverTimestamp() });
