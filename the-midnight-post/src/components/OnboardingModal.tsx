@@ -233,7 +233,7 @@ export default function OnboardingModal({ onClose, isInitial = false }: Props) {
 
               {/* ════ II. 현자 ═══════════════════════════════════════════════ */}
               {step === 1 && (
-                <div style={{ paddingTop: '28px' }}>
+                <div style={{ paddingTop: '24px' }}>
                   <div style={{ textAlign: 'center' }}>
                     <PageTitle>{'네 명의 현자가\n기다리고 있습니다.'}</PageTitle>
                   </div>
@@ -242,32 +242,31 @@ export default function OnboardingModal({ onClose, isInitial = false }: Props) {
                   {MENTORS.map(({ id, Icon, name, tradition, desc }, i) => (
                     <div key={id}>
                       {i > 0 && <HRule my="0px" />}
-                      <div style={{ display: 'flex', gap: '14px', padding: '15px 0' }}>
-                        {/* 아이콘 — 프레임 없이 잉크색으로만 */}
-                        <div style={{ flexShrink: 0, paddingTop: '2px' }}>
-                          <Icon size={16} strokeWidth={1.2} color={INK} style={{ opacity: 0.55 }} />
+                      <div style={{ display: 'flex', gap: '14px', padding: '13px 0', alignItems: 'flex-start' }}>
+                        <div style={{ flexShrink: 0, paddingTop: '3px' }}>
+                          <Icon size={15} strokeWidth={1.2} color={INK} style={{ opacity: 0.55 }} />
                         </div>
                         <div style={{ flex: 1 }}>
                           <div style={{
                             fontFamily: SERIF, fontWeight: 500,
-                            fontSize: '0.92rem', letterSpacing: '0.03em',
-                            color: INK, marginBottom: '2px',
+                            fontSize: '0.9rem', letterSpacing: '0.03em',
+                            color: INK, marginBottom: '3px',
                           }}>
                             {name}
                           </div>
                           <div style={{
                             fontSize: '9px', letterSpacing: '0.16em',
                             color: INK, opacity: 0.32,
-                            textTransform: 'uppercase', marginBottom: '6px',
-                            fontFamily: SERIF,
+                            textTransform: 'uppercase',
+                            fontFamily: SERIF, margin: 0,
                           }}>
                             {tradition}
                           </div>
                           <p style={{
                             fontFamily: SERIF, fontStyle: 'italic', fontWeight: 300,
-                            fontSize: '0.75rem', lineHeight: 1.75,
-                            color: INK, opacity: 0.52,
-                            wordBreak: 'keep-all', margin: 0,
+                            fontSize: '0.72rem', lineHeight: 1.7,
+                            color: INK, opacity: 0.48,
+                            wordBreak: 'keep-all', margin: '5px 0 0',
                           }}>
                             {desc}
                           </p>
@@ -275,7 +274,7 @@ export default function OnboardingModal({ onClose, isInitial = false }: Props) {
                       </div>
                     </div>
                   ))}
-                  <div style={{ height: '20px' }} />
+                  <div style={{ height: '12px' }} />
                 </div>
               )}
 
@@ -323,7 +322,7 @@ export default function OnboardingModal({ onClose, isInitial = false }: Props) {
 
               {/* ════ IV. 샘플 편지 미리보기 ════════════════════════════════ */}
               {step === 3 && (
-                <div style={{ paddingTop: '28px' }}>
+                <div style={{ paddingTop: '24px' }}>
                   <div style={{ textAlign: 'center' }}>
                     <PageTitle>{'이런 편지가\n도착합니다.'}</PageTitle>
                   </div>
@@ -332,12 +331,12 @@ export default function OnboardingModal({ onClose, isInitial = false }: Props) {
                   {/* 샘플 일기 */}
                   <div style={{
                     borderLeft: `2px solid ${MUTE}0.15)`,
-                    paddingLeft: '14px', marginBottom: '24px',
+                    paddingLeft: '12px', marginBottom: '18px',
                   }}>
                     <p style={{
                       fontFamily: SERIF, fontStyle: 'italic', fontWeight: 300,
-                      fontSize: '0.82rem', color: INK, opacity: 0.45,
-                      lineHeight: 1.7, margin: '0 0 4px',
+                      fontSize: '0.8rem', color: INK, opacity: 0.45,
+                      lineHeight: 1.6, margin: '0 0 3px',
                     }}>
                       오늘 하루가 너무 힘들었다
                     </p>
@@ -350,51 +349,39 @@ export default function OnboardingModal({ onClose, isInitial = false }: Props) {
                     </p>
                   </div>
 
-                  {/* 샘플 편지 카드 2통 */}
-                  {SAMPLE_LETTERS.map(({ id, Icon, name, quote, source, translation, snippet }, i) => (
+                  {/* 샘플 편지 카드 2통 — snippet 없이 컴팩트하게 */}
+                  {SAMPLE_LETTERS.map(({ id, Icon, name, quote, source, translation }, i) => (
                     <div key={id}>
-                      {i > 0 && <div style={{ height: '16px' }} />}
+                      {i > 0 && <div style={{ height: '10px' }} />}
                       <div style={{
                         border: `1px solid ${MUTE}0.1)`,
                         background: 'rgba(255,255,255,0.35)',
-                        padding: '16px',
+                        padding: '13px 14px',
                       }}>
-                        {/* 멘토 */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                          <Icon size={13} strokeWidth={1.2} color={INK} style={{ opacity: 0.45 }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                          <Icon size={12} strokeWidth={1.2} color={INK} style={{ opacity: 0.45 }} />
                           <span style={{
                             fontFamily: SERIF, fontWeight: 500,
-                            fontSize: '0.82rem', color: INK, opacity: 0.7,
+                            fontSize: '0.8rem', color: INK, opacity: 0.7,
                           }}>{name}</span>
                         </div>
-                        {/* 인용 */}
                         <p style={{
                           fontFamily: SERIF, fontStyle: 'italic',
-                          fontSize: '0.78rem', color: INK, opacity: 0.65,
-                          marginBottom: '4px', lineHeight: 1.6, margin: '0 0 3px',
+                          fontSize: '0.76rem', color: INK, opacity: 0.65,
+                          lineHeight: 1.55, margin: '0 0 5px',
                         }}>
                           "{quote}"
                         </p>
                         <p style={{
-                          fontSize: '9px', letterSpacing: '0.1em',
-                          color: INK, opacity: 0.3, fontFamily: SERIF,
-                          margin: '0 0 10px',
+                          fontSize: '9px', letterSpacing: '0.08em',
+                          color: INK, opacity: 0.3, fontFamily: SERIF, margin: 0,
                         }}>
                           {source} · {translation}
-                        </p>
-                        <HRule my="0px" />
-                        <p style={{
-                          fontFamily: SERIF, fontStyle: 'italic', fontWeight: 300,
-                          fontSize: '0.75rem', lineHeight: 1.85,
-                          color: INK, opacity: 0.52,
-                          wordBreak: 'keep-all', margin: '10px 0 0',
-                        }}>
-                          {snippet}
                         </p>
                       </div>
                     </div>
                   ))}
-                  <div style={{ height: '28px' }} />
+                  <div style={{ height: '16px' }} />
                 </div>
               )}
 

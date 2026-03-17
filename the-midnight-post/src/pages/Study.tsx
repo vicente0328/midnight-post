@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Feather, Flower2, Cross, Brush, X, ChevronLeft, Bookmark, BookmarkCheck } from 'lucide-react';
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
@@ -53,24 +53,25 @@ type MentorKey = keyof typeof ROOMS;
 
 export default function Study() {
   const [activeRoom, setActiveRoom] = useState<MentorKey | null>(null);
-  const isFirstRender = useRef(true);
-  useEffect(() => { isFirstRender.current = false; }, []);
 
   return (
     <div className="w-full max-w-4xl flex flex-col items-center">
-      <motion.div
-        key={activeRoom ?? 'lobby'}
-        initial={isFirstRender.current ? false : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.2, ease: 'easeOut' }}
-        className="w-full flex flex-col items-center"
-      >
-        {activeRoom ? (
-          <RoomView mentorId={activeRoom} onBack={() => setActiveRoom(null)} />
-        ) : (
-          <Lobby onEnter={setActiveRoom} isFirst={isFirstRender.current} />
-        )}
-      </motion.div>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={activeRoom ?? 'lobby'}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
+          className="w-full flex flex-col items-center"
+        >
+          {activeRoom ? (
+            <RoomView mentorId={activeRoom} onBack={() => setActiveRoom(null)} />
+          ) : (
+            <Lobby onEnter={setActiveRoom} />
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
@@ -79,7 +80,7 @@ export default function Study() {
 
 const ADMIN_EMAIL = 'admin@tmp.com';
 
-function Lobby({ onEnter, isFirst }: { onEnter: (id: MentorKey) => void; isFirst: boolean }) {
+function Lobby({ onEnter }: { onEnter: (id: MentorKey) => void }) {
   const { user } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
   const [regenerating, setRegenerating] = useState(false);
@@ -121,7 +122,7 @@ function Lobby({ onEnter, isFirst }: { onEnter: (id: MentorKey) => void; isFirst
           return (
             <motion.button
               key={id}
-              initial={isFirst ? false : { opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.08, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
               onClick={() => onEnter(id)}

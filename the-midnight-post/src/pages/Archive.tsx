@@ -62,10 +62,6 @@ type Tab = 'letters' | 'damso' | 'bookmarks';
 
 // ── Archive ───────────────────────────────────────────────────────────────────
 
-// 카드 스켈레톤 — 로딩 중 레이아웃 높이 유지용
-function SkeletonCard({ height = 'h-48' }: { height?: string }) {
-  return <div className={`${height} border border-ink/8 bg-[#fdfbf7] animate-pulse rounded-none opacity-50`} />;
-}
 
 export default function Archive() {
   const { user } = useAuth();
@@ -229,16 +225,14 @@ export default function Archive() {
       {tab === 'letters' && (
         <div className="w-full flex flex-col items-center">
 
+          {loadingEntries && (
+            <p className="font-serif italic opacity-30 text-sm text-center py-12 animate-pulse">불러오는 중…</p>
+          )}
+          {!loadingEntries && entries.length === 0 && (
+            <p className="font-serif italic opacity-40 text-center py-12">아직 남겨진 기록이 없습니다.</p>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
-            {loadingEntries
-              ? [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
-              : entries.length === 0
-                ? (
-                  <p className="font-serif italic opacity-40 col-span-full text-center py-4">
-                    아직 남겨진 기록이 없습니다.
-                  </p>
-                )
-                : entries.map((entry, index) => (
+            {!loadingEntries && entries.map((entry, index) => (
               <motion.div
                 key={entry.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -316,8 +310,11 @@ export default function Archive() {
 
       {tab === 'damso' && (
         <div className="w-full flex flex-col items-center">
+          {loadingSessions && (
+            <p className="font-serif italic opacity-30 text-sm text-center py-12 animate-pulse">불러오는 중…</p>
+          )}
           {!loadingSessions && sessionsError && (
-            <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col items-center gap-4 py-12">
               <p className="font-serif italic opacity-40">기록을 불러오지 못했습니다.</p>
               <button
                 onClick={fetchSessions}
@@ -327,12 +324,11 @@ export default function Archive() {
               </button>
             </div>
           )}
+          {!loadingSessions && sessionsFetched && sessions.length === 0 && !sessionsError && (
+            <p className="font-serif italic opacity-40 text-center py-12">아직 나눈 담소가 없습니다.</p>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
-            {loadingSessions && [...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
-            {!loadingSessions && sessionsFetched && sessions.length === 0 && !sessionsError && (
-              <p className="font-serif italic opacity-40 col-span-full text-center py-4">아직 나눈 담소가 없습니다.</p>
-            )}
-            {sessions.map((session, index) => {
+            {!loadingSessions && sessions.map((session, index) => {
               const mentor = MENTOR_INFO[session.mentorId as MentorKey];
               if (!mentor) return null;
               const Icon = mentor.icon;
@@ -411,15 +407,17 @@ export default function Archive() {
       )}
       {tab === 'bookmarks' && (
         <div className="w-full flex flex-col items-center">
+          {loadingBookmarks && (
+            <p className="font-serif italic opacity-30 text-sm text-center py-12 animate-pulse">불러오는 중…</p>
+          )}
+          {!loadingBookmarks && bookmarksFetched && bookmarks.length === 0 && (
+            <div className="flex flex-col items-center gap-3 opacity-40 py-12">
+              <Bookmark size={28} strokeWidth={1} />
+              <p className="font-serif italic text-sm">아직 간직한 편지가 없습니다.</p>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
-            {loadingBookmarks && [...Array(3)].map((_, i) => <SkeletonCard key={i} height="h-52" />)}
-            {!loadingBookmarks && bookmarksFetched && bookmarks.length === 0 && (
-              <div className="flex flex-col items-center gap-3 opacity-40 py-4 col-span-full">
-                <Bookmark size={28} strokeWidth={1} />
-                <p className="font-serif italic text-sm">아직 간직한 편지가 없습니다.</p>
-              </div>
-            )}
-            {bookmarks.map((bm, index) => {
+            {!loadingBookmarks && bookmarks.map((bm, index) => {
               const mentor = MENTOR_INFO[bm.mentorId as MentorKey];
               if (!mentor) return null;
               const Icon = mentor.icon;
