@@ -259,6 +259,11 @@ function WisdomModal({
 }) {
   const Icon = room.icon;
 
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
