@@ -15,6 +15,8 @@ interface AuthContextType {
   loading: boolean;
   showAuthModal: boolean;
   setShowAuthModal: (v: boolean) => void;
+  showGuideModal: boolean;
+  setShowGuideModal: (v: boolean) => void;
   isNewUser: boolean;
   markOnboarded: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -50,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showGuideModal, setShowGuideModal] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
 
   useEffect(() => {
@@ -115,6 +118,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         showAuthModal,
         setShowAuthModal,
+        showGuideModal,
+        setShowGuideModal,
         isNewUser,
         markOnboarded,
         signInWithGoogle,

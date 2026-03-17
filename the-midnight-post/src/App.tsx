@@ -16,7 +16,7 @@ import OnboardingModal from './components/OnboardingModal';
 import { triggerDailyKnowledgeGeneration } from './services/knowledge';
 
 function AppRoutes() {
-  const { isNewUser, user } = useAuth();
+  const { isNewUser, user, markOnboarded, showGuideModal, setShowGuideModal } = useAuth();
 
   useEffect(() => {
     triggerDailyKnowledgeGeneration();
@@ -38,7 +38,16 @@ function AppRoutes() {
         {/* 담소: 전체화면 소설 인터페이스 — Layout 밖에 배치 */}
         <Route path="damso/:entryId/:mentorId" element={<Damso />} />
       </Routes>
-      {user && isNewUser && <OnboardingModal />}
+
+      {/* 신규 유저: 온보딩 자동 표시 */}
+      {user && isNewUser && !showGuideModal && (
+        <OnboardingModal onClose={markOnboarded} isInitial />
+      )}
+
+      {/* Guide 버튼으로 열기 (기존 유저 포함) */}
+      {showGuideModal && (
+        <OnboardingModal onClose={() => setShowGuideModal(false)} />
+      )}
     </>
   );
 }

@@ -2,12 +2,12 @@ import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import AuthModal from './AuthModal';
-import { LogOut, BookOpen, PenTool, FlaskConical } from 'lucide-react';
+import { LogOut, BookOpen, PenTool, FlaskConical, Feather } from 'lucide-react';
 import { motion } from 'motion/react';
 import BottomNav from './BottomNav';
 
 export default function Layout() {
-  const { user, setShowAuthModal, signOut } = useAuth();
+  const { user, setShowAuthModal, setShowGuideModal, signOut } = useAuth();
   const location = useLocation();
 
   return (
@@ -34,27 +34,57 @@ export default function Layout() {
                 <FlaskConical size={16} />
                 <span>Library</span>
               </Link>
+              <button
+                onClick={() => setShowGuideModal(true)}
+                className="flex items-center gap-1.5 hover:opacity-70 transition-opacity opacity-50"
+                title="Guide"
+              >
+                <Feather size={15} strokeWidth={1.4} />
+                <span>Guide</span>
+              </button>
               <button onClick={signOut} className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Logout">
                 <LogOut size={16} />
                 <span>Logout</span>
               </button>
             </>
           ) : (
-            <button onClick={() => setShowAuthModal(true)} className="hover:opacity-70 transition-opacity">
-              Login
-            </button>
+            <>
+              <button
+                onClick={() => setShowGuideModal(true)}
+                className="flex items-center gap-1.5 hover:opacity-70 transition-opacity opacity-50"
+                title="Guide"
+              >
+                <Feather size={15} strokeWidth={1.4} />
+                <span>Guide</span>
+              </button>
+              <button onClick={() => setShowAuthModal(true)} className="hover:opacity-70 transition-opacity">
+                Login
+              </button>
+            </>
           )}
         </nav>
 
-        {/* 모바일: 비로그인 시에만 Login 버튼 표시 */}
-        {!user && (
+        {/* 모바일 우측: Guide 아이콘 (항상) + 비로그인시 Login */}
+        <div className="sm:hidden flex items-center gap-3">
           <button
-            onClick={() => setShowAuthModal(true)}
-            className="sm:hidden hover:opacity-70 transition-opacity text-sm tracking-widest uppercase"
+            onClick={() => setShowGuideModal(true)}
+            className="flex items-center gap-1.5 transition-opacity"
+            style={{ opacity: 0.45 }}
+            onTouchStart={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.85'; }}
+            onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.45'; }}
+            title="Guide"
           >
-            Login
+            <Feather size={15} strokeWidth={1.4} />
           </button>
-        )}
+          {!user && (
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="hover:opacity-70 transition-opacity text-sm tracking-widest uppercase"
+            >
+              Login
+            </button>
+          )}
+        </div>
       </header>
 
       <main className="flex-1 w-full flex flex-col items-center justify-center">
