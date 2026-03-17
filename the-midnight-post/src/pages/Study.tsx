@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
 import { getTodayKnowledge, forceRegenerateKnowledge, KnowledgeEntry } from '../services/knowledge';
+import { generateSingleMentorReply } from '../services/ai';
 import { ShareCardButton } from '../utils/shareCard';
 
 // ── 멘토 공간 정보 ────────────────────────────────────────────────────────────
@@ -307,6 +308,7 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
   const [loading, setLoading] = useState(true);
   const [selectedEntry, setSelectedEntry] = useState<KnowledgeEntry | null>(null);
   const [damsoLoading, setDamsoLoading] = useState(false);
+  const [showLetterModal, setShowLetterModal] = useState(false);
 
   useEffect(() => {
     getTodayKnowledge(mentorId)
@@ -417,37 +419,42 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
       </div>
 
       {/* ── 액션 버튼 ── */}
-      <div className="flex gap-3 w-full mb-10">
+      <div className="flex flex-col items-center gap-4 mb-12 w-full">
         <button
-          onClick={() => navigate('/')}
-          className="flex-1 flex items-center justify-center gap-2 py-3 border font-serif text-sm italic transition-all duration-300"
-          style={{
-            borderColor: `rgba(${room.accentRgb},0.35)`,
-            color: `rgba(44,42,41,0.65)`,
-            backgroundColor: 'rgba(253,251,247,0.7)',
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `rgba(${room.accentRgb},0.65)`; (e.currentTarget as HTMLElement).style.color = 'rgba(44,42,41,0.9)'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `rgba(${room.accentRgb},0.35)`; (e.currentTarget as HTMLElement).style.color = 'rgba(44,42,41,0.65)'; }}
+          onClick={() => setShowLetterModal(true)}
+          className="flex items-center gap-2 font-serif italic text-sm opacity-60 hover:opacity-100 transition-opacity duration-300"
+          style={{ touchAction: 'manipulation' }}
         >
-          <PenLine size={14} strokeWidth={1.5} />
+          <PenLine size={13} strokeWidth={1.4} />
           {room.name}께 편지 보내기
         </button>
+        <div className="flex items-center gap-3 opacity-20 w-24">
+          <div className="flex-1 h-px bg-ink" />
+          <div className="w-1 h-1 rotate-45 bg-[#D4AF37]" />
+          <div className="flex-1 h-px bg-ink" />
+        </div>
         <button
           onClick={handleDamso}
           disabled={damsoLoading}
-          className="flex-1 flex items-center justify-center gap-2 py-3 border font-serif text-sm italic transition-all duration-300 disabled:opacity-40"
-          style={{
-            borderColor: `rgba(${room.accentRgb},0.35)`,
-            color: `rgba(44,42,41,0.65)`,
-            backgroundColor: 'rgba(253,251,247,0.7)',
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `rgba(${room.accentRgb},0.65)`; (e.currentTarget as HTMLElement).style.color = 'rgba(44,42,41,0.9)'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = `rgba(${room.accentRgb},0.35)`; (e.currentTarget as HTMLElement).style.color = 'rgba(44,42,41,0.65)'; }}
+          className="flex items-center gap-2 font-serif italic text-sm opacity-60 hover:opacity-100 transition-opacity duration-300 disabled:opacity-25"
+          style={{ touchAction: 'manipulation' }}
         >
-          <MessageCircle size={14} strokeWidth={1.5} />
+          <MessageCircle size={13} strokeWidth={1.4} />
           {damsoLoading ? '연결 중…' : `${room.name}${room.particle} 담소 나누기`}
         </button>
       </div>
+
+      {/* ── 편지 쓰기 모달 ── */}
+      <AnimatePresence>
+        {showLetterModal && (
+          <LetterWritingModal
+            mentorId={mentorId}
+            room={room}
+            onClose={() => setShowLetterModal(false)}
+            onSent={(entryId) => { setShowLetterModal(false); navigate(`/envelopes/${entryId}`); }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* 오늘의 지혜 레이블 */}
       <p className="text-[9px] uppercase tracking-[0.35em] opacity-28 text-center font-serif mb-7">
@@ -728,6 +735,178 @@ function WisdomModal({
             />
           </div>
         </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ── 편지 쓰기 모달 ────────────────────────────────────────────────────────────
+
+function LetterWritingModal({
+  mentorId,
+  room,
+  onClose,
+  onSent,
+}: {
+  mentorId: MentorKey;
+  room: typeof ROOMS[MentorKey];
+  onClose: () => void;
+  onSent: (entryId: string) => void;
+}) {
+  const { user, setShowAuthModal } = useAuth();
+  const [content, setContent] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const Icon = room.icon;
+  const MAX = 100;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = content.trim();
+    if (!trimmed) return;
+    if (!user) { setShowAuthModal(true); return; }
+
+    setIsSending(true);
+    try {
+      // 1. 일기 저장
+      const entryRef = await addDoc(collection(db, 'entries'), {
+        uid: user.uid,
+        content: trimmed,
+        emotion: 'unknown',
+        createdAt: serverTimestamp(),
+        status: 'replied',
+      });
+
+      // 2. 최근 일기 조회
+      let recentEntries: { content: string; emotion?: string; date?: string }[] = [];
+      try {
+        const snap = await getDocs(query(
+          collection(db, 'entries'),
+          where('uid', '==', user.uid),
+          orderBy('createdAt', 'desc'),
+          limit(6),
+        ));
+        snap.forEach(d => {
+          if (d.id !== entryRef.id) {
+            const data = d.data();
+            recentEntries.push({ content: data.content, emotion: data.emotion,
+              date: data.createdAt?.toDate?.()?.toLocaleDateString('ko-KR') });
+          }
+        });
+        recentEntries = recentEntries.slice(0, 5);
+      } catch {}
+
+      // 3. pendingDeliverTimes — 즉시 도착
+      const deliverTimes: Record<string, number> = { [mentorId]: Date.now() };
+      localStorage.setItem('pendingEntryId', entryRef.id);
+      localStorage.setItem('pendingDeliverTimes', JSON.stringify(deliverTimes));
+      window.dispatchEvent(new Event('pendingEntryUpdated'));
+
+      // 4. 해당 멘토에게만 답장 생성
+      const reply = await generateSingleMentorReply(trimmed, mentorId, new Date().getHours(), recentEntries);
+      const replyData: any = {
+        uid: user.uid,
+        entryId: entryRef.id,
+        mentorId: reply.mentorId,
+        quote: reply.quote,
+        translation: reply.translation,
+        advice: reply.advice,
+        createdAt: serverTimestamp(),
+      };
+      if (reply.source) replyData.source = reply.source;
+      await addDoc(collection(db, 'replies'), replyData);
+
+      onSent(entryRef.id);
+    } catch (err) {
+      console.error('편지 전송 실패:', err);
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/85 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.96, y: 16, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.96, y: 16, opacity: 0 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        onClick={e => e.stopPropagation()}
+        className="relative w-full max-w-md bg-[#fdfbf7] p-8 sm:p-12 border border-[#D4AF37]/20 shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
+        style={{
+          backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
+        }}
+      >
+        {/* 코너 장식 */}
+        <div className="absolute top-3 left-3 w-4 h-4 border-t border-l border-[#D4AF37]/25 pointer-events-none" />
+        <div className="absolute top-3 right-3 w-4 h-4 border-t border-r border-[#D4AF37]/25 pointer-events-none" />
+        <div className="absolute bottom-3 left-3 w-4 h-4 border-b border-l border-[#D4AF37]/25 pointer-events-none" />
+        <div className="absolute bottom-3 right-3 w-4 h-4 border-b border-r border-[#D4AF37]/25 pointer-events-none" />
+
+        {/* 닫기 */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 opacity-30 hover:opacity-70 transition-opacity duration-200 hover:rotate-90 transition-transform"
+        >
+          <X size={22} strokeWidth={1} />
+        </button>
+
+        {/* 수신인 */}
+        <div className="flex flex-col items-center mb-8">
+          <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${room.color} flex items-center justify-center mb-3 relative`}>
+            <div className="absolute inset-1 rounded-full border border-[#D4AF37]/40" />
+            <Icon size={17} strokeWidth={1.3} className="text-[#D4AF37]" />
+          </div>
+          <p className="font-serif text-[10px] uppercase tracking-[0.3em] opacity-35 mb-1">To</p>
+          <p className="font-serif text-lg font-bold text-ink/85">{room.name}</p>
+          <p className="text-[10px] opacity-35 italic mt-0.5">{room.desc}</p>
+        </div>
+
+        {isSending ? (
+          <div className="flex flex-col items-center gap-4 py-8">
+            <motion.div
+              animate={{ opacity: [0.3, 0.7, 0.3] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="font-serif italic text-sm opacity-50"
+            >
+              편지를 전하고 있습니다…
+            </motion.div>
+            <p className="text-[10px] opacity-25 font-serif text-center">
+              {room.name}의 답장을 기다려주세요
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <div className="relative">
+              <textarea
+                value={content}
+                onChange={e => setContent(e.target.value.slice(0, MAX))}
+                placeholder={`${room.name}께 오늘의 마음을 전해보세요…`}
+                rows={5}
+                className="w-full bg-transparent resize-none outline-none font-serif text-base leading-[1.9] text-ink/85 placeholder:text-ink/25 placeholder:italic border-b border-ink/15 pb-2 focus:border-ink/30 transition-colors duration-300"
+                autoFocus
+              />
+              <span className={`absolute bottom-3 right-0 text-[10px] font-mono transition-opacity ${content.length > MAX * 0.8 ? 'opacity-50' : 'opacity-20'}`}>
+                {content.length}/{MAX}
+              </span>
+            </div>
+
+            <div className="flex justify-center pt-2">
+              <button
+                type="submit"
+                disabled={!content.trim()}
+                className="font-serif italic text-sm opacity-55 hover:opacity-90 transition-opacity duration-300 disabled:opacity-20 border-b border-ink/20 pb-px"
+              >
+                편지 보내기 →
+              </button>
+            </div>
+          </form>
+        )}
       </motion.div>
     </motion.div>
   );
