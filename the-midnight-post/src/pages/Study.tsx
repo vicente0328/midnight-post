@@ -393,22 +393,24 @@ function WisdomModal({
           </div>
         </div>
 
-        {/* 명언 */}
-        <div className="mb-8 relative">
+        {/* 원문 */}
+        <div className="mb-6 relative">
           <span className="absolute -top-4 -left-2 text-6xl text-[#D4AF37]/15 font-serif leading-none select-none">"</span>
-          <p className="font-serif text-xl sm:text-2xl italic leading-relaxed text-ink/90 relative z-10 mb-4 break-keep whitespace-pre-line" style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
+          <p className="font-serif text-xl sm:text-2xl italic leading-relaxed text-ink/90 relative z-10 break-keep whitespace-pre-line" style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
             {entry.quote}
           </p>
-          <div className="flex items-start gap-3 opacity-50">
-            <div className="h-px w-8 bg-ink/40 flex-shrink-0 mt-2" />
-            <span className="text-xs tracking-wide leading-relaxed break-keep" style={{ wordBreak: 'keep-all' }}>{entry.source}</span>
-          </div>
         </div>
 
         {/* 번역 */}
-        <p className="font-serif text-base sm:text-lg text-ink/70 leading-relaxed mb-8 italic break-keep" style={{ wordBreak: 'keep-all' }}>
+        <p className="font-serif text-base sm:text-lg text-ink/70 leading-relaxed mb-5 italic break-keep" style={{ wordBreak: 'keep-all' }}>
           {entry.translation}
         </p>
+
+        {/* 출처 */}
+        <div className="flex items-start gap-3 opacity-50 mb-8">
+          <div className="h-px w-8 bg-ink/40 flex-shrink-0 mt-2" />
+          <span className="text-xs tracking-wide leading-relaxed break-keep" style={{ wordBreak: 'keep-all' }}>{entry.source}</span>
+        </div>
 
         {/* 구분선 */}
         <div className="flex items-center gap-3 mb-8 opacity-20">
