@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { PenTool, BookOpen, Scroll, UserRound } from 'lucide-react';
 
 const TABS = [
@@ -11,6 +11,9 @@ const TABS = [
 
 export default function BottomNav() {
   const location = useLocation();
+  const navigate = useNavigate();
+  // touchStart 위치 기록 — 스크롤과 탭 구분
+  const touchStartY = useRef<number>(0);
 
   return (
     <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-paper border-t border-ink/10 flex safe-bottom">
@@ -21,9 +24,20 @@ export default function BottomNav() {
             : location.pathname.startsWith(path);
 
         return (
-          <Link
+          <button
             key={path}
-            to={path}
+            onTouchStart={e => {
+              touchStartY.current = e.touches[0].clientY;
+            }}
+            onTouchEnd={e => {
+              const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
+              // 수직 이동 10px 미만이면 탭으로 인식, 즉시 이동
+              if (dy < 10) {
+                e.preventDefault();
+                navigate(path);
+              }
+            }}
+            onClick={() => navigate(path)}
             className={`flex-1 flex items-center justify-center relative transition-opacity duration-150 active:scale-95 ${
               isActive ? 'opacity-90' : 'opacity-30 active:opacity-60'
             }`}
@@ -46,7 +60,7 @@ export default function BottomNav() {
               strokeWidth={isActive ? 1.8 : 1.5}
               className={isActive ? 'text-ink' : 'text-ink/60'}
             />
-          </Link>
+          </button>
         );
       })}
     </nav>
