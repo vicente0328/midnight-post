@@ -214,16 +214,15 @@ export default function Archive() {
       </div>
 
       {/* ── 탭 콘텐츠 ── */}
-      <AnimatePresence mode="wait">
+      <motion.div
+        key={tab}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.25, ease: 'easeOut' }}
+        className="w-full flex flex-col items-center"
+      >
       {tab === 'letters' && (
-        <motion.div
-          key="letters"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full flex flex-col items-center"
-        >
+        <div className="w-full flex flex-col items-center">
           {loadingEntries && (
             <p className="font-serif italic opacity-40 animate-pulse">서재를 정리하는 중...</p>
           )}
@@ -278,18 +277,11 @@ export default function Archive() {
               </motion.div>
             ))}
           </div>
-        </motion.div>
+        </div>
       )}
 
       {tab === 'damso' && (
-        <motion.div
-          key="damso"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full flex flex-col items-center"
-        >
+        <div className="w-full flex flex-col items-center">
           {loadingSessions && (
             <p className="font-serif italic opacity-40 animate-pulse">담소 기록을 불러오는 중...</p>
           )}
@@ -383,17 +375,10 @@ export default function Archive() {
               );
             })}
           </div>
-        </motion.div>
+        </div>
       )}
       {tab === 'bookmarks' && (
-        <motion.div
-          key="bookmarks"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full flex flex-col items-center"
-        >
+        <div className="w-full flex flex-col items-center">
           {loadingBookmarks && (
             <p className="font-serif italic opacity-40 animate-pulse">북마크를 불러오는 중...</p>
           )}
@@ -455,9 +440,9 @@ export default function Archive() {
               );
             })}
           </div>
-        </motion.div>
+        </div>
       )}
-      </AnimatePresence>
+      </motion.div>
 
       {/* ── 담소 리더 모달 ── */}
       <AnimatePresence>

@@ -53,17 +53,19 @@ export default function Study() {
 
   return (
     <div className="w-full max-w-4xl flex flex-col items-center">
-      <AnimatePresence mode="wait">
+      <motion.div
+        key={activeRoom ?? 'lobby'}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.25, ease: 'easeOut' }}
+        className="w-full flex flex-col items-center"
+      >
         {activeRoom ? (
-          <RoomView
-            key={activeRoom}
-            mentorId={activeRoom}
-            onBack={() => setActiveRoom(null)}
-          />
+          <RoomView mentorId={activeRoom} onBack={() => setActiveRoom(null)} />
         ) : (
-          <Lobby key="lobby" onEnter={setActiveRoom} />
+          <Lobby onEnter={setActiveRoom} />
         )}
-      </AnimatePresence>
+      </motion.div>
     </div>
   );
 }
@@ -72,13 +74,7 @@ export default function Study() {
 
 function Lobby({ onEnter }: { onEnter: (id: MentorKey) => void }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="w-full flex flex-col items-center"
-    >
+    <div className="w-full flex flex-col items-center">
       <div className="text-center mb-12">
         <h1 className="text-3xl font-serif mb-3">멘토의 연구실</h1>
         <p className="opacity-60 italic text-sm break-keep">
@@ -125,7 +121,7 @@ function Lobby({ onEnter }: { onEnter: (id: MentorKey) => void }) {
           );
         })}
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -146,13 +142,7 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
   }, [mentorId]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="w-full flex flex-col items-center"
-    >
+    <div className="w-full flex flex-col items-center">
       {/* 뒤로가기 */}
       <button
         onClick={onBack}
@@ -250,7 +240,7 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
           />
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }
 
