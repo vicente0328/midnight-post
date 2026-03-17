@@ -24,10 +24,10 @@ export default function BottomNav() {
           <Link
             key={path}
             to={path}
-            className={`flex-1 flex items-center justify-center py-5 relative transition-all duration-200 ${
+            className={`flex-1 flex items-center justify-center py-7 relative transition-all duration-200 ${
               isActive ? 'opacity-90' : 'opacity-30 active:opacity-60'
             }`}
-            style={{ touchAction: 'manipulation', minHeight: '60px' }}
+            style={{ touchAction: 'manipulation', minHeight: '72px' }}
           >
             {/* 활성 탭: 상단 금색 라인 */}
             <div
