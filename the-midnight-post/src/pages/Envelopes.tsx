@@ -60,10 +60,15 @@ export default function Envelopes() {
   // 페이지 전환 완료 후 애니메이션 시작 — 전환 중 글리치 방지
   const [ready, setReady] = useState(false);
 
-  // deliverAt 기준 필터링 — 5초마다 now 갱신
+  // localStorage의 deliverTimes 기준 필터링
+  const pendingEntryId = localStorage.getItem('pendingEntryId');
+  const deliverTimes: Record<string, number> = (() => {
+    try { return JSON.parse(localStorage.getItem('pendingDeliverTimes') ?? '{}'); } catch { return {}; }
+  })();
   const replies = allReplies.filter(r => {
-    const deliverAt = (r as any).deliverAt?.toDate?.();
-    return !deliverAt || deliverAt <= now;
+    if (entryId !== pendingEntryId) return true; // 이전 편지함은 바로 표시
+    const deliverMs = deliverTimes[r.mentorId];
+    return !deliverMs || deliverMs <= now.getTime();
   });
 
   // 도착 순서 추적 (stagger delay 계산용)

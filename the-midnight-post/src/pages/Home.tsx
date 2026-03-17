@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { useAuth } from '../components/AuthContext';
 import { useSound } from '../components/SoundContext';
 import { db } from '../firebase';
-import { collection, query, where, orderBy, limit, addDoc, getDocs, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
 import { generateSingleMentorReply, rankMentors } from '../services/ai';
 
 // ── 위기 키워드 (클라이언트 사이드) ──────────────────────────────────────────
@@ -174,12 +174,17 @@ export default function Home() {
         Notification.requestPermission();
       }
 
-      rankedMentors.forEach((mentorId, index) => {
-        // 멘토별 랜덤 발송 시간: 10초 ~ 10분
-        const minMs = 10 * 1000;
-        const maxMs = 3 * 60 * 1000;
-        const deliverAt = Timestamp.fromMillis(submittedAt + minMs + Math.random() * (maxMs - minMs));
+      // 멘토별 랜덤 발송 시간 localStorage 저장 (10초 ~ 3분, Firestore 규칙 변경 불필요)
+      const minMs = 10 * 1000;
+      const maxMs = 3 * 60 * 1000;
+      const deliverTimes: Record<string, number> = {};
+      rankMentors(trimmed).forEach(mentorId => {
+        deliverTimes[mentorId] = submittedAt + minMs + Math.random() * (maxMs - minMs);
+      });
+      localStorage.setItem('pendingEntryId', entryRef.id);
+      localStorage.setItem('pendingDeliverTimes', JSON.stringify(deliverTimes));
 
+      rankedMentors.forEach((mentorId, index) => {
         setTimeout(async () => {
           try {
             const reply = await generateSingleMentorReply(trimmed, mentorId, writtenHour, recentEntries);
@@ -191,7 +196,6 @@ export default function Home() {
               translation: reply.translation,
               advice: reply.advice,
               createdAt: serverTimestamp(),
-              deliverAt,
             };
             if (reply.source) replyData.source = reply.source;
             await addDoc(collection(db, 'replies'), replyData);
@@ -200,9 +204,6 @@ export default function Home() {
           }
         }, index * 150);
       });
-
-      // 보류 중인 편지 entryId 저장 (Layout의 알림 감지용)
-      localStorage.setItem('pendingEntryId', entryRef.id);
 
       // 4. Route based on crisis
       if (isCrisis) {

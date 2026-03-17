@@ -46,7 +46,7 @@ service cloud.firestore {
     }
 
     function isValidReply(data) {
-      return hasOnlyAllowedFields(['uid', 'entryId', 'mentorId', 'quote', 'source', 'translation', 'advice', 'createdAt', 'deliverAt']) &&
+      return hasOnlyAllowedFields(['uid', 'entryId', 'mentorId', 'quote', 'source', 'translation', 'advice', 'createdAt']) &&
              data.uid is string && data.uid.size() > 0 &&
              data.entryId is string && data.entryId.size() > 0 &&
              data.mentorId in ['hyewoon', 'benedicto', 'theodore', 'yeonam'] &&
@@ -54,8 +54,7 @@ service cloud.firestore {
              (!('source' in data) || validStringLength('source', 1, 500)) &&
              validStringLength('translation', 1, 2000) &&
              validStringLength('advice', 1, 10000) &&
-             data.createdAt is timestamp &&
-             (!('deliverAt' in data) || data.deliverAt is timestamp);
+             data.createdAt is timestamp;
     }
 
     match /users/{userId} {
