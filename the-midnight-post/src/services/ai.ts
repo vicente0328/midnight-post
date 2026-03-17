@@ -10,19 +10,21 @@ export interface MentorReply {
   advice: string;
 }
 
+
 export async function generateSingleMentorReply(
   content: string,
   mentorId: 'hyewoon' | 'benedicto' | 'theodore' | 'yeonam',
-  writtenHour?: number
+  writtenHour?: number,
+  recentEntries?: { content: string; emotion?: string; date?: string }[],
 ): Promise<MentorReply> {
   const knowledgeEntries: KnowledgeEntry[] = await getRecentKnowledge(mentorId, 5).catch(() => []);
 
   const fn = httpsCallable<
-    { content: string; mentorId: string; writtenHour?: number; knowledgeEntries: KnowledgeEntry[] },
+    { content: string; mentorId: string; writtenHour?: number; knowledgeEntries: KnowledgeEntry[]; recentEntries: { content: string; emotion?: string; date?: string }[] },
     MentorReply
   >(functions, 'generateMentorReply');
 
-  const result = await fn({ content, mentorId, writtenHour, knowledgeEntries });
+  const result = await fn({ content, mentorId, writtenHour, knowledgeEntries, recentEntries: recentEntries ?? [] });
   return result.data;
 }
 

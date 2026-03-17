@@ -12,7 +12,17 @@ import {
   type MentorId,
 } from '../services/damso';
 
-const SESSION_DURATION_MS = 5 * 60 * 1000; // 5분
+// ── 위기 키워드 ───────────────────────────────────────────────────────────────
+const CRISIS_PATTERNS = [
+  '죽고 싶', '죽고싶', '자살', '자해',
+  '사라지고 싶', '사라지고싶', '없어지고 싶', '없어지고싶',
+  '스스로 목숨', '삶을 끝', '살기 싫',
+];
+function hasCrisis(text: string): boolean {
+  return CRISIS_PATTERNS.some(k => text.includes(k));
+}
+
+const MAX_USER_TURNS = 5; // 질문 5개 제한
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -252,13 +262,14 @@ export default function Damso() {
   const [animatingId, setAnimatingId] = useState<string | null>(null);
   const [isEnding, setIsEnding] = useState(false);
   const [sessionSaveFailed, setSessionSaveFailed] = useState(false);
+  const [userTurnCount, setUserTurnCount] = useState(0);
+  const [showCrisisBanner, setShowCrisisBanner] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationRef = useRef<DamsoConversationEntry[]>([]);
   const sessionIdRef = useRef<string | null>(null);
   const entryContentRef = useRef('');
   const messageOrderRef = useRef(0);
-  const sessionStartRef = useRef<number | null>(null);
   const shouldCloseRef = useRef(false);
   // 사용자가 위로 스크롤 중이면 자동 스크롤 하지 않음
   const isNearBottomRef = useRef(true);
@@ -365,7 +376,6 @@ export default function Damso() {
   const handleOverlayDone = useCallback((): void => {
     setShowLoading(false);
     setOverlayDone(true);
-    sessionStartRef.current = Date.now();
   }, []);
 
   const handleEndSession = useCallback(async () => {
@@ -391,9 +401,12 @@ export default function Damso() {
     setInputValue('');
     setIsSending(true);
 
-    // 5분 경과 여부 확인 — 마지막 메시지 처리
-    const elapsed = sessionStartRef.current ? Date.now() - sessionStartRef.current : 0;
-    const isLastMessage = elapsed >= SESSION_DURATION_MS;
+    // 위기 키워드 감지 — 담소는 그대로 계속
+    if (hasCrisis(raw)) setShowCrisisBanner(true);
+
+    const nextTurn = userTurnCount + 1;
+    setUserTurnCount(nextTurn);
+    const isLastMessage = nextTurn >= MAX_USER_TURNS;
     if (isLastMessage) shouldCloseRef.current = true;
 
     try {
@@ -477,6 +490,33 @@ export default function Damso() {
             transition={{ duration: 1.2 }}
             className="flex flex-col h-full"
           >
+            {/* ── 위기 배너 ── */}
+            <AnimatePresence>
+              {showCrisisBanner && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.4 }}
+                  className="flex-none flex items-center justify-between px-5 py-3 gap-4"
+                  style={{ background: 'rgba(26,18,8,0.04)', borderBottom: '1px solid rgba(26,18,8,0.07)' }}
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <p className="font-serif text-xs opacity-70">힘드실 때는 언제든지 전화하세요.</p>
+                    <a href="tel:1393" className="text-xs font-mono opacity-55 hover:opacity-90 transition-opacity">
+                      자살예방상담전화 1393 · 24시간 무료
+                    </a>
+                  </div>
+                  <button
+                    onClick={() => setShowCrisisBanner(false)}
+                    className="text-[10px] opacity-30 hover:opacity-60 transition-opacity flex-shrink-0 font-mono"
+                  >
+                    ✕
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* ── Header ── */}
             <div
               className="flex-none px-6 py-4 md:py-5 flex items-center justify-between"
@@ -498,15 +538,22 @@ export default function Damso() {
                 </h1>
               </div>
 
-              {/* Center ornament */}
-              <div className="hidden md:flex items-center gap-2 opacity-20">
-                <div className="w-10 h-px bg-current" style={{ color: space.accent }} />
-                <div
-                  className="w-1 h-1 rotate-45"
-                  style={{ background: space.accent }}
-                />
-                <div className="w-10 h-px" style={{ background: space.accent }} />
-              </div>
+              {/* Center: turn counter */}
+              {overlayDone && (
+                <div className="flex items-center gap-1.5">
+                  {Array.from({ length: MAX_USER_TURNS }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-1.5 h-1.5 rotate-45 transition-all duration-500"
+                      style={{
+                        background: i < userTurnCount ? space.accent : 'transparent',
+                        border: `1px solid ${space.accent}`,
+                        opacity: i < userTurnCount ? 0.8 : 0.3,
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
 
               {/* Right: exit */}
               <button

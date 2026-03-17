@@ -29,11 +29,34 @@ const FLOW = [
   { Icon: BookMarked, title: '담소',  desc: '현자의 방을 찾아가\n마주 앉아 이야기 나눕니다.' },
 ];
 
+/* ── 샘플 편지 데이터 ─────────────────────────────────────────────────────── */
+const SAMPLE_LETTERS = [
+  {
+    id: 'hyewoon',
+    Icon: Flower2,
+    name: '혜운 스님',
+    quote: '一切有爲法，如夢幻泡影',
+    source: '금강경',
+    translation: '모든 인연은 꿈이요, 환영이요, 거품이요, 그림자입니다.',
+    snippet: '도반이여, 지금 이 힘듦도 언젠가는 지나갈 것입니다. 강물이 바위를 만나 잠시 소용돌이치다 흘러가듯, 마음의 어둠도 그러합니다.',
+  },
+  {
+    id: 'benedicto',
+    Icon: Cross,
+    name: '베네딕토 신부',
+    quote: 'Omnia tempus habent',
+    source: '코헬렛 3:1',
+    translation: '모든 것에는 때가 있습니다.',
+    snippet: '형제님, 지금 이 무거움은 당신이 약해서가 아닙니다. 오히려 진심으로 살고 있다는 증거입니다. 촛불이 바람 앞에 흔들릴수록 더 환하게 타오르듯이.',
+  },
+];
+
 /* ── 페이지 CTA ───────────────────────────────────────────────────────────── */
 const PAGES = [
   { cta: '현자들을 만나볼게요'      },
   { cta: '어떻게 쓰는 건가요?'     },
   { cta: '또 무엇이 있나요?'        },
+  { cta: '편지가 어떻게 오는지 볼게요' },
   { cta: '편지를 쓰러 가겠습니다'  },
 ];
 
@@ -132,7 +155,8 @@ function Body({ children, center }: { children: string; center?: boolean }) {
 /* ════════════════════════════ 메인 ════════════════════════════════════════ */
 export default function OnboardingModal({ onClose, isInitial = false }: Props) {
   const [step, setStep] = useState(0);
-  const advance = () => step < PAGES.length - 1 ? setStep(s => s + 1) : onClose();
+  const TOTAL = PAGES.length; // 5
+  const advance = () => step < TOTAL - 1 ? setStep(s => s + 1) : onClose();
 
   return (
     <div
@@ -171,7 +195,7 @@ export default function OnboardingModal({ onClose, isInitial = false }: Props) {
           display: 'flex', justifyContent: 'center', gap: '18px',
           padding: '14px 0 0',
         }}>
-          {['I', 'II', 'III', 'IV'].map((num, i) => (
+          {['I', 'II', 'III', 'IV', 'V'].map((num, i) => (
             <span key={num} style={{
               fontFamily: SERIF, fontStyle: 'italic',
               fontSize: '0.72rem', letterSpacing: '0.04em',
@@ -297,8 +321,85 @@ export default function OnboardingModal({ onClose, isInitial = false }: Props) {
                 </div>
               )}
 
-              {/* ════ IV. 지혜 카드 & 책갈피 ════════════════════════════════ */}
+              {/* ════ IV. 샘플 편지 미리보기 ════════════════════════════════ */}
               {step === 3 && (
+                <div style={{ paddingTop: '28px' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <PageTitle>{'이런 편지가\n도착합니다.'}</PageTitle>
+                  </div>
+                  <Asterism />
+
+                  {/* 샘플 일기 */}
+                  <div style={{
+                    borderLeft: `2px solid ${MUTE}0.15)`,
+                    paddingLeft: '14px', marginBottom: '24px',
+                  }}>
+                    <p style={{
+                      fontFamily: SERIF, fontStyle: 'italic', fontWeight: 300,
+                      fontSize: '0.82rem', color: INK, opacity: 0.45,
+                      lineHeight: 1.7, margin: '0 0 4px',
+                    }}>
+                      오늘 하루가 너무 힘들었다
+                    </p>
+                    <p style={{
+                      fontSize: '9px', letterSpacing: '0.18em',
+                      textTransform: 'uppercase', color: INK, opacity: 0.25,
+                      fontFamily: SERIF, margin: 0,
+                    }}>
+                      샘플 일기
+                    </p>
+                  </div>
+
+                  {/* 샘플 편지 카드 2통 */}
+                  {SAMPLE_LETTERS.map(({ id, Icon, name, quote, source, translation, snippet }, i) => (
+                    <div key={id}>
+                      {i > 0 && <div style={{ height: '16px' }} />}
+                      <div style={{
+                        border: `1px solid ${MUTE}0.1)`,
+                        background: 'rgba(255,255,255,0.35)',
+                        padding: '16px',
+                      }}>
+                        {/* 멘토 */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                          <Icon size={13} strokeWidth={1.2} color={INK} style={{ opacity: 0.45 }} />
+                          <span style={{
+                            fontFamily: SERIF, fontWeight: 500,
+                            fontSize: '0.82rem', color: INK, opacity: 0.7,
+                          }}>{name}</span>
+                        </div>
+                        {/* 인용 */}
+                        <p style={{
+                          fontFamily: SERIF, fontStyle: 'italic',
+                          fontSize: '0.78rem', color: INK, opacity: 0.65,
+                          marginBottom: '4px', lineHeight: 1.6, margin: '0 0 3px',
+                        }}>
+                          "{quote}"
+                        </p>
+                        <p style={{
+                          fontSize: '9px', letterSpacing: '0.1em',
+                          color: INK, opacity: 0.3, fontFamily: SERIF,
+                          margin: '0 0 10px',
+                        }}>
+                          {source} · {translation}
+                        </p>
+                        <HRule my="0px" />
+                        <p style={{
+                          fontFamily: SERIF, fontStyle: 'italic', fontWeight: 300,
+                          fontSize: '0.75rem', lineHeight: 1.85,
+                          color: INK, opacity: 0.52,
+                          wordBreak: 'keep-all', margin: '10px 0 0',
+                        }}>
+                          {snippet}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ height: '28px' }} />
+                </div>
+              )}
+
+              {/* ════ V. 지혜 카드 & 책갈피 ════════════════════════════════ */}
+              {step === 4 && (
                 <div style={{ paddingTop: '32px' }}>
                   <div style={{ textAlign: 'center' }}>
                     <PageTitle>{'지혜는 계속\n쌓여갑니다.'}</PageTitle>
@@ -361,7 +462,7 @@ export default function OnboardingModal({ onClose, isInitial = false }: Props) {
           </AnimatePresence>
 
           <CtaButton label={PAGES[step].cta} onClick={advance} />
-          {isInitial && step < PAGES.length - 1 && (
+          {isInitial && step < TOTAL - 1 && (
             <SubButton label="나중에 읽겠습니다" onClick={onClose} />
           )}
           {!isInitial && <SubButton label="닫기" onClick={onClose} />}

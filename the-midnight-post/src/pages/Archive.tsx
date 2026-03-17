@@ -1,11 +1,27 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { collection, query, where, getDocs, doc, getDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Flower2, Cross, Feather, Brush, Trash2, Bookmark } from 'lucide-react';
+import { X, Flower2, Cross, Feather, Brush, Trash2, Bookmark, Search } from 'lucide-react';
+
+const MENTOR_FILTERS = [
+  { id: 'hyewoon',   label: '혜운' },
+  { id: 'benedicto', label: '베네딕토' },
+  { id: 'theodore',  label: '테오도르' },
+  { id: 'yeonam',    label: '연암' },
+] as const;
+
+const EMOTION_FILTERS = [
+  { id: 'joy',     label: '기쁨' },
+  { id: 'sadness', label: '슬픔' },
+  { id: 'anxiety', label: '불안' },
+  { id: 'lonely',  label: '외로움' },
+  { id: 'anger',   label: '분노' },
+  { id: 'calm',    label: '평온' },
+] as const;
 
 // ── 멘토 정보 ─────────────────────────────────────────────────────────────────
 
@@ -94,6 +110,10 @@ export default function Archive() {
 
   // 편지 카드 펼치기
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // 검색 & 필터 (letters 탭)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterEmotion, setFilterEmotion] = useState<string | null>(null);
 
   // 책갈피 상세 모달
   const [selectedBookmark, setSelectedBookmark] = useState<BookmarkDoc | null>(null);
@@ -186,9 +206,21 @@ export default function Archive() {
       .finally(() => setLoadingSessions(false));
   }, [user]);
 
+  const filteredEntries = useMemo(() => {
+    let result = entries;
+    if (filterEmotion) result = result.filter(e => e.emotion === filterEmotion);
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter(e => e.content.toLowerCase().includes(q));
+    }
+    return result;
+  }, [entries, filterEmotion, searchQuery]);
+
   const handleTabChange = (t: Tab) => {
     setConfirmDeleteId(null);
     setExpandedId(null);
+    setSearchQuery('');
+    setFilterEmotion(null);
     setTab(t);
     if (t === 'damso' && !sessionsFetched) fetchSessions();
     if (t === 'bookmarks' && !bookmarksFetched) fetchBookmarks();
@@ -228,12 +260,59 @@ export default function Archive() {
       <div className="w-full flex flex-col items-center">
       {tab === 'letters' && (
         <div className="w-full flex flex-col items-center">
+
+          {/* 검색 & 감정 필터 */}
+          {!loadingEntries && entries.length > 0 && (
+            <div className="w-full mb-8 flex flex-col gap-3">
+              {/* 검색창 */}
+              <div className="relative">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-30" strokeWidth={1.5} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="일기 내용 검색"
+                  className="w-full bg-transparent border border-ink/15 pl-8 pr-4 py-2 font-serif text-sm placeholder:opacity-30 focus:outline-none focus:border-ink/35 transition-colors"
+                />
+              </div>
+              {/* 감정 필터 */}
+              <div className="flex gap-2 flex-wrap">
+                {EMOTION_FILTERS.map(({ id, label }) => (
+                  <button
+                    key={id}
+                    onClick={() => setFilterEmotion(prev => prev === id ? null : id)}
+                    className="font-serif text-xs px-3 py-1 border transition-all duration-200"
+                    style={{
+                      borderColor: filterEmotion === id ? 'rgba(26,18,8,0.5)' : 'rgba(26,18,8,0.12)',
+                      background: filterEmotion === id ? 'rgba(26,18,8,0.07)' : 'transparent',
+                      opacity: filterEmotion && filterEmotion !== id ? 0.35 : 1,
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+                {(filterEmotion || searchQuery) && (
+                  <button
+                    onClick={() => { setFilterEmotion(null); setSearchQuery(''); }}
+                    className="font-serif text-xs px-3 py-1 opacity-35 hover:opacity-60 transition-opacity"
+                  >
+                    초기화 ✕
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
             {loadingEntries
               ? [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
-              : entries.length === 0
-                ? <p className="font-serif italic opacity-40 col-span-full text-center py-4">아직 남겨진 기록이 없습니다.</p>
-                : entries.map((entry, index) => (
+              : filteredEntries.length === 0
+                ? (
+                  <p className="font-serif italic opacity-40 col-span-full text-center py-4">
+                    {entries.length === 0 ? '아직 남겨진 기록이 없습니다.' : '검색 결과가 없습니다.'}
+                  </p>
+                )
+                : filteredEntries.map((entry, index) => (
               <motion.div
                 key={entry.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -498,6 +577,125 @@ export default function Archive() {
   );
 }
 
+// ── 공유 카드 생성 (Canvas API) ───────────────────────────────────────────────
+
+async function generateShareCardBlob(
+  mentorName: string,
+  quote: string,
+  source: string,
+  translation: string,
+): Promise<Blob | null> {
+  await document.fonts.ready;
+
+  const W = 1080, H = 1080;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  const PAPER = '#EDE6CC';
+  const INK = (a: number) => `rgba(26,18,8,${a})`;
+  const GOLD = 'rgba(148,112,28,0.65)';
+  const SERIF = "'Cormorant Garamond', 'Nanum Myeongjo', serif";
+  const PAD = 110;
+
+  // Background
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, 0, W, H);
+
+  // Gold border lines (top + bottom only)
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(0, 0, W, 2.5);
+  ctx.fillRect(0, H - 2.5, W, 2.5);
+
+  // Inner ink border (subtle)
+  ctx.strokeStyle = INK(0.07);
+  ctx.lineWidth = 1;
+  ctx.strokeRect(PAD * 0.55, PAD * 0.55, W - PAD * 1.1, H - PAD * 1.1);
+
+  let y = PAD + 60;
+
+  // Mentor name
+  ctx.font = `500 26px ${SERIF}`;
+  ctx.fillStyle = INK(0.38);
+  ctx.textAlign = 'center';
+  ctx.fillText(mentorName, W / 2, y);
+  y += 36;
+
+  // Thin divider
+  ctx.strokeStyle = INK(0.12);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(PAD * 1.6, y);
+  ctx.lineTo(W - PAD * 1.6, y);
+  ctx.stroke();
+  y += 70;
+
+  // Quote (large italic, word-wrapped)
+  ctx.font = `italic 300 46px ${SERIF}`;
+  ctx.fillStyle = INK(0.82);
+  const maxW = W - PAD * 2;
+  const quoteLines = wrapCanvasText(ctx, `"${quote}"`, maxW);
+  for (const line of quoteLines) {
+    ctx.fillText(line, W / 2, y);
+    y += 64;
+  }
+  y += 16;
+
+  // Source
+  ctx.font = `300 22px ${SERIF}`;
+  ctx.fillStyle = INK(0.32);
+  ctx.fillText(`— ${source}`, W / 2, y);
+  y += 50;
+
+  // Thin divider
+  ctx.strokeStyle = INK(0.08);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(PAD * 2, y);
+  ctx.lineTo(W - PAD * 2, y);
+  ctx.stroke();
+  y += 50;
+
+  // Translation (italic)
+  ctx.font = `italic 300 30px ${SERIF}`;
+  ctx.fillStyle = INK(0.52);
+  const transLines = wrapCanvasText(ctx, translation, maxW - 40);
+  for (const line of transLines) {
+    ctx.fillText(line, W / 2, y);
+    y += 46;
+  }
+
+  // Asterism
+  ctx.font = `300 22px serif`;
+  ctx.fillStyle = INK(0.2);
+  ctx.fillText('* * *', W / 2, H - PAD - 70);
+
+  // Watermark
+  ctx.font = `300 17px ${SERIF}`;
+  ctx.fillStyle = INK(0.25);
+  ctx.fillText('THE MIDNIGHT POST', W / 2, H - PAD - 30);
+
+  return new Promise(resolve => canvas.toBlob(b => resolve(b), 'image/png'));
+}
+
+function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const lines: string[] = [];
+  let line = '';
+  for (const char of text) {
+    const test = line + char;
+    if (ctx.measureText(test).width > maxWidth) {
+      if (line) lines.push(line);
+      line = char;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
 // ── 책갈피 상세 모달 ──────────────────────────────────────────────────────────
 
 function BookmarkModal({
@@ -510,6 +708,46 @@ function BookmarkModal({
   const mentor = MENTOR_INFO[bookmark.mentorId as MentorKey];
   if (!mentor) return null;
   const Icon = mentor.icon;
+  const [isGeneratingCard, setIsGeneratingCard] = useState(false);
+  const [cardUrl, setCardUrl] = useState<string | null>(null);
+
+  const handleShareCard = async () => {
+    setIsGeneratingCard(true);
+    try {
+      const blob = await generateShareCardBlob(
+        mentor.name,
+        bookmark.quote,
+        bookmark.source,
+        bookmark.translation,
+      );
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+
+      // Web Share API (mobile)
+      if (navigator.share && navigator.canShare?.({ files: [new File([blob], 'midnight-post.png', { type: 'image/png' })] })) {
+        await navigator.share({
+          files: [new File([blob], 'midnight-post.png', { type: 'image/png' })],
+          title: 'The Midnight Post',
+        });
+        URL.revokeObjectURL(url);
+      } else {
+        // Fallback: open preview
+        setCardUrl(url);
+      }
+    } catch (err) {
+      console.error('공유 카드 생성 실패:', err);
+    } finally {
+      setIsGeneratingCard(false);
+    }
+  };
+
+  const handleDownloadCard = () => {
+    if (!cardUrl) return;
+    const a = document.createElement('a');
+    a.href = cardUrl;
+    a.download = 'midnight-post-card.png';
+    a.click();
+  };
 
   return (
     <motion.div
@@ -594,6 +832,42 @@ function BookmarkModal({
           <div className="mt-8 md:mt-16 text-right opacity-60 italic">
             <p className="text-base sm:text-lg font-bold">{mentor.name} 드림</p>
           </div>
+
+          {/* 공유 카드 */}
+          <div className="mt-10 md:mt-14 flex flex-col items-center gap-3">
+            <div className="h-px w-full bg-ink/8" />
+            {!cardUrl ? (
+              <button
+                onClick={handleShareCard}
+                disabled={isGeneratingCard}
+                className="font-serif text-sm italic opacity-45 hover:opacity-80 transition-opacity disabled:opacity-20 mt-4"
+              >
+                {isGeneratingCard ? '카드 생성 중…' : '공유 카드 만들기 →'}
+              </button>
+            ) : (
+              <div className="w-full flex flex-col items-center gap-4 mt-4">
+                <img src={cardUrl} alt="공유 카드" className="w-full max-w-xs border border-ink/10 shadow-md" />
+                <div className="flex gap-4">
+                  <button
+                    onClick={handleDownloadCard}
+                    className="font-serif text-sm italic opacity-55 hover:opacity-90 transition-opacity border-b border-ink/20 pb-px"
+                  >
+                    이미지 저장
+                  </button>
+                  <button
+                    onClick={() => { URL.revokeObjectURL(cardUrl!); setCardUrl(null); }}
+                    className="font-serif text-sm italic opacity-30 hover:opacity-55 transition-opacity"
+                  >
+                    닫기
+                  </button>
+                </div>
+                <p className="text-[10px] opacity-30 font-serif italic text-center">
+                  인스타그램 스토리나 피드에 공유해보세요.
+                </p>
+              </div>
+            )}
+          </div>
+
         </div>
       </motion.div>
     </motion.div>

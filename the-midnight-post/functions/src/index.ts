@@ -151,11 +151,12 @@ const MENTOR_DOMAINS: Record<MentorId, string> = {
 export const generateMentorReply = onCall(async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', '로그인이 필요합니다.');
 
-  const { content, mentorId, writtenHour, knowledgeEntries = [] } = request.data as {
+  const { content, mentorId, writtenHour, knowledgeEntries = [], recentEntries = [] } = request.data as {
     content: string;
     mentorId: MentorId;
     writtenHour?: number;
     knowledgeEntries?: KnowledgeEntry[];
+    recentEntries?: { content: string; emotion?: string; date?: string }[];
   };
 
   if (!content || !mentorId) throw new HttpsError('invalid-argument', 'content와 mentorId가 필요합니다.');
@@ -163,8 +164,16 @@ export const generateMentorReply = onCall(async (request) => {
   const { timeLabel, closing } = getTimeContext(writtenHour ?? new Date().getHours());
   const knowledgeContext = buildKnowledgeContext(knowledgeEntries);
 
+  // 최근 일기 맥락 — 멘토가 "나를 아는 현자"처럼 느껴지게
+  const recentContext = recentEntries.length > 0
+    ? `\n\n[최근에 쓴 일기들 — 이 맥락을 자연스럽게 반영해 주세요. 직접 언급하지 말고, 편지의 깊이와 공감에 녹여주세요]\n` +
+      recentEntries.map((e, i) =>
+        `${i + 1}. ${e.date ? `(${e.date}) ` : ''}${e.content}${e.emotion && e.emotion !== 'unknown' ? ` [${e.emotion}]` : ''}`
+      ).join('\n')
+    : '';
+
   const prompt = `
-${timeLabel}에 쓴 한 줄의 일기입니다: "${content}"
+${timeLabel}에 쓴 한 줄의 일기입니다: "${content}"${recentContext}
 
 당신은 아래 설명된 현자입니다. 이 일기를 읽고, 당신의 철학과 삶의 결로 빚어낸 따뜻한 위로의 편지를 써주세요.
 
@@ -441,17 +450,36 @@ export const generateKnowledge = onCall(async (request) => {
 
   const today = new Date().toISOString().slice(0, 10);
 
+  const QUOTE_LANG: Record<MentorId, string> = {
+    hyewoon:   '한문(漢文) — 불교 경전의 한역본(법구경·숫타니파타·중부니카야 등) 원문',
+    benedicto: '라틴어(Vulgata) 또는 영어 — 성경 원문이나 영문 신학 고전',
+    theodore:  '영어 또는 라틴어 — 스토아·실존주의 철학 원문이나 표준 영역',
+    yeonam:    '한문(漢文) — 논어·맹자·노자·중용 등 동양 고전 원문',
+  };
+
   const prompt = `오늘(${today}) 다음 분야에서 심리 위로와 정서 치유에 실제로 도움이 되는,
 잘 알려지지 않은 깊이 있는 지식 4개를 발굴해주세요.
 
 [현자의 분야]
 ${MENTOR_DOMAINS[mentorId]}
 
-[요구사항]
+[필수 형식 — 반드시 아래 순서와 규칙을 지키세요]
+
+1. quote (글귀): ${QUOTE_LANG[mentorId]}으로 작성하세요. 한국어를 섞지 말고 원문만 쓰세요.
+
+2. source (출처): 원문의 출처를 명확하게 쓰세요. (예: "법구경(法句經) 제1게", "Epistulae Morales 제1서")
+
+3. translation (번역): quote의 한국어 직역을 간결하게 쓰세요. 해설이나 감상을 덧붙이지 말고, 원문을 충실하게 번역하세요.
+
+4. context (멘토의 말): 이 글귀에 대한 멘토의 해석 또는 독자에게 건네고 싶은 말을 멘토의 목소리로 직접 쓰세요.
+   - "~할 때 씁니다", "~분에게 씁니다", "~하는 분들에게 추천합니다" 같은 상담사 말투는 절대 금지
+   - 멘토 특유의 말투로 자연스럽게: 혜운(하십시오체), 베네딕토(경어체), 테오도르(문어체), 연암(예스러운 문체)
+   - 글귀의 의미를 해석하거나, 이 글귀를 마음에 품으면 어떻게 달라지는지 진솔하게 이야기하세요
+
+[공통 요구사항]
 - 뻔하고 유명한 구절(예: "나는 생각한다, 고로 존재한다")은 절대 피하세요.
 - 실제 경전·문헌·저서에서 출처가 명확한 내용만 사용하세요.
-- 각 항목은 서로 다른 삶의 상황을 다루도록 다양하게 구성하세요.
-- context는 멘토가 독자에게 직접 말을 건네는 형식으로 써주세요. "~할 때 씁니다", "~분에게 씁니다" 같은 상담사 말투는 절대 사용하지 마세요. 멘토의 목소리로, 따뜻하고 진솔하게, "~입니다", "~하십시오", "~합니까?" 등의 말투로 써주세요.`;
+- 각 항목은 서로 다른 삶의 상황(외로움·불안·상실·분노·의미 등)을 다루도록 다양하게 구성하세요.`;
 
   const ai = getGemini();
 

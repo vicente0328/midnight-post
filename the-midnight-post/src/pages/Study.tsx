@@ -4,7 +4,7 @@ import { Feather, Flower2, Cross, Brush, X, ChevronLeft, Bookmark, BookmarkCheck
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
-import { getTodayKnowledge, KnowledgeEntry } from '../services/knowledge';
+import { getTodayKnowledge, forceRegenerateKnowledge, KnowledgeEntry } from '../services/knowledge';
 
 // ── 멘토 연구실 정보 ─────────────────────────────────────────────────────────
 
@@ -77,7 +77,25 @@ export default function Study() {
 
 // ── 입구 화면 ────────────────────────────────────────────────────────────────
 
+const ADMIN_EMAIL = 'admin@tmp.com';
+
 function Lobby({ onEnter, isFirst }: { onEnter: (id: MentorKey) => void; isFirst: boolean }) {
+  const { user } = useAuth();
+  const isAdmin = user?.email === ADMIN_EMAIL;
+  const [regenerating, setRegenerating] = useState(false);
+
+  const handleAdminDoubleClick = async () => {
+    if (!isAdmin || regenerating) return;
+    setRegenerating(true);
+    try {
+      await forceRegenerateKnowledge();
+      window.location.reload();
+    } catch (e) {
+      console.error(e);
+      setRegenerating(false);
+    }
+  };
+
   return (
     <div className="w-full flex flex-col items-center">
       <div className="text-center mb-12">
@@ -85,6 +103,15 @@ function Lobby({ onEnter, isFirst }: { onEnter: (id: MentorKey) => void; isFirst
         <p className="opacity-60 italic text-sm break-keep">
           매일 새롭게 쌓이는 지혜의 공간입니다. 문을 열어보세요.
         </p>
+        {isAdmin && (
+          <button
+            onClick={handleAdminDoubleClick}
+            disabled={regenerating}
+            className="mt-3 text-[10px] uppercase tracking-[0.2em] opacity-30 hover:opacity-70 transition-opacity disabled:opacity-20"
+          >
+            {regenerating ? '재생성 중...' : '↻ 지혜 재생성'}
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 w-full">

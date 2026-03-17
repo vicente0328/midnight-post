@@ -1,0 +1,25 @@
+{
+  "name": "The Midnight Post",
+  "short_name": "MidnightPost",
+  "description": "100자 일기를 쓰면 4명의 현자가 편지로 답합니다.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#EDE6CC",
+  "theme_color": "#EDE6CC",
+  "orientation": "portrait",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
