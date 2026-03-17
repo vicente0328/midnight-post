@@ -1,6 +1,11 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { GoogleGenAI, Type } from '@google/genai';
 import Anthropic from '@anthropic-ai/sdk';
+import { initializeApp, getApps } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+
+if (getApps().length === 0) initializeApp();
 
 // ── AI 클라이언트 초기화 (함수 호출 시점에 env 읽음) ──────────────────────────
 
@@ -442,27 +447,31 @@ JSON만 응답하세요.`;
 
 // ── 5. 지혜 카드 생성 ─────────────────────────────────────────────────────────
 
-export const generateKnowledge = onCall(async (request) => {
-  if (!request.auth) throw new HttpsError('unauthenticated', '로그인이 필요합니다.');
+const QUOTE_LANG: Record<MentorId, string> = {
+  hyewoon:   '한문(漢文) — 불교 경전의 한역본(법구경·숫타니파타·중부니카야 등) 원문',
+  benedicto: '라틴어(Vulgata) 또는 영어 — 성경 원문이나 영문 신학 고전',
+  theodore:  '영어 또는 라틴어 — 스토아·실존주의 철학 원문이나 표준 영역',
+  yeonam:    '한문(漢文) — 논어·맹자·노자·중용 등 동양 고전 원문',
+};
 
-  const { mentorId } = request.data as { mentorId: MentorId };
-  if (!mentorId) throw new HttpsError('invalid-argument', 'mentorId가 필요합니다.');
-
+/** 핵심 생성 로직 — onCall과 스케줄 함수가 공용으로 사용 */
+async function generateKnowledgeEntries(
+  mentorId: MentorId,
+  avoidQuotes: string[] = [],
+): Promise<KnowledgeEntry[]> {
   const today = new Date().toISOString().slice(0, 10);
 
-  const QUOTE_LANG: Record<MentorId, string> = {
-    hyewoon:   '한문(漢文) — 불교 경전의 한역본(법구경·숫타니파타·중부니카야 등) 원문',
-    benedicto: '라틴어(Vulgata) 또는 영어 — 성경 원문이나 영문 신학 고전',
-    theodore:  '영어 또는 라틴어 — 스토아·실존주의 철학 원문이나 표준 영역',
-    yeonam:    '한문(漢文) — 논어·맹자·노자·중용 등 동양 고전 원문',
-  };
+  const avoidSection = avoidQuotes.length > 0
+    ? `\n[이미 사용된 구절 — 아래 구절들은 반드시 피하세요]\n` +
+      avoidQuotes.slice(0, 28).map((q, i) => `${i + 1}. ${q}`).join('\n') + '\n'
+    : '';
 
   const prompt = `오늘(${today}) 다음 분야에서 심리 위로와 정서 치유에 실제로 도움이 되는,
 잘 알려지지 않은 깊이 있는 지식 4개를 발굴해주세요.
 
 [현자의 분야]
 ${MENTOR_DOMAINS[mentorId]}
-
+${avoidSection}
 [필수 형식 — 반드시 아래 순서와 규칙을 지키세요]
 
 1. quote (글귀): ${QUOTE_LANG[mentorId]}으로 작성하세요. 한국어를 섞지 말고 원문만 쓰세요.
@@ -482,7 +491,6 @@ ${MENTOR_DOMAINS[mentorId]}
 - 각 항목은 서로 다른 삶의 상황(외로움·불안·상실·분노·의미 등)을 다루도록 다양하게 구성하세요.`;
 
   const ai = getGemini();
-
   const response = await ai.models.generateContent({
     model: 'gemini-2.0-flash',
     contents: prompt,
@@ -506,6 +514,104 @@ ${MENTOR_DOMAINS[mentorId]}
   });
 
   const text = response.text;
-  if (!text) throw new HttpsError('internal', 'AI 응답을 받지 못했습니다.');
+  if (!text) throw new Error('AI 응답을 받지 못했습니다.');
   return JSON.parse(text) as KnowledgeEntry[];
+}
+
+/** 최근 N일치 사용된 quote 목록 수집 (중복 방지용) */
+async function collectRecentQuotes(mentorId: MentorId, days = 14): Promise<string[]> {
+  const db = getFirestore();
+  const quotes: string[] = [];
+  const now = new Date();
+
+  for (let i = 0; i < days; i++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    for (const period of ['am', 'pm', '']) {
+      const key = period ? `${mentorId}_${dateStr}_${period}` : `${mentorId}_${dateStr}`;
+      try {
+        const snap = await db.doc(`mentor_knowledge/${key}`).get();
+        if (snap.exists) {
+          const entries: KnowledgeEntry[] = snap.data()?.entries ?? [];
+          entries.forEach(e => { if (e.quote) quotes.push(e.quote); });
+        }
+      } catch { /* 해당 문서 없으면 skip */ }
+    }
+  }
+  return quotes;
+}
+
+// 5-a. 클라이언트 호출용 (어드민 수동 재생성)
+export const generateKnowledge = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', '로그인이 필요합니다.');
+
+  const { mentorId } = request.data as { mentorId: MentorId };
+  if (!mentorId) throw new HttpsError('invalid-argument', 'mentorId가 필요합니다.');
+
+  const avoidQuotes = await collectRecentQuotes(mentorId);
+  const entries = await generateKnowledgeEntries(mentorId, avoidQuotes);
+  return entries;
 });
+
+// 5-b. 스케줄 함수 — 매일 KST 00:00 (자정) · 12:00 (정오) 자동 생성
+export const scheduledKnowledgeGeneration = onSchedule(
+  {
+    schedule: '0 0,12 * * *',
+    timeZone: 'Asia/Seoul',
+    memory:          '512MiB',
+    timeoutSeconds:  300,
+  },
+  async () => {
+    const db = getFirestore();
+
+    // KST 기준 날짜·시간대 결정
+    const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const today  = nowKst.toISOString().slice(0, 10);
+    const period = nowKst.getUTCHours() < 12 ? 'am' : 'pm';
+
+    console.log(`[Schedule] 시작 — ${today} ${period}`);
+
+    // 중복 실행 방지 (Firestore 잠금)
+    const lockRef = db.doc(`meta/knowledge_${today}_${period}`);
+    const lockSnap = await lockRef.get();
+    if (lockSnap.exists && lockSnap.data()?.status === 'done') {
+      console.log(`[Schedule] 이미 완료 — ${today} ${period}, 종료`);
+      return;
+    }
+    await lockRef.set({ status: 'generating', startedAt: FieldValue.serverTimestamp() });
+
+    const mentors: MentorId[] = ['hyewoon', 'benedicto', 'theodore', 'yeonam'];
+
+    await Promise.allSettled(mentors.map(async (mentorId) => {
+      const docRef = db.doc(`mentor_knowledge/${mentorId}_${today}_${period}`);
+      const existing = await docRef.get();
+      if (existing.exists) {
+        console.log(`[Schedule] ${mentorId} 이미 존재 — skip`);
+        return;
+      }
+
+      try {
+        // 최근 14일 quote 수집 → 중복 방지
+        const avoidQuotes = await collectRecentQuotes(mentorId, 14);
+        console.log(`[Schedule] ${mentorId} — 회피 구절 ${avoidQuotes.length}개`);
+
+        const entries = await generateKnowledgeEntries(mentorId, avoidQuotes);
+
+        await docRef.set({
+          mentorId,
+          date: today,
+          period,
+          entries,
+          generatedAt: FieldValue.serverTimestamp(),
+        });
+        console.log(`[Schedule] ${mentorId} ${period} — ${entries.length}개 저장 완료`);
+      } catch (err) {
+        console.error(`[Schedule] ${mentorId} 생성 실패:`, err);
+      }
+    }));
+
+    await lockRef.set({ status: 'done', completedAt: FieldValue.serverTimestamp() });
+    console.log(`[Schedule] 완료 — ${today} ${period}`);
+  },
+);
