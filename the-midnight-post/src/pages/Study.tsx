@@ -169,7 +169,7 @@ function DoorCard({
       onClick={() => onEnter(id)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="group relative overflow-hidden flex flex-col cursor-pointer"
+      className="group relative overflow-hidden flex flex-col cursor-pointer w-full h-full"
       style={{
         border: `1px solid rgba(${room.accentRgb},${hovered ? '0.55' : '0.20'})`,
         boxShadow: hovered
@@ -248,7 +248,7 @@ function DoorCard({
 
       {/* ── 하단: 명패 ── */}
       <div
-        className="flex flex-col items-center justify-start px-3 pt-4 pb-5"
+        className="flex-1 flex flex-col items-center justify-start px-3 pt-4 pb-5"
         style={{
           backgroundColor: '#fdfbf7',
           backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
