@@ -24,10 +24,10 @@ export default function BottomNav() {
           <Link
             key={path}
             to={path}
-            className={`flex-1 flex items-center justify-center py-4 relative transition-all duration-200 ${
+            className={`flex-1 flex items-center justify-center py-5 relative transition-all duration-200 ${
               isActive ? 'opacity-90' : 'opacity-30 active:opacity-60'
             }`}
-            style={{ touchAction: 'manipulation' }}
+            style={{ touchAction: 'manipulation', minHeight: '60px' }}
           >
             {/* 활성 탭: 상단 금색 라인 */}
             <div
@@ -36,7 +36,7 @@ export default function BottomNav() {
               }`}
             />
             <Icon
-              size={22}
+              size={26}
               strokeWidth={isActive ? 1.8 : 1.5}
               className={isActive ? 'text-ink' : 'text-ink/60'}
             />

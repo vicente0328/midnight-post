@@ -200,31 +200,33 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
               onClick={() => setSelectedEntry(entry)}
-              className="group text-left relative flex flex-col p-6 border border-ink/15 bg-[#fdfbf7] shadow-sm hover:shadow-md transition-all duration-500"
+              className="group text-left relative flex flex-col p-7 border border-ink/12 bg-[#faf8f3] hover:bg-[#f7f4ed] shadow-sm hover:shadow-lg transition-all duration-700"
+              style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")' }}
             >
-              <div className="absolute top-1.5 left-1.5 right-1.5 bottom-1.5 border border-ink/5 pointer-events-none" />
+              {/* 모서리 장식 */}
+              <div className="absolute top-2.5 left-2.5 w-4 h-4 border-t border-l border-[#D4AF37]/25 group-hover:border-[#D4AF37]/55 transition-colors duration-500 pointer-events-none" />
+              <div className="absolute top-2.5 right-2.5 w-4 h-4 border-t border-r border-[#D4AF37]/25 group-hover:border-[#D4AF37]/55 transition-colors duration-500 pointer-events-none" />
+              <div className="absolute bottom-2.5 left-2.5 w-4 h-4 border-b border-l border-[#D4AF37]/25 group-hover:border-[#D4AF37]/55 transition-colors duration-500 pointer-events-none" />
+              <div className="absolute bottom-2.5 right-2.5 w-4 h-4 border-b border-r border-[#D4AF37]/25 group-hover:border-[#D4AF37]/55 transition-colors duration-500 pointer-events-none" />
+
+              {/* 상단 장식 라인 */}
+              <div className="w-6 h-px bg-[#D4AF37]/30 group-hover:bg-[#D4AF37]/60 mb-5 transition-colors duration-500" />
 
               {/* 명언 */}
-              <p className="font-serif text-sm italic opacity-80 leading-relaxed mb-3 line-clamp-3 group-hover:opacity-100 transition-opacity duration-300">
-                "{entry.quote}"
+              <p className="font-serif text-sm italic leading-[1.85] mb-4 line-clamp-3 text-ink/75 group-hover:text-ink/90 transition-colors duration-500 break-keep flex-1" style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
+                {entry.quote.split('\n')[0]}
               </p>
+
+              {/* 출처 구분선 */}
+              <div className="flex items-center gap-2 mb-2 opacity-30">
+                <div className="flex-1 h-px bg-ink/40" />
+                <div className="w-0.5 h-0.5 rounded-full bg-[#D4AF37]" />
+              </div>
 
               {/* 출처 */}
-              <p className="text-[10px] uppercase tracking-widest opacity-40 mb-3">
-                — {entry.source}
+              <p className="text-[9.5px] tracking-wider opacity-45 break-keep leading-relaxed font-serif" style={{ wordBreak: 'keep-all' }}>
+                {entry.source}
               </p>
-
-              {/* 태그 */}
-              <div className="flex flex-wrap gap-1.5 mt-auto">
-                {entry.tags.slice(0, 3).map(tag => (
-                  <span
-                    key={tag}
-                    className="text-[9px] px-2 py-0.5 border border-ink/15 opacity-50 tracking-wide"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
             </motion.button>
           ))}
         </div>
@@ -304,17 +306,17 @@ function WisdomModal({
         {/* 명언 */}
         <div className="mb-8 relative">
           <span className="absolute -top-4 -left-2 text-6xl text-[#D4AF37]/15 font-serif leading-none select-none">"</span>
-          <p className="font-serif text-xl sm:text-2xl italic leading-relaxed text-ink/90 relative z-10 mb-4">
+          <p className="font-serif text-xl sm:text-2xl italic leading-relaxed text-ink/90 relative z-10 mb-4 break-keep whitespace-pre-line" style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
             {entry.quote}
           </p>
-          <div className="flex items-center gap-3 opacity-50">
-            <div className="h-px w-8 bg-ink/40" />
-            <span className="text-xs tracking-wider">{entry.source}</span>
+          <div className="flex items-start gap-3 opacity-50">
+            <div className="h-px w-8 bg-ink/40 flex-shrink-0 mt-2" />
+            <span className="text-xs tracking-wide leading-relaxed break-keep" style={{ wordBreak: 'keep-all' }}>{entry.source}</span>
           </div>
         </div>
 
         {/* 번역 */}
-        <p className="font-serif text-base sm:text-lg text-ink/70 leading-relaxed mb-8 italic">
+        <p className="font-serif text-base sm:text-lg text-ink/70 leading-relaxed mb-8 italic break-keep" style={{ wordBreak: 'keep-all' }}>
           {entry.translation}
         </p>
 
@@ -325,27 +327,13 @@ function WisdomModal({
           <div className="flex-1 h-px bg-ink" />
         </div>
 
-        {/* 활용 맥락 */}
-        <div className="mb-8">
-          <p className="text-[9px] uppercase tracking-[0.3em] opacity-35 mb-3">이런 마음에 와닿습니다</p>
-          <p className="font-serif text-sm sm:text-base leading-relaxed text-ink/80">
+        {/* 멘토의 말 */}
+        <div>
+          <p className="text-[9px] uppercase tracking-[0.3em] opacity-35 mb-3">멘토의 말</p>
+          <p className="font-serif text-sm sm:text-base leading-[1.95] text-ink/80 break-keep italic" style={{ wordBreak: 'keep-all' }}>
             {entry.context}
           </p>
         </div>
-
-        {/* 태그 */}
-        {entry.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {entry.tags.map(tag => (
-              <span
-                key={tag}
-                className="text-[10px] px-3 py-1 border border-ink/20 opacity-55 tracking-wide font-serif"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
       </motion.div>
     </motion.div>
   );
