@@ -246,9 +246,10 @@ export default function Archive() {
                 transition={{ delay: index * 0.05, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                 className="group relative"
               >
-                <div
-                  onClick={() => { if (!confirmDeleteId) navigate(`/envelopes/${entry.id}`); }}
-                  className="relative flex flex-col p-6 border border-ink/20 bg-[#fdfbf7] shadow-sm hover:shadow-md transition-shadow duration-500 cursor-pointer"
+                <button
+                  onClick={() => navigate(`/envelopes/${entry.id}`)}
+                  className="w-full text-left relative flex flex-col p-6 border border-ink/20 bg-[#fdfbf7] shadow-sm hover:shadow-md transition-shadow duration-500 select-none"
+                  style={{ touchAction: 'manipulation' }}
                 >
                   <div className="absolute top-2 left-2 right-2 bottom-2 border border-ink/5 pointer-events-none" />
                   <div className="mb-4">
@@ -262,7 +263,7 @@ export default function Archive() {
                   <p className="mt-4 text-[10px] opacity-25 group-hover:opacity-50 transition-opacity duration-300 tracking-wide self-end">
                     답장 읽기 →
                   </p>
-                </div>
+                </button>
                 {confirmDeleteId === entry.id ? (
                   <div
                     className="absolute top-2 right-2 flex items-center gap-2 bg-[#fdfbf7] border border-ink/20 px-2 py-1 shadow-sm z-10"
