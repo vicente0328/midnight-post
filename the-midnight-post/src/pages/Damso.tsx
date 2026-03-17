@@ -352,12 +352,21 @@ export default function Damso() {
     sessionStartRef.current = Date.now();
   }, []);
 
+  const handleEndSession = useCallback(async () => {
+    if (sessionIdRef.current) {
+      await updateDoc(doc(db, 'damso_sessions', sessionIdRef.current), {
+        endedAt: serverTimestamp(),
+      }).catch(err => console.error('담소 세션 종료 업데이트 실패:', err));
+    }
+    navigate(`/envelopes/${entryId}`);
+  }, [entryId, navigate]);
+
   // isEnding 전환 시 세션 종료 후 자동 이동
   useEffect(() => {
     if (!isEnding) return;
     const t = setTimeout(handleEndSession, 4500);
     return () => clearTimeout(t);
-  }, [isEnding]);
+  }, [isEnding, handleEndSession]);
 
   // Send message
   const handleSend = async () => {
@@ -429,15 +438,6 @@ export default function Damso() {
       setIsSending(false);
     }
   };
-
-  const handleEndSession = useCallback(async () => {
-    if (sessionIdRef.current) {
-      await updateDoc(doc(db, 'damso_sessions', sessionIdRef.current), {
-        endedAt: serverTimestamp(),
-      }).catch(() => {});
-    }
-    navigate(`/envelopes/${entryId}`);
-  }, [entryId, navigate]);
 
   return (
     <div

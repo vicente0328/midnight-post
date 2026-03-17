@@ -60,6 +60,7 @@ export default function Archive() {
   const [sessions, setSessions] = useState<SessionDoc[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [sessionsFetched, setSessionsFetched] = useState(false);
+  const [sessionsError, setSessionsError] = useState(false);
 
   // 담소 리더
   const [selectedSession, setSelectedSession] = useState<SessionDoc | null>(null);
@@ -83,6 +84,7 @@ export default function Archive() {
     if (!user) return;
     setLoadingSessions(true);
     setSessionsFetched(false);
+    setSessionsError(false);
     getDocs(query(collection(db, 'damso_sessions'), where('uid', '==', user.uid)))
       .then(snap => {
         const list: SessionDoc[] = [];
@@ -91,7 +93,10 @@ export default function Archive() {
         setSessions(list);
         setSessionsFetched(true);
       })
-      .catch(console.error)
+      .catch(err => {
+        console.error('담소 기록 불러오기 실패:', err);
+        setSessionsError(true);
+      })
       .finally(() => setLoadingSessions(false));
   }, [user]);
 
@@ -173,7 +178,18 @@ export default function Archive() {
           {loadingSessions && (
             <p className="font-serif italic opacity-40 animate-pulse">담소 기록을 불러오는 중...</p>
           )}
-          {!loadingSessions && sessions.length === 0 && (
+          {!loadingSessions && sessionsError && (
+            <div className="flex flex-col items-center gap-4">
+              <p className="font-serif italic opacity-40">기록을 불러오지 못했습니다.</p>
+              <button
+                onClick={fetchSessions}
+                className="font-serif text-xs italic opacity-50 hover:opacity-80 transition-opacity"
+              >
+                다시 시도 →
+              </button>
+            </div>
+          )}
+          {!loadingSessions && !sessionsError && sessions.length === 0 && sessionsFetched && (
             <p className="font-serif italic opacity-40">아직 나눈 담소가 없습니다.</p>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
