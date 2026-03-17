@@ -273,7 +273,7 @@ function BookmarkModal({
 
           {/* 편지 본문 */}
           <div className="text-[15px] sm:text-lg md:text-xl leading-[1.85] sm:leading-[2.1] md:leading-[2.2] text-ink/90 md:text-justify md:break-keep px-0 md:px-8">
-            {bookmark.advice.split('\n').map((paragraph, index) => {
+            {bookmark.advice.replace(/\\n/g, '\n').split('\n').map((paragraph, index) => {
               if (!paragraph.trim()) return null;
               const isFirst = index === 0;
               const segments = splitDialogue(paragraph);

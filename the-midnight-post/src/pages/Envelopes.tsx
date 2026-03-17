@@ -440,7 +440,7 @@ function LetterModal({
 
           {/* Advice Section */}
           <div className="text-[15px] sm:text-lg md:text-xl leading-[1.85] sm:leading-[2.1] md:leading-[2.2] text-ink/90 md:text-justify md:break-keep px-0 md:px-8">
-            {reply.advice.split('\n').map((paragraph, index) => {
+            {reply.advice.replace(/\\n/g, '\n').split('\n').map((paragraph, index) => {
               if (!paragraph.trim()) return null;
               const isFirstParagraph = index === 0;
               const segments = splitDialogue(paragraph);

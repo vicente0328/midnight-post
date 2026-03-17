@@ -581,7 +581,7 @@ function BookmarkModal({
 
           {/* 조언 */}
           <div className="text-[15px] sm:text-lg leading-[1.85] sm:leading-[2.1] text-ink/90 px-0 md:px-4">
-            {bookmark.advice.split('\n').map((paragraph, index) => {
+            {bookmark.advice.replace(/\\n/g, '\n').split('\n').map((paragraph, index) => {
               if (!paragraph.trim()) return null;
               return (
                 <p key={index} className="mb-4 md:mb-6">
