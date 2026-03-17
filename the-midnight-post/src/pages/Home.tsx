@@ -174,12 +174,11 @@ export default function Home() {
         Notification.requestPermission();
       }
 
-      // 멘토별 랜덤 발송 시간 localStorage 저장 (10초 ~ 3분, Firestore 규칙 변경 불필요)
-      const minMs = 10 * 1000;
-      const maxMs = 3 * 60 * 1000;
+      // 멘토별 발송 시간: 1번째 즉시, 2번째 1분 이내, 3번째 2분 이내, 4번째 3분 이내
       const deliverTimes: Record<string, number> = {};
-      rankMentors(trimmed).forEach(mentorId => {
-        deliverTimes[mentorId] = submittedAt + minMs + Math.random() * (maxMs - minMs);
+      const maxDelaysMs = [0, 60 * 1000, 2 * 60 * 1000, 3 * 60 * 1000];
+      rankedMentors.forEach((mentorId, idx) => {
+        deliverTimes[mentorId] = submittedAt + Math.random() * maxDelaysMs[idx];
       });
       localStorage.setItem('pendingEntryId', entryRef.id);
       localStorage.setItem('pendingDeliverTimes', JSON.stringify(deliverTimes));
