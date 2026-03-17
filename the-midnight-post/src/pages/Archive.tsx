@@ -274,6 +274,7 @@ function DamsoReader({
   session: SessionDoc;
   onClose: () => void;
 }) {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<MessageDoc[]>([]);
   const [entryContent, setEntryContent] = useState('');
   const [loading, setLoading] = useState(true);
@@ -281,16 +282,23 @@ function DamsoReader({
   const mentor = MENTOR_INFO[session.mentorId as MentorKey];
 
   useEffect(() => {
+    if (!user) return;
     const load = async () => {
-      // 메시지 목록 가져오기
+      // uid 기준으로 조회 후 sessionId로 클라이언트 필터링
+      // (Firestore list 규칙이 uid 제약을 요구함)
       const snap = await getDocs(
         query(
           collection(db, 'damso_messages'),
-          where('sessionId', '==', session.id),
+          where('uid', '==', user.uid),
         )
       );
       const list: MessageDoc[] = [];
-      snap.forEach(d => list.push({ id: d.id, ...d.data() } as MessageDoc));
+      snap.forEach(d => {
+        const data = d.data();
+        if (data.sessionId === session.id) {
+          list.push({ id: d.id, ...data } as MessageDoc);
+        }
+      });
       list.sort((a, b) => a.order - b.order);
       setMessages(list);
 
@@ -303,7 +311,7 @@ function DamsoReader({
       setLoading(false);
     };
     load().catch(console.error);
-  }, [session]);
+  }, [session, user]);
 
   if (!mentor) return null;
 
