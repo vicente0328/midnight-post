@@ -5,7 +5,7 @@ import { useAuth } from '../components/AuthContext';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Flower2, Cross, Feather, Brush, Trash2 } from 'lucide-react';
+import { X, Flower2, Cross, Feather, Brush, Trash2, Bookmark } from 'lucide-react';
 
 // ── 멘토 정보 ─────────────────────────────────────────────────────────────────
 
@@ -42,9 +42,23 @@ interface MessageDoc {
   order: number;
 }
 
+// ── 북마크 타입 ────────────────────────────────────────────────────────────────
+
+interface BookmarkDoc {
+  id: string;
+  uid: string;
+  entryId: string;
+  mentorId: string;
+  quote: string;
+  source: string;
+  translation: string;
+  advice: string;
+  savedAt: any;
+}
+
 // ── 탭 타입 ───────────────────────────────────────────────────────────────────
 
-type Tab = 'letters' | 'damso';
+type Tab = 'letters' | 'damso' | 'bookmarks';
 
 // ── Archive ───────────────────────────────────────────────────────────────────
 
@@ -64,6 +78,11 @@ export default function Archive() {
 
   // 담소 리더
   const [selectedSession, setSelectedSession] = useState<SessionDoc | null>(null);
+
+  // 북마크 탭
+  const [bookmarks, setBookmarks] = useState<BookmarkDoc[]>([]);
+  const [loadingBookmarks, setLoadingBookmarks] = useState(false);
+  const [bookmarksFetched, setBookmarksFetched] = useState(false);
 
   // 삭제 확인
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -97,6 +116,27 @@ export default function Archive() {
     setSessions(prev => prev.filter(s => s.id !== sessionId));
     setConfirmDeleteId(null);
   }, [user]);
+
+  const fetchBookmarks = useCallback(() => {
+    if (!user) return;
+    setLoadingBookmarks(true);
+    getDocs(query(collection(db, 'bookmarks'), where('uid', '==', user.uid)))
+      .then(snap => {
+        const list: BookmarkDoc[] = [];
+        snap.forEach(d => list.push({ id: d.id, ...d.data() } as BookmarkDoc));
+        list.sort((a, b) => (b.savedAt?.toDate?.() ?? 0) - (a.savedAt?.toDate?.() ?? 0));
+        setBookmarks(list);
+        setBookmarksFetched(true);
+      })
+      .catch(console.error)
+      .finally(() => setLoadingBookmarks(false));
+  }, [user]);
+
+  const deleteBookmark = useCallback(async (id: string) => {
+    await deleteDoc(doc(db, 'bookmarks', id));
+    setBookmarks(prev => prev.filter(b => b.id !== id));
+    setConfirmDeleteId(null);
+  }, []);
 
   // 편지 목록 — 마운트 시 로드
   useEffect(() => {
@@ -136,8 +176,10 @@ export default function Archive() {
   }, [user]);
 
   const handleTabChange = (t: Tab) => {
+    setConfirmDeleteId(null);
     setTab(t);
-    if (t === 'damso') fetchSessions();
+    if (t === 'damso' && !sessionsFetched) fetchSessions();
+    if (t === 'bookmarks' && !bookmarksFetched) fetchBookmarks();
   };
 
   return (
@@ -146,8 +188,12 @@ export default function Archive() {
       <p className="opacity-60 italic text-sm mb-10">당신의 밤이 기록된 서재입니다.</p>
 
       {/* ── 탭 ── */}
-      <div className="flex gap-10 mb-12 w-full border-b border-ink/10">
-        {(['letters', 'damso'] as Tab[]).map(t => (
+      <div className="flex gap-8 mb-12 w-full border-b border-ink/10">
+        {([
+          { key: 'letters',   label: '편지 기록' },
+          { key: 'damso',     label: '담소 기록' },
+          { key: 'bookmarks', label: '북마크'    },
+        ] as { key: Tab; label: string }[]).map(({ key: t, label }) => (
           <button
             key={t}
             onClick={() => handleTabChange(t)}
@@ -155,7 +201,7 @@ export default function Archive() {
               tab === t ? 'opacity-90' : 'opacity-35 hover:opacity-55'
             }`}
           >
-            {t === 'letters' ? '편지 기록' : '담소 기록'}
+            {label}
             {tab === t && (
               <motion.div
                 layoutId="tab-indicator"
@@ -328,6 +374,78 @@ export default function Archive() {
                   ) : (
                     <button
                       onClick={() => setConfirmDeleteId(session.id)}
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-30 hover:!opacity-70 transition-opacity duration-200"
+                    >
+                      <Trash2 size={14} strokeWidth={1.5} />
+                    </button>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+      {tab === 'bookmarks' && (
+        <motion.div
+          key="bookmarks"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full flex flex-col items-center"
+        >
+          {loadingBookmarks && (
+            <p className="font-serif italic opacity-40 animate-pulse">북마크를 불러오는 중...</p>
+          )}
+          {!loadingBookmarks && bookmarksFetched && bookmarks.length === 0 && (
+            <div className="flex flex-col items-center gap-3 opacity-40 py-4">
+              <Bookmark size={28} strokeWidth={1} />
+              <p className="font-serif italic text-sm">아직 간직한 편지가 없습니다.</p>
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
+            {bookmarks.map((bm, index) => {
+              const mentor = MENTOR_INFO[bm.mentorId as MentorKey];
+              if (!mentor) return null;
+              const Icon = mentor.icon;
+              const date = bm.savedAt?.toDate ? format(bm.savedAt.toDate(), 'yyyy.MM.dd') : '—';
+
+              return (
+                <motion.div
+                  key={bm.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                  className="group relative"
+                >
+                  <div className="relative flex flex-col justify-between p-6 border border-ink/20 bg-[#fdfbf7] shadow-sm h-52">
+                    <div className="absolute top-2 left-2 right-2 bottom-2 border border-ink/5 pointer-events-none" />
+
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${mentor.color} flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                        <Icon size={13} strokeWidth={1.5} className="text-[#D4AF37]" />
+                      </div>
+                      <div>
+                        <p className="font-serif text-sm font-bold text-ink/80">{mentor.name}</p>
+                        <p className="text-[9px] uppercase tracking-widest opacity-40">{date}</p>
+                      </div>
+                    </div>
+
+                    <p className="font-serif text-sm italic opacity-75 line-clamp-2 leading-relaxed mb-2">
+                      "{bm.quote}"
+                    </p>
+                    <p className="text-xs opacity-50 line-clamp-2 leading-relaxed">{bm.translation}</p>
+                  </div>
+
+                  {confirmDeleteId === bm.id ? (
+                    <div className="absolute top-2 right-2 flex items-center gap-2 bg-[#fdfbf7] border border-ink/20 px-2 py-1 shadow-sm z-10">
+                      <span className="text-[10px] opacity-60">제거할까요?</span>
+                      <button onClick={() => deleteBookmark(bm.id)} className="text-[10px] text-red-700 hover:text-red-900 transition-colors">확인</button>
+                      <button onClick={() => setConfirmDeleteId(null)} className="text-[10px] opacity-40 hover:opacity-70 transition-opacity">취소</button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteId(bm.id)}
                       className="absolute top-2 right-2 opacity-0 group-hover:opacity-30 hover:!opacity-70 transition-opacity duration-200"
                     >
                       <Trash2 size={14} strokeWidth={1.5} />
