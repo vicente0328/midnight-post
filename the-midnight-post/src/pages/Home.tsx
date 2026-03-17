@@ -33,7 +33,7 @@ const TIME_CONTENT: Record<string, { subtitle: string; greetings: string[] }> = 
     ],
   },
   morning: {
-    subtitle: "오늘 하루, 어떤\n마음으로 시작하시나요?",
+    subtitle: "오늘 하루,\n어떤 마음으로 시작하시나요?",
     greetings: [
       "좋은 아침입니다.\n오늘은 어떤 하루를 보내실 건가요?",
       "새로운 하루가 시작되었습니다.\n오늘의 마음은 어떤가요?",
