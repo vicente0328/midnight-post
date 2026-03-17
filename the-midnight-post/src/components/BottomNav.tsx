@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { PenTool, BookOpen, FlaskConical, Scroll } from 'lucide-react';
 
@@ -11,20 +11,6 @@ const TABS = [
 
 export default function BottomNav() {
   const location = useLocation();
-  const pressedRef = useRef<HTMLAnchorElement | null>(null);
-
-  const handleTouchStart = (e: React.TouchEvent<HTMLAnchorElement>) => {
-    const el = e.currentTarget;
-    pressedRef.current = el;
-    el.style.opacity = '0.6';
-    el.style.transform = 'scale(0.94)';
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent<HTMLAnchorElement>, isActive: boolean) => {
-    const el = e.currentTarget;
-    el.style.opacity = isActive ? '0.9' : '0.3';
-    el.style.transform = '';
-  };
 
   return (
     <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-paper border-t border-ink/10 flex safe-bottom">
@@ -38,11 +24,8 @@ export default function BottomNav() {
           <Link
             key={path}
             to={path}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={e => handleTouchEnd(e, isActive)}
-            onTouchCancel={e => handleTouchEnd(e, isActive)}
-            className={`flex-1 flex items-center justify-center relative transition-opacity duration-150 ${
-              isActive ? 'opacity-90' : 'opacity-30'
+            className={`flex-1 flex items-center justify-center relative transition-opacity duration-150 active:scale-95 ${
+              isActive ? 'opacity-90' : 'opacity-30 active:opacity-60'
             }`}
             style={{
               touchAction: 'manipulation',
