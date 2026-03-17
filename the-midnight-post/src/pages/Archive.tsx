@@ -1,27 +1,11 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { collection, query, where, getDocs, doc, getDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Flower2, Cross, Feather, Brush, Trash2, Bookmark, Search } from 'lucide-react';
-
-const MENTOR_FILTERS = [
-  { id: 'hyewoon',   label: '혜운' },
-  { id: 'benedicto', label: '베네딕토' },
-  { id: 'theodore',  label: '테오도르' },
-  { id: 'yeonam',    label: '연암' },
-] as const;
-
-const EMOTION_FILTERS = [
-  { id: 'joy',     label: '기쁨' },
-  { id: 'sadness', label: '슬픔' },
-  { id: 'anxiety', label: '불안' },
-  { id: 'lonely',  label: '외로움' },
-  { id: 'anger',   label: '분노' },
-  { id: 'calm',    label: '평온' },
-] as const;
+import { X, Flower2, Cross, Feather, Brush, Trash2, Bookmark } from 'lucide-react';
 
 // ── 멘토 정보 ─────────────────────────────────────────────────────────────────
 
@@ -110,10 +94,6 @@ export default function Archive() {
 
   // 편지 카드 펼치기
   const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  // 검색 & 필터 (letters 탭)
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterEmotion, setFilterEmotion] = useState<string | null>(null);
 
   // 책갈피 상세 모달
   const [selectedBookmark, setSelectedBookmark] = useState<BookmarkDoc | null>(null);
@@ -206,21 +186,9 @@ export default function Archive() {
       .finally(() => setLoadingSessions(false));
   }, [user]);
 
-  const filteredEntries = useMemo(() => {
-    let result = entries;
-    if (filterEmotion) result = result.filter(e => e.emotion === filterEmotion);
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
-      result = result.filter(e => e.content.toLowerCase().includes(q));
-    }
-    return result;
-  }, [entries, filterEmotion, searchQuery]);
-
   const handleTabChange = (t: Tab) => {
     setConfirmDeleteId(null);
     setExpandedId(null);
-    setSearchQuery('');
-    setFilterEmotion(null);
     setTab(t);
     if (t === 'damso' && !sessionsFetched) fetchSessions();
     if (t === 'bookmarks' && !bookmarksFetched) fetchBookmarks();
@@ -261,58 +229,16 @@ export default function Archive() {
       {tab === 'letters' && (
         <div className="w-full flex flex-col items-center">
 
-          {/* 검색 & 감정 필터 */}
-          {!loadingEntries && entries.length > 0 && (
-            <div className="w-full mb-8 flex flex-col gap-3">
-              {/* 검색창 */}
-              <div className="relative">
-                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-30" strokeWidth={1.5} />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="일기 내용 검색"
-                  className="w-full bg-transparent border border-ink/15 pl-8 pr-4 py-2 font-serif text-sm placeholder:opacity-30 focus:outline-none focus:border-ink/35 transition-colors"
-                />
-              </div>
-              {/* 감정 필터 */}
-              <div className="flex gap-2 flex-wrap">
-                {EMOTION_FILTERS.map(({ id, label }) => (
-                  <button
-                    key={id}
-                    onClick={() => setFilterEmotion(prev => prev === id ? null : id)}
-                    className="font-serif text-xs px-3 py-1 border transition-all duration-200"
-                    style={{
-                      borderColor: filterEmotion === id ? 'rgba(26,18,8,0.5)' : 'rgba(26,18,8,0.12)',
-                      background: filterEmotion === id ? 'rgba(26,18,8,0.07)' : 'transparent',
-                      opacity: filterEmotion && filterEmotion !== id ? 0.35 : 1,
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
-                {(filterEmotion || searchQuery) && (
-                  <button
-                    onClick={() => { setFilterEmotion(null); setSearchQuery(''); }}
-                    className="font-serif text-xs px-3 py-1 opacity-35 hover:opacity-60 transition-opacity"
-                  >
-                    초기화 ✕
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
             {loadingEntries
               ? [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
-              : filteredEntries.length === 0
+              : entries.length === 0
                 ? (
                   <p className="font-serif italic opacity-40 col-span-full text-center py-4">
-                    {entries.length === 0 ? '아직 남겨진 기록이 없습니다.' : '검색 결과가 없습니다.'}
+                    아직 남겨진 기록이 없습니다.
                   </p>
                 )
-                : filteredEntries.map((entry, index) => (
+                : entries.map((entry, index) => (
               <motion.div
                 key={entry.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -334,12 +260,9 @@ export default function Archive() {
                   }`}
                 >
                   <div className="absolute top-2 left-2 right-2 bottom-2 border border-ink/5 pointer-events-none" />
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="mb-4">
                     <span className="text-xs font-mono opacity-50">
                       {entry.createdAt ? format(entry.createdAt.toDate(), 'yyyy.MM.dd') : '—'}
-                    </span>
-                    <span className="text-[10px] uppercase tracking-widest opacity-40">
-                      {entry.emotion !== 'unknown' ? entry.emotion : ''}
                     </span>
                   </div>
                   <p className={`font-serif text-lg leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity duration-300 ${

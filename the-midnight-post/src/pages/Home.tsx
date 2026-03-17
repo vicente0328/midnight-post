@@ -19,19 +19,6 @@ function hasCrisis(text: string): boolean {
   return CRISIS_PATTERNS.some(k => text.includes(k));
 }
 
-// ── 감정 태그 ──────────────────────────────────────────────────────────────────
-
-const EMOTIONS = [
-  { id: 'joy',      label: '기쁨',   symbol: '晴' },
-  { id: 'sadness',  label: '슬픔',   symbol: '雨' },
-  { id: 'anxiety',  label: '불안',   symbol: '風' },
-  { id: 'lonely',   label: '외로움', symbol: '夜' },
-  { id: 'anger',    label: '분노',   symbol: '火' },
-  { id: 'calm',     label: '평온',   symbol: '靜' },
-] as const;
-
-type EmotionId = typeof EMOTIONS[number]['id'];
-
 // ── 시간대별 문구 ──────────────────────────────────────────────────────────────
 
 const TIME_CONTENT: Record<string, { subtitle: string; greetings: string[] }> = {
@@ -105,7 +92,6 @@ export default function Home() {
   const [crisisEntryId, setCrisisEntryId] = useState<string | null>(null);
   const [greeting, setGreeting] = useState('');
   const [timePeriod, setTimePeriod] = useState('night');
-  const [selectedEmotion, setSelectedEmotion] = useState<EmotionId | null>(null);
   const { user, setShowAuthModal } = useAuth();
   const { setTyping } = useSound();
   const navigate = useNavigate();
@@ -147,7 +133,7 @@ export default function Home() {
       const entryRef = await addDoc(collection(db, 'entries'), {
         uid: user.uid,
         content: trimmed,
-        emotion: selectedEmotion ?? 'unknown',
+        emotion: 'unknown',
         createdAt: serverTimestamp(),
         status: 'replied',
       });
@@ -324,27 +310,6 @@ export default function Home() {
           <div className="absolute bottom-2 right-2 text-xs opacity-40 font-mono">
             {content.length} / 100
           </div>
-        </div>
-
-        {/* 감정 태그 */}
-        <div className="flex gap-3 mt-6 flex-wrap justify-center">
-          {EMOTIONS.map(em => (
-            <button
-              key={em.id}
-              type="button"
-              onClick={() => setSelectedEmotion(prev => prev === em.id ? null : em.id)}
-              className="flex flex-col items-center gap-1 transition-opacity duration-200"
-              style={{ opacity: selectedEmotion && selectedEmotion !== em.id ? 0.25 : selectedEmotion === em.id ? 1 : 0.5 }}
-            >
-              <span
-                className="font-serif text-sm"
-                style={{ color: selectedEmotion === em.id ? 'rgba(26,18,8,0.85)' : 'rgba(26,18,8,0.6)' }}
-              >
-                {em.symbol}
-              </span>
-              <span className="text-[9px] tracking-widest uppercase opacity-70">{em.label}</span>
-            </button>
-          ))}
         </div>
 
         <button
