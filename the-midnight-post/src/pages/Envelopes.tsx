@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, deleteDoc, getDocs, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
 import { useSound } from '../components/SoundContext';
 import { MentorReply } from '../services/ai';
-import { X, Feather, Flower2, Cross, Brush, MessageCircle } from 'lucide-react';
+import { X, Feather, Flower2, Cross, Brush, MessageCircle, Bookmark } from 'lucide-react';
 
 
 const WAITING_PHRASES = [
@@ -187,6 +187,7 @@ export default function Envelopes() {
         {selectedReply && (
           <LetterModal
             reply={selectedReply}
+            entryId={entryId ?? ''}
             onClose={() => setSelectedReply(null)}
             onStartDamso={(mentorId) => {
               setSelectedReply(null);
@@ -219,15 +220,66 @@ function splitDialogue(text: string): { text: string; isDialogue: boolean }[] {
 
 function LetterModal({
   reply,
+  entryId,
   onClose,
   onStartDamso,
 }: {
   reply: MentorReply;
+  entryId: string;
   onClose: () => void;
   onStartDamso: (mentorId: string) => void;
 }) {
+  const { user } = useAuth();
   const mentor = MENTORS[reply.mentorId];
-  
+  const [bookmarkDocId, setBookmarkDocId] = useState<string | null>(null);
+  const [bookmarkLoading, setBookmarkLoading] = useState(false);
+
+  // 이미 북마크됐는지 확인
+  useEffect(() => {
+    if (!user) return;
+    getDocs(query(
+      collection(db, 'bookmarks'),
+      where('uid', '==', user.uid),
+      where('entryId', '==', entryId),
+      where('mentorId', '==', reply.mentorId)
+    )).then(snap => {
+      if (!snap.empty) setBookmarkDocId(snap.docs[0].id);
+    }).catch(() => {});
+  }, [user, entryId, reply.mentorId]);
+
+  const toggleBookmark = useCallback(async () => {
+    if (!user || bookmarkLoading) return;
+    setBookmarkLoading(true);
+    try {
+      if (bookmarkDocId) {
+        const snap = await getDocs(query(
+          collection(db, 'bookmarks'),
+          where('uid', '==', user.uid),
+          where('entryId', '==', entryId),
+          where('mentorId', '==', reply.mentorId)
+        ));
+        for (const d of snap.docs) await deleteDoc(d.ref);
+        setBookmarkDocId(null);
+      } else {
+        const docRef = await addDoc(collection(db, 'bookmarks'), {
+          uid: user.uid,
+          entryId,
+          mentorId: reply.mentorId,
+          quote: reply.quote,
+          source: reply.source ?? '',
+          translation: reply.translation,
+          advice: reply.advice,
+          savedAt: serverTimestamp(),
+        });
+        setBookmarkDocId(docRef.id);
+      }
+    } catch (e) {
+      console.error('Bookmark error:', e);
+    } finally {
+      setBookmarkLoading(false);
+    }
+  }, [user, bookmarkDocId, bookmarkLoading, entryId, reply]);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -251,13 +303,31 @@ function LetterModal({
           WebkitOverflowScrolling: 'touch',
         }}
       >
-        {/* Elegant Close Button */}
+        {/* 닫기 버튼 */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 sm:top-8 sm:right-8 opacity-40 hover:opacity-100 transition-all duration-300 hover:rotate-90"
         >
           <X size={28} strokeWidth={1} />
         </button>
+
+        {/* 북마크 버튼 */}
+        {user && (
+          <button
+            onClick={toggleBookmark}
+            disabled={bookmarkLoading}
+            title={bookmarkDocId ? '서재에서 제거' : '나의 서재에 저장'}
+            className="absolute top-4 right-12 sm:top-8 sm:right-16 transition-all duration-300 disabled:opacity-30"
+          >
+            <Bookmark
+              size={22}
+              strokeWidth={1.5}
+              className={bookmarkDocId
+                ? 'fill-[#D4AF37] text-[#D4AF37]'
+                : 'text-ink/40 hover:text-[#D4AF37] transition-colors duration-300'}
+            />
+          </button>
+        )}
 
         {/* Header: Mentor Info */}
         <div className="flex flex-col items-center mb-6 md:mb-16">

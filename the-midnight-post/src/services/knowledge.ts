@@ -107,6 +107,21 @@ export async function saveKnowledgeEntries(
   });
 }
 
+// 오늘 특정 멘토의 지식 (Study 페이지용)
+export async function getTodayKnowledge(
+  mentorId: MentorId
+): Promise<KnowledgeEntry[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const snap = await getDoc(doc(db, 'mentor_knowledge', `${mentorId}_${today}`));
+    if (snap.exists()) {
+      const data = snap.data();
+      if (Array.isArray(data.entries)) return data.entries as KnowledgeEntry[];
+    }
+  } catch {}
+  return [];
+}
+
 // 최근 N일치 지식 합산 (복합 인덱스 불필요 — 문서 ID로 직접 접근)
 export async function getRecentKnowledge(
   mentorId: MentorId,

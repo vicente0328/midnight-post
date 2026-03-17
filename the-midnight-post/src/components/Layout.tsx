@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import AuthModal from './AuthModal';
-import { LogOut, BookOpen, PenTool } from 'lucide-react';
+import { LogOut, BookOpen, PenTool, Bookmark, FlaskConical } from 'lucide-react';
 
 export default function Layout() {
   const { user, setShowAuthModal, signOut } = useAuth();
@@ -24,6 +24,14 @@ export default function Layout() {
               <Link to="/archive" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Archive">
                 <BookOpen size={16} />
                 <span className="hidden sm:inline">Archive</span>
+              </Link>
+              <Link to="/library" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="나의 서재">
+                <Bookmark size={16} />
+                <span className="hidden sm:inline">Library</span>
+              </Link>
+              <Link to="/study" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="멘토의 연구실">
+                <FlaskConical size={16} />
+                <span className="hidden sm:inline">Study</span>
               </Link>
               <button onClick={signOut} className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Logout">
                 <LogOut size={16} />
