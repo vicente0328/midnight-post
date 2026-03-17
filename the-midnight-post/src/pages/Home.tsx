@@ -182,6 +182,7 @@ export default function Home() {
       });
       localStorage.setItem('pendingEntryId', entryRef.id);
       localStorage.setItem('pendingDeliverTimes', JSON.stringify(deliverTimes));
+      window.dispatchEvent(new Event('pendingEntryUpdated'));
 
       rankedMentors.forEach((mentorId, index) => {
         setTimeout(async () => {

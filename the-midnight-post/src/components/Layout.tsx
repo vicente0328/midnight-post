@@ -32,51 +32,72 @@ export default function Layout() {
   // 전역 편지 도착 감지
   useEffect(() => {
     if (!user) return;
-    const pendingEntryId = localStorage.getItem('pendingEntryId');
-    if (!pendingEntryId) return;
 
-    const q = query(
-      collection(db, 'replies'),
-      where('uid', '==', user.uid),
-      where('entryId', '==', pendingEntryId)
-    );
+    let unsubscribe: (() => void) | null = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      snapshot.forEach((doc) => {
-        pendingRepliesRef.current.set(doc.id, { ...doc.data(), id: doc.id });
+    const cleanup = () => {
+      unsubscribe?.();
+      if (interval) clearInterval(interval);
+    };
+
+    const initListener = () => {
+      cleanup();
+      pendingRepliesRef.current.clear();
+
+      const pendingEntryId = localStorage.getItem('pendingEntryId');
+      if (!pendingEntryId) return;
+
+      const q = query(
+        collection(db, 'replies'),
+        where('uid', '==', user.uid),
+        where('entryId', '==', pendingEntryId)
+      );
+
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        snapshot.forEach((doc) => {
+          pendingRepliesRef.current.set(doc.id, { ...doc.data(), id: doc.id });
+        });
       });
-    });
 
-    // 5초마다 deliverTimes 체크
-    const interval = setInterval(() => {
-      const nowMs = Date.now();
-      let deliverTimes: Record<string, number> = {};
-      try { deliverTimes = JSON.parse(localStorage.getItem('pendingDeliverTimes') ?? '{}'); } catch {}
+      // 5초마다 deliverTimes 체크
+      interval = setInterval(() => {
+        const nowMs = Date.now();
+        let deliverTimes: Record<string, number> = {};
+        try { deliverTimes = JSON.parse(localStorage.getItem('pendingDeliverTimes') ?? '{}'); } catch {}
 
-      let newlyArrived: ToastItem[] = [];
-      pendingRepliesRef.current.forEach((data, docId) => {
-        const deliverMs = deliverTimes[data.mentorId];
-        if (deliverMs && deliverMs <= nowMs && !notifiedRef.current.has(docId)) {
-          notifiedRef.current.add(docId);
-          newlyArrived.push({ id: docId, mentorId: data.mentorId, entryId: pendingEntryId });
-          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-            new Notification(`${MENTOR_NAMES[data.mentorId] ?? '현자'}의 편지가 도착했습니다`, {
-              body: '오늘의 일기에 대한 답장이 왔습니다. 확인해보세요.',
-              icon: '/icon-192x192.png',
-            });
+        const newlyArrived: ToastItem[] = [];
+        pendingRepliesRef.current.forEach((data, docId) => {
+          const deliverMs = deliverTimes[data.mentorId];
+          if (deliverMs && deliverMs <= nowMs && !notifiedRef.current.has(docId)) {
+            notifiedRef.current.add(docId);
+            newlyArrived.push({ id: docId, mentorId: data.mentorId, entryId: pendingEntryId });
+            if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+              new Notification(`${MENTOR_NAMES[data.mentorId] ?? '현자'}의 편지가 도착했습니다`, {
+                body: '오늘의 일기에 대한 답장이 왔습니다. 확인해보세요.',
+                icon: '/icon-192x192.png',
+              });
+            }
           }
+        });
+        if (newlyArrived.length > 0) {
+          setToasts(prev => [...prev, ...newlyArrived]);
         }
-      });
-      if (newlyArrived.length > 0) {
-        setToasts(prev => [...prev, ...newlyArrived]);
-      }
-      if (notifiedRef.current.size >= 4) {
-        localStorage.removeItem('pendingEntryId');
-        localStorage.removeItem('pendingDeliverTimes');
-      }
-    }, 5000);
+        if (notifiedRef.current.size >= 4) {
+          localStorage.removeItem('pendingEntryId');
+          localStorage.removeItem('pendingDeliverTimes');
+          cleanup();
+        }
+      }, 5000);
+    };
 
-    return () => { unsubscribe(); clearInterval(interval); };
+    initListener();
+    window.addEventListener('pendingEntryUpdated', initListener);
+
+    return () => {
+      cleanup();
+      window.removeEventListener('pendingEntryUpdated', initListener);
+    };
   }, [user]);
 
   const dismissToast = (id: string) => setToasts(prev => prev.filter(t => t.id !== id));
