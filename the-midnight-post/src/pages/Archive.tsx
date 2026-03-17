@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { collection, query, where, getDocs, doc, getDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Flower2, Cross, Feather, Brush, Trash2, Bookmark } from 'lucide-react';
@@ -66,6 +66,7 @@ type Tab = 'letters' | 'damso' | 'bookmarks';
 
 export default function Archive() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('letters');
 
   // 편지 탭
@@ -88,9 +89,6 @@ export default function Archive() {
 
   // 삭제 확인
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-
-  // 편지 카드 펼치기
-  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // 책갈피 상세 모달
   const [selectedBookmark, setSelectedBookmark] = useState<BookmarkDoc | null>(null);
@@ -185,7 +183,6 @@ export default function Archive() {
 
   const handleTabChange = (t: Tab) => {
     setConfirmDeleteId(null);
-    setExpandedId(null);
     setTab(t);
     if (t === 'damso' && !sessionsFetched) fetchSessions();
     if (t === 'bookmarks' && !bookmarksFetched) fetchBookmarks();
@@ -221,10 +218,18 @@ export default function Archive() {
         ))}
       </div>
 
-      {/* ── 탭 콘텐츠 — 즉시 전환 (애니메이션 없음, 레이아웃 점프 방지) ── */}
-      <div className="w-full flex flex-col items-center">
+      {/* ── 탭 콘텐츠 ── */}
+      <div className="w-full flex flex-col items-center min-h-[60vh]">
+      <AnimatePresence mode="wait">
       {tab === 'letters' && (
-        <div className="w-full flex flex-col items-center">
+        <motion.div
+          key="letters"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: 'easeInOut' }}
+          className="w-full flex flex-col items-center"
+        >
 
           {loadingEntries && (
             <p className="font-serif italic opacity-30 text-sm text-center py-12 animate-pulse">불러오는 중…</p>
@@ -242,17 +247,8 @@ export default function Archive() {
                 className="group relative"
               >
                 <div
-                  onClick={() => {
-                    if (confirmDeleteId) return;
-                    if (expandedId === entry.id) {
-                      setExpandedId(null);
-                    } else {
-                      setExpandedId(entry.id);
-                    }
-                  }}
-                  className={`relative flex flex-col p-6 border border-ink/20 bg-[#fdfbf7] shadow-sm transition-shadow duration-500 cursor-pointer ${
-                    expandedId === entry.id ? '' : 'h-48 hover:shadow-md'
-                  }`}
+                  onClick={() => { if (!confirmDeleteId) navigate(`/envelopes/${entry.id}`); }}
+                  className="relative flex flex-col p-6 border border-ink/20 bg-[#fdfbf7] shadow-sm hover:shadow-md transition-shadow duration-500 cursor-pointer"
                 >
                   <div className="absolute top-2 left-2 right-2 bottom-2 border border-ink/5 pointer-events-none" />
                   <div className="mb-4">
@@ -260,31 +256,18 @@ export default function Archive() {
                       {entry.createdAt ? format(entry.createdAt.toDate(), 'yyyy.MM.dd') : '—'}
                     </span>
                   </div>
-                  <p className={`font-serif text-lg leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity duration-300 ${
-                    expandedId === entry.id ? '' : 'line-clamp-3'
-                  }`}>
+                  <p className="font-serif text-lg leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity duration-300">
                     {entry.content}
                   </p>
-                  {expandedId === entry.id && (
-                    <div className="mt-6 flex items-center justify-between">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setExpandedId(null); }}
-                        className="text-[10px] opacity-35 hover:opacity-60 transition-opacity font-mono tracking-widest uppercase"
-                      >
-                        접기
-                      </button>
-                      <Link
-                        to={`/envelopes/${entry.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="font-serif text-sm italic opacity-60 hover:opacity-100 transition-opacity"
-                      >
-                        멘토들의 답장 읽기 →
-                      </Link>
-                    </div>
-                  )}
+                  <p className="mt-4 text-[10px] opacity-25 group-hover:opacity-50 transition-opacity duration-300 tracking-wide self-end">
+                    답장 읽기 →
+                  </p>
                 </div>
                 {confirmDeleteId === entry.id ? (
-                  <div className="absolute top-2 right-2 flex items-center gap-2 bg-[#fdfbf7] border border-ink/20 px-2 py-1 shadow-sm z-10">
+                  <div
+                    className="absolute top-2 right-2 flex items-center gap-2 bg-[#fdfbf7] border border-ink/20 px-2 py-1 shadow-sm z-10"
+                    onClick={e => e.stopPropagation()}
+                  >
                     <span className="text-[10px] opacity-60">삭제할까요?</span>
                     <button
                       onClick={() => deleteEntry(entry.id)}
@@ -298,7 +281,7 @@ export default function Archive() {
                 ) : (
                   <button
                     onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(entry.id); }}
-                    className="absolute top-2 right-2 opacity-20 hover:opacity-70 transition-opacity duration-200"
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-30 hover:!opacity-70 transition-opacity duration-200"
                   >
                     <Trash2 size={14} strokeWidth={1.5} />
                   </button>
@@ -306,11 +289,18 @@ export default function Archive() {
               </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
 
       {tab === 'damso' && (
-        <div className="w-full flex flex-col items-center">
+        <motion.div
+          key="damso"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: 'easeInOut' }}
+          className="w-full flex flex-col items-center"
+        >
           {loadingSessions && (
             <p className="font-serif italic opacity-30 text-sm text-center py-12 animate-pulse">불러오는 중…</p>
           )}
@@ -404,10 +394,17 @@ export default function Archive() {
               );
             })}
           </div>
-        </div>
+        </motion.div>
       )}
       {tab === 'bookmarks' && (
-        <div className="w-full flex flex-col items-center">
+        <motion.div
+          key="bookmarks"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: 'easeInOut' }}
+          className="w-full flex flex-col items-center"
+        >
           {loadingBookmarks && (
             <p className="font-serif italic opacity-30 text-sm text-center py-12 animate-pulse">불러오는 중…</p>
           )}
@@ -472,8 +469,9 @@ export default function Archive() {
               );
             })}
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
       </div>
 
       {/* ── 담소 리더 모달 ── */}
