@@ -148,8 +148,8 @@ export default function Envelopes() {
       <h1 className="text-3xl font-serif mb-6">The Four Envelopes</h1>
       <p className="opacity-60 italic text-sm mb-8">네 명의 현자가 당신에게 보내는 위로의 편지입니다.</p>
 
-      {/* 대기 문구 + 지혜카드 링크 — min-h로 공간 고정 */}
-      <div className="min-h-[5rem] flex flex-col items-center justify-center gap-4 mb-10">
+      {/* 대기 문구 + 안내 — min-h로 공간 고정 */}
+      <div className="min-h-[7rem] flex flex-col items-center justify-center gap-3 mb-10">
         <AnimatePresence mode="wait">
           {replies.length < MENTOR_ORDER.length && (
             <motion.p
@@ -168,13 +168,18 @@ export default function Envelopes() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 2.5, duration: 1.2 }}
+            transition={{ delay: 1.5, duration: 1.2 }}
+            className="flex flex-col items-center gap-2"
           >
+            <p className="font-serif text-xs text-ink/35 text-center leading-relaxed px-6">
+              마음을 다해 쓴 편지는 서두르지 않습니다.<br />
+              현자들의 답장이 하나씩, 조용히 당신 곁에 닿을 것입니다.
+            </p>
             <button
               onClick={() => navigate('/study')}
-              className="font-serif italic text-xs text-[#8B7355]/50 hover:text-[#8B7355]/90 transition-colors duration-500 border-b border-[#8B7355]/20 hover:border-[#8B7355]/50 pb-px"
+              className="font-serif italic text-xs text-[#8B7355]/45 hover:text-[#8B7355]/80 transition-colors duration-500 border-b border-[#8B7355]/20 hover:border-[#8B7355]/50 pb-px mt-1"
             >
-              기다리는 동안 오늘의 지혜 카드 읽으러 가기 →
+              기다리는 동안 연구실을 방문해보세요 →
             </button>
           </motion.div>
         )}
