@@ -88,6 +88,50 @@ function calcOpacity(index: number, total: number): number {
   return 0.22;
 }
 
+// ─── Typing animation for mentor speech ──────────────────────────────────────
+
+function TypingMentorText({
+  mentorName,
+  content,
+  onComplete,
+}: {
+  mentorName: string;
+  content: string;
+  onComplete: () => void;
+}) {
+  const [displayed, setDisplayed] = useState('');
+  const completedRef = useRef(false);
+
+  useEffect(() => {
+    let i = 0;
+    const interval = setInterval(() => {
+      i++;
+      setDisplayed(content.slice(0, i));
+      if (i >= content.length) {
+        clearInterval(interval);
+        if (!completedRef.current) {
+          completedRef.current = true;
+          setTimeout(onComplete, 700);
+        }
+      }
+    }, 42); // 42ms/자 ≈ 서정적이고 차분한 속도
+    return () => clearInterval(interval);
+  }, [content, onComplete]);
+
+  return (
+    <p className="font-serif text-base md:text-lg leading-[2] md:leading-[2.1]"
+      style={{ color: 'rgba(44,42,41,0.9)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
+      <span className="font-bold">{mentorName}:</span>
+      {' '}
+      &ldquo;{displayed}
+      {displayed.length < content.length && (
+        <span style={{ opacity: 0.5 }}>▎</span>
+      )}
+      &rdquo;
+    </p>
+  );
+}
+
 // ─── Message block ────────────────────────────────────────────────────────────
 
 function MessageBlock({
@@ -105,8 +149,16 @@ function MessageBlock({
 }) {
   const calledRef = useRef(false);
 
-  const handleAnimationComplete = () => {
-    if (isAnimating && !calledRef.current) {
+  const handleMotionComplete = () => {
+    // mentor 타입은 TypingMentorText에서 완료 처리하므로 여기선 skip
+    if (isAnimating && message.type !== 'mentor' && !calledRef.current) {
+      calledRef.current = true;
+      onAnimationComplete?.();
+    }
+  };
+
+  const handleTypingComplete = () => {
+    if (!calledRef.current) {
       calledRef.current = true;
       onAnimationComplete?.();
     }
@@ -116,8 +168,8 @@ function MessageBlock({
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: targetOpacity, y: 0 }}
-      transition={{ duration: isAnimating ? 1.6 : 0.8, ease: 'easeOut' }}
-      onAnimationComplete={handleAnimationComplete}
+      transition={{ duration: isAnimating && message.type === 'mentor' ? 0.4 : isAnimating ? 1.6 : 0.8, ease: 'easeOut' }}
+      onAnimationComplete={handleMotionComplete}
       className="mb-7 md:mb-9"
     >
       {message.type === 'stage_direction' && (
@@ -127,12 +179,18 @@ function MessageBlock({
         </p>
       )}
 
-      {message.type === 'mentor' && (
+      {message.type === 'mentor' && isAnimating ? (
+        <TypingMentorText
+          mentorName={mentorName}
+          content={message.content}
+          onComplete={handleTypingComplete}
+        />
+      ) : message.type === 'mentor' && (
         <p className="font-serif text-base md:text-lg leading-[2] md:leading-[2.1]"
           style={{ color: 'rgba(44,42,41,0.9)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
           <span className="font-bold">{mentorName}:</span>
           {' '}
-          "{message.content}"
+          &ldquo;{message.content}&rdquo;
         </p>
       )}
 

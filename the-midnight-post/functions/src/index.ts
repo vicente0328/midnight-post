@@ -76,6 +76,50 @@ function buildKnowledgeContext(entries: KnowledgeEntry[]): string {
     ).join('\n\n');
 }
 
+async function getRecentKnowledgeForDamso(mentorId: MentorId, count = 4): Promise<KnowledgeEntry[]> {
+  const db = getFirestore();
+  const today = new Date().toISOString().slice(0, 10);
+  const entries: KnowledgeEntry[] = [];
+
+  for (const period of ['am', 'pm']) {
+    if (entries.length >= count) break;
+    try {
+      const snap = await db.doc(`mentor_knowledge/${mentorId}_${today}_${period}`).get();
+      if (snap.exists) {
+        const data: KnowledgeEntry[] = snap.data()?.entries ?? [];
+        entries.push(...data);
+      }
+    } catch { /* 해당 문서 없으면 skip */ }
+  }
+
+  // 오늘 자료가 부족하면 어제 것도 채움
+  if (entries.length < count) {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yd = yesterday.toISOString().slice(0, 10);
+    for (const period of ['am', 'pm']) {
+      if (entries.length >= count) break;
+      try {
+        const snap = await db.doc(`mentor_knowledge/${mentorId}_${yd}_${period}`).get();
+        if (snap.exists) {
+          const data: KnowledgeEntry[] = snap.data()?.entries ?? [];
+          entries.push(...data);
+        }
+      } catch { /* skip */ }
+    }
+  }
+
+  return entries.slice(0, count);
+}
+
+function buildDamsoKnowledgeContext(entries: KnowledgeEntry[]): string {
+  if (entries.length === 0) return '';
+  return `\n\n[참고할 수 있는 구절들]\n` +
+    entries.map((k, i) =>
+      `${i + 1}. ${k.quote}\n   출처: ${k.source} / 번역: ${k.translation}`
+    ).join('\n');
+}
+
 function buildHistoryContext(history: DamsoConversationEntry[]): string {
   if (history.length === 0) return '';
   return '\n\n[지금까지의 대화]\n' + history.map(e => {
@@ -261,15 +305,18 @@ export const generateDamsoOpening = onCall({ timeoutSeconds: 180, memory: '512Mi
   if (!mentorId) throw new HttpsError('invalid-argument', 'mentorId가 필요합니다.');
 
   const mentor = MENTOR_PROFILES[mentorId];
+  const knowledgeEntries = await getRecentKnowledgeForDamso(mentorId);
+  const knowledgeContext = buildDamsoKnowledgeContext(knowledgeEntries);
+
   const prompt = `당신은 ${mentor.name}입니다. 성격: ${mentor.personality}
 
-사용자가 어젯밤 이런 일기를 썼습니다: "${entryContent || '말로 표현하기 어려운 감정'}"
+사용자가 어젯밤 이런 일기를 썼습니다: "${entryContent || '말로 표현하기 어려운 감정'}"${knowledgeContext}
 
 사용자가 당신의 ${mentor.space}을 찾아왔습니다. 소설의 첫 장면처럼 묘사하고 첫 인사를 건네주세요.
 
 JSON 필드:
 - stageDirection: 공간의 분위기와 당신의 첫 동작을 묘사하는 2-3문장의 지문. 현재형, 서정적으로. (예: "방 안에는 은은한 차 향기가 가득하다. 스님은 조용히 찻잔을 건네며 부드러운 미소를 지으셨다.")
-- mentorGreeting: 사용자를 맞이하는 첫 인사말. ${mentor.style} 일기 내용을 직접 언급하지 않고 마음을 자연스럽게 여는 말. 80-120자 내외.
+- mentorGreeting: 사용자를 맞이하는 첫 인사말. ${mentor.style} 일기 내용을 직접 언급하지 않고 마음을 자연스럽게 여는 말. 위 구절들 중 하나를 자연스럽게 녹여도 좋습니다. 80-120자 내외.
 
 JSON만 응답하세요.`;
 
@@ -323,10 +370,12 @@ export const generateDamsoResponse = onCall({ timeoutSeconds: 180, memory: '512M
 
   const mentor = MENTOR_PROFILES[mentorId];
   const historyContext = buildHistoryContext(conversationHistory);
+  const knowledgeEntries = await getRecentKnowledgeForDamso(mentorId);
+  const knowledgeContext = buildDamsoKnowledgeContext(knowledgeEntries);
 
   const prompt = `당신은 ${mentor.name}입니다. 성격: ${mentor.personality}
 
-사용자가 어젯밤 이런 일기를 썼습니다: "${entryContent || '말로 표현하기 어려운 감정'}"${historyContext}
+사용자가 어젯밤 이런 일기를 썼습니다: "${entryContent || '말로 표현하기 어려운 감정'}"${historyContext}${knowledgeContext}
 
 사용자가 방금 말했습니다: "${userInput}"
 
@@ -335,7 +384,7 @@ JSON 필드:
 
 2. stageDirection: 당신의 반응 행동을 묘사하는 1-2문장의 지문. 현재형, 서정적으로. (예: "스님은 잠시 눈을 감고 대나무 숲 소리에 귀를 기울이셨다. 그리고는 천천히 입을 열어 말씀하셨다.")
 
-3. mentorSpeech: 당신의 대사. ${mentor.style} 사용자의 감정과 상황에 먼저 충분히 공감하고, 그 마음을 있는 그대로 따뜻하게 품어주세요. 대화 맥락을 이어받아 깊이 있게 응답. 120-200자 내외. 30% 확률로 마지막에 사용자가 스스로 사유하게 하는 질문 하나를 덧붙임.
+3. mentorSpeech: 당신의 대사. ${mentor.style} 사용자의 감정과 상황에 먼저 충분히 공감하고, 그 마음을 있는 그대로 따뜻하게 품어주세요. 대화 맥락을 이어받아 깊이 있게 응답. 위 구절들 중 대화 흐름에 자연스럽게 어울리는 것이 있다면 멘토의 말투로 자연스럽게 녹여 인용하세요 (억지로 끼워넣지 말 것). 120-200자 내외. 50% 확률로 마지막에 질문 하나를 덧붙이되, 절반은 삶·존재·가치에 관한 철학적 질문, 절반은 사용자의 일상과 생각을 자연스럽게 묻는 가벼운 질문으로 하세요.
 
 JSON만 응답하세요.`;
 
@@ -390,10 +439,12 @@ export const generateDamsoClosing = onCall({ timeoutSeconds: 180, memory: '512Mi
 
   const mentor = MENTOR_PROFILES[mentorId];
   const historyContext = buildHistoryContext(conversationHistory);
+  const knowledgeEntries = await getRecentKnowledgeForDamso(mentorId);
+  const knowledgeContext = buildDamsoKnowledgeContext(knowledgeEntries);
 
   const prompt = `당신은 ${mentor.name}입니다. 성격: ${mentor.personality}
 
-사용자가 어젯밤 이런 일기를 썼습니다: "${entryContent || '말로 표현하기 어려운 감정'}"${historyContext}
+사용자가 어젯밤 이런 일기를 썼습니다: "${entryContent || '말로 표현하기 어려운 감정'}"${historyContext}${knowledgeContext}
 
 사용자가 방금 말했습니다: "${userInput}"
 
@@ -404,7 +455,7 @@ JSON 필드:
 
 2. stageDirection: 마무리 분위기를 담은 지문 1-2문장. 현재형, 서정적으로. (예: "스님은 찻잔을 조심스레 내려놓으시며 창밖 먼 산을 한참 바라보셨다.")
 
-3. mentorSpeech: ${mentor.style} 사용자의 마지막 말에 따뜻하게 응답하고, 자연스럽게 작별을 고하는 말. 오늘 이 자리에 와준 것에 대한 감사와, 사용자가 앞으로 나아갈 수 있도록 진심 어린 축복 혹은 기원의 말을 담아 마무리. 120-180자 내외.
+3. mentorSpeech: ${mentor.style} 사용자의 마지막 말에 따뜻하게 응답하고, 자연스럽게 작별을 고하는 말. 오늘 이 자리에 와준 것에 대한 감사와, 사용자가 앞으로 나아갈 수 있도록 진심 어린 축복 혹은 기원의 말을 담아 마무리. 위 구절들 중 마무리에 어울리는 것이 있다면 자연스럽게 인용해도 좋습니다. 120-180자 내외.
 
 JSON만 응답하세요.`;
 
