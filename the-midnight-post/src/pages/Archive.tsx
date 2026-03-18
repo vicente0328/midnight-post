@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { collection, query, where, getDocs, doc, getDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
+import { useVault } from '../components/VaultContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
@@ -66,6 +67,7 @@ type Tab = 'letters' | 'damso' | 'bookmarks';
 
 export default function Archive() {
   const { user } = useAuth();
+  const { decrypt } = useVault();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const highlightEntryId = searchParams.get('entryId');
@@ -130,16 +132,27 @@ export default function Archive() {
     if (!user) return;
     setLoadingBookmarks(true);
     getDocs(query(collection(db, 'bookmarks'), where('uid', '==', user.uid)))
-      .then(snap => {
-        const list: BookmarkDoc[] = [];
-        snap.forEach(d => list.push({ id: d.id, ...d.data() } as BookmarkDoc));
+      .then(async snap => {
+        const list: BookmarkDoc[] = await Promise.all(
+          snap.docs.map(async d => {
+            const data = d.data();
+            return {
+              id: d.id,
+              ...data,
+              quote: await decrypt(data.quote ?? ''),
+              source: data.source ? await decrypt(data.source) : data.source,
+              translation: await decrypt(data.translation ?? ''),
+              advice: await decrypt(data.advice ?? ''),
+            } as BookmarkDoc;
+          })
+        );
         list.sort((a, b) => (b.savedAt?.toDate?.() ?? 0) - (a.savedAt?.toDate?.() ?? 0));
         setBookmarks(list);
         setBookmarksFetched(true);
       })
       .catch(console.error)
       .finally(() => setLoadingBookmarks(false));
-  }, [user]);
+  }, [user, decrypt]);
 
   const deleteBookmark = useCallback(async (id: string) => {
     await deleteDoc(doc(db, 'bookmarks', id));
@@ -151,9 +164,13 @@ export default function Archive() {
   useEffect(() => {
     if (!user) return;
     getDocs(query(collection(db, 'entries'), where('uid', '==', user.uid)))
-      .then(snap => {
-        const list: EntryDoc[] = [];
-        snap.forEach(d => list.push({ id: d.id, ...d.data() } as EntryDoc));
+      .then(async snap => {
+        const list: EntryDoc[] = await Promise.all(
+          snap.docs.map(async d => {
+            const data = d.data();
+            return { id: d.id, ...data, content: await decrypt(data.content ?? '') } as EntryDoc;
+          })
+        );
         list.sort((a, b) => (b.createdAt?.toDate() ?? 0) - (a.createdAt?.toDate() ?? 0));
         setEntries(list);
       })
@@ -644,6 +661,7 @@ function DamsoReader({
   onClose: () => void;
 }) {
   const { user } = useAuth();
+  const { decrypt } = useVault();
   const [messages, setMessages] = useState<MessageDoc[]>([]);
   const [entryContent, setEntryContent] = useState('');
   const [loading, setLoading] = useState(true);
@@ -662,25 +680,32 @@ function DamsoReader({
         )
       );
       const list: MessageDoc[] = [];
-      snap.forEach(d => {
+      for (const d of snap.docs) {
         const data = d.data();
         if (data.sessionId === session.id) {
-          list.push({ id: d.id, ...data } as MessageDoc);
+          list.push({
+            id: d.id,
+            ...data,
+            content: await decrypt(data.content ?? ''),
+          } as MessageDoc);
         }
-      });
+      }
       list.sort((a, b) => a.order - b.order);
       setMessages(list);
 
       // 원본 일기 가져오기
       try {
         const entrySnap = await getDoc(doc(db, 'entries', session.entryId));
-        if (entrySnap.exists()) setEntryContent(String(entrySnap.data().content ?? ''));
+        if (entrySnap.exists()) {
+          const raw = String(entrySnap.data().content ?? '');
+          setEntryContent(await decrypt(raw));
+        }
       } catch {}
 
       setLoading(false);
     };
     load().catch(console.error);
-  }, [session, user]);
+  }, [session, user, decrypt]);
 
   if (!mentor) return null;
 

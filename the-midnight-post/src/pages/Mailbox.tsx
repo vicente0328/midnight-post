@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { collection, query, where, getDocs, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
+import { useVault } from '../components/VaultContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
@@ -34,6 +35,7 @@ interface ReplyDoc {
 
 export default function Mailbox() {
   const { user } = useAuth();
+  const { decrypt } = useVault();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const highlightEntryId = searchParams.get('entryId');
@@ -48,16 +50,26 @@ export default function Mailbox() {
   useEffect(() => {
     if (!user) return;
     getDocs(query(collection(db, 'replies'), where('uid', '==', user.uid)))
-      .then(snap => {
-        const list: ReplyDoc[] = [];
-        snap.forEach(d => list.push({ id: d.id, ...d.data() } as ReplyDoc));
-        // 최신순 정렬 (도착 순서: createdAt 내림차순)
+      .then(async snap => {
+        const list: ReplyDoc[] = await Promise.all(
+          snap.docs.map(async d => {
+            const data = d.data();
+            return {
+              id: d.id,
+              ...data,
+              quote: await decrypt(data.quote ?? ''),
+              translation: await decrypt(data.translation ?? ''),
+              advice: await decrypt(data.advice ?? ''),
+              source: data.source ? await decrypt(data.source) : data.source,
+            } as ReplyDoc;
+          })
+        );
         list.sort((a, b) => (b.createdAt?.toDate?.() ?? 0) - (a.createdAt?.toDate?.() ?? 0));
         setReplies(list);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [user, decrypt]);
 
   // 하이라이트 대상으로 스크롤
   useEffect(() => {

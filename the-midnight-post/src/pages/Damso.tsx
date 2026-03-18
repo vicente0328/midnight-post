@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { collection, addDoc, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
+import { useVault } from '../components/VaultContext';
 import {
   generateDamsoOpening,
   generateDamsoResponse,
@@ -151,18 +152,20 @@ function MessageBlock({
 function LoadingOverlay({
   spaceKey,
   onDone,
+  ready,
 }: {
   spaceKey: SpaceKey;
   onDone: () => void;
+  ready: boolean;
 }) {
   const space = MENTOR_SPACES[spaceKey];
   const [textDone, setTextDone] = useState(false);
 
   useEffect(() => {
-    if (!textDone) return;
+    if (!textDone || !ready) return;
     const t = setTimeout(onDone, 1000);
     return () => clearTimeout(t);
-  }, [textDone, onDone]);
+  }, [textDone, ready, onDone]);
 
   return (
     <motion.div
@@ -250,6 +253,7 @@ function TornPaperEdge({ fill }: { fill: string }) {
 export default function Damso() {
   const { entryId, mentorId } = useParams<{ entryId: string; mentorId: string }>();
   const { user } = useAuth();
+  const { encrypt, decrypt } = useVault();
   const navigate = useNavigate();
 
   const spaceKey = (mentorId as SpaceKey) ?? 'hyewoon';
@@ -305,8 +309,8 @@ export default function Damso() {
 
     const init = async () => {
       const entrySnap = await getDoc(doc(db, 'entries', entryId));
-      const content = entrySnap.exists() ? String(entrySnap.data().content ?? '') : '';
-      entryContentRef.current = content;
+      const rawContent = entrySnap.exists() ? String(entrySnap.data().content ?? '') : '';
+      entryContentRef.current = await decrypt(rawContent);
 
       // 세션 생성과 오프닝 생성을 병렬로 실행 — 한쪽 실패해도 다른 쪽은 진행
       const [sessionResult, openingResult] = await Promise.allSettled([
@@ -316,7 +320,7 @@ export default function Damso() {
           mentorId,
           startedAt: serverTimestamp(),
         }),
-        generateDamsoOpening(mentorId as MentorId, content),
+        generateDamsoOpening(mentorId as MentorId, entryContentRef.current),
       ]);
 
       if (sessionResult.status === 'fulfilled') {
@@ -361,17 +365,19 @@ export default function Damso() {
     if (sessionIdRef.current) {
       const sid = sessionIdRef.current;
       const uid = user.uid;
-      addDoc(collection(db, 'damso_messages'), {
-        sessionId: sid, uid, type: 'stage_direction',
-        content: stageDirection, order: 0, createdAt: serverTimestamp(),
-      });
-      addDoc(collection(db, 'damso_messages'), {
-        sessionId: sid, uid, type: 'mentor',
-        content: mentorGreeting, order: 1, createdAt: serverTimestamp(),
-      });
+      (async () => {
+        addDoc(collection(db, 'damso_messages'), {
+          sessionId: sid, uid, type: 'stage_direction',
+          content: await encrypt(stageDirection), order: 0, createdAt: serverTimestamp(),
+        });
+        addDoc(collection(db, 'damso_messages'), {
+          sessionId: sid, uid, type: 'mentor',
+          content: await encrypt(mentorGreeting), order: 1, createdAt: serverTimestamp(),
+        });
+      })();
       messageOrderRef.current = 2;
     }
-  }, [overlayDone, openingData, user]);
+  }, [overlayDone, openingData, user, encrypt]);
 
   const handleOverlayDone = useCallback((): void => {
     setShowLoading(false);
@@ -384,8 +390,8 @@ export default function Damso() {
         endedAt: serverTimestamp(),
       }).catch(err => console.error('담소 세션 종료 업데이트 실패:', err));
     }
-    navigate(`/envelopes/${entryId}`);
-  }, [entryId, navigate]);
+    navigate('/study', { state: { activeRoom: mentorId } });
+  }, [mentorId, navigate]);
 
   // isEnding 전환 시 세션 종료 후 자동 이동
   useEffect(() => {
@@ -447,16 +453,16 @@ export default function Damso() {
         await Promise.all([
           addDoc(collection(db, 'damso_messages'), {
             sessionId: sid, uid, type: 'user',
-            content: turn.transformedInput, rawInput: raw,
+            content: await encrypt(turn.transformedInput), rawInput: await encrypt(raw),
             order, createdAt: serverTimestamp(),
           }),
           addDoc(collection(db, 'damso_messages'), {
             sessionId: sid, uid, type: 'stage_direction',
-            content: turn.stageDirection, order: order + 1, createdAt: serverTimestamp(),
+            content: await encrypt(turn.stageDirection), order: order + 1, createdAt: serverTimestamp(),
           }),
           addDoc(collection(db, 'damso_messages'), {
             sessionId: sid, uid, type: 'mentor',
-            content: turn.mentorSpeech, order: order + 2, createdAt: serverTimestamp(),
+            content: await encrypt(turn.mentorSpeech), order: order + 2, createdAt: serverTimestamp(),
           }),
         ]);
         messageOrderRef.current += 3;
@@ -476,7 +482,7 @@ export default function Damso() {
       {/* Loading overlay */}
       <AnimatePresence>
         {showLoading && (
-          <LoadingOverlay key="loading" spaceKey={spaceKey} onDone={handleOverlayDone} />
+          <LoadingOverlay key="loading" spaceKey={spaceKey} onDone={handleOverlayDone} ready={openingData !== null} />
         )}
       </AnimatePresence>
 

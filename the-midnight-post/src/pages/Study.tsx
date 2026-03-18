@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Feather, Flower2, Cross, Brush, X, ChevronLeft, Bookmark, BookmarkCheck, PenLine, MessageCircle } from 'lucide-react';
 import { collection, addDoc, getDocs, query, where, orderBy, limit, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
 import { getTodayKnowledge, forceRegenerateKnowledge, KnowledgeEntry } from '../services/knowledge';
@@ -78,7 +78,9 @@ type MentorKey = keyof typeof ROOMS;
 // ── Study 메인 ───────────────────────────────────────────────────────────────
 
 export default function Study() {
-  const [activeRoom, setActiveRoom] = useState<MentorKey | null>(null);
+  const location = useLocation();
+  const initialRoom = (location.state as { activeRoom?: MentorKey } | null)?.activeRoom ?? null;
+  const [activeRoom, setActiveRoom] = useState<MentorKey | null>(initialRoom);
 
   return (
     <div className="w-full max-w-4xl flex flex-col items-center">

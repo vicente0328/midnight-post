@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './components/AuthContext';
+import { VaultProvider } from './components/VaultContext';
+import VaultModal from './components/VaultModal';
 import { SoundProvider } from './components/SoundContext';
 import SoundControls from './components/SoundControls';
 import Layout from './components/Layout';
@@ -57,11 +59,14 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <SoundProvider>
-        <Router>
-          <AppRoutes />
-        </Router>
-      </SoundProvider>
+      <VaultProvider>
+        <SoundProvider>
+          <Router>
+            <AppRoutes />
+            <VaultModal />
+          </Router>
+        </SoundProvider>
+      </VaultProvider>
     </AuthProvider>
   );
 }

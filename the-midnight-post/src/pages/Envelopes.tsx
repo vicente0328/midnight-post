@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { collection, query, where, onSnapshot, setDoc, deleteDoc, getDocs, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
+import { useVault } from '../components/VaultContext';
 import { useSound } from '../components/SoundContext';
 import { MentorReply } from '../services/ai';
 import { X, Feather, Flower2, Cross, Brush, MessageCircle, Bookmark, ChevronLeft } from 'lucide-react';
@@ -52,6 +53,7 @@ const MENTOR_ORDER = ['hyewoon', 'benedicto', 'theodore', 'yeonam'] as const;
 export default function Envelopes() {
   const { entryId } = useParams();
   const { user } = useAuth();
+  const { decrypt } = useVault();
   const { playArrivalSound } = useSound();
   const navigate = useNavigate();
   const [allReplies, setAllReplies] = useState<MentorReply[]>([]);
@@ -116,11 +118,19 @@ export default function Envelopes() {
       where('entryId', '==', entryId)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedReplies: MentorReply[] = [];
-      snapshot.forEach((doc) => {
-        fetchedReplies.push(doc.data() as MentorReply);
-      });
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const fetchedReplies: MentorReply[] = await Promise.all(
+        snapshot.docs.map(async (d) => {
+          const data = d.data();
+          return {
+            ...data,
+            quote: await decrypt(data.quote ?? ''),
+            translation: await decrypt(data.translation ?? ''),
+            advice: await decrypt(data.advice ?? ''),
+            source: data.source ? await decrypt(data.source) : data.source,
+          } as MentorReply;
+        })
+      );
       // 도착 순서 기록 (한 번 기록되면 바뀌지 않음)
       fetchedReplies.forEach(r => {
         if (!arrivalOrderRef.current.includes(r.mentorId)) {
@@ -310,6 +320,7 @@ function LetterModal({
   onStartDamso: (mentorId: string) => void;
 }) {
   const { user } = useAuth();
+  const { encrypt } = useVault();
   const mentor = MENTORS[reply.mentorId];
   const [bookmarkDocId, setBookmarkDocId] = useState<string | null>(null);
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
@@ -337,10 +348,10 @@ function LetterModal({
           uid: user.uid,
           entryId,
           mentorId: reply.mentorId,
-          quote: reply.quote,
-          source: reply.source ?? '',
-          translation: reply.translation,
-          advice: reply.advice,
+          quote: await encrypt(reply.quote),
+          source: await encrypt(reply.source ?? ''),
+          translation: await encrypt(reply.translation),
+          advice: await encrypt(reply.advice),
           savedAt: serverTimestamp(),
         });
         setBookmarkDocId(bookmarkId);

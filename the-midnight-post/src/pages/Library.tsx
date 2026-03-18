@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
+import { useVault } from '../components/VaultContext';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Feather, Flower2, Cross, Brush, Bookmark, Trash2 } from 'lucide-react';
@@ -54,6 +55,7 @@ function splitDialogue(text: string): { text: string; isDialogue: boolean }[] {
 
 export default function Library() {
   const { user } = useAuth();
+  const { decrypt } = useVault();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Bookmark | null>(null);
@@ -62,15 +64,26 @@ export default function Library() {
   useEffect(() => {
     if (!user) { setLoading(false); return; }
     getDocs(query(collection(db, 'bookmarks'), where('uid', '==', user.uid)))
-      .then(snap => {
-        const list: Bookmark[] = [];
-        snap.forEach(d => list.push({ id: d.id, ...d.data() } as Bookmark));
+      .then(async snap => {
+        const list: Bookmark[] = await Promise.all(
+          snap.docs.map(async d => {
+            const data = d.data();
+            return {
+              id: d.id,
+              ...data,
+              quote: await decrypt(data.quote ?? ''),
+              source: data.source ? await decrypt(data.source) : data.source,
+              translation: await decrypt(data.translation ?? ''),
+              advice: await decrypt(data.advice ?? ''),
+            } as Bookmark;
+          })
+        );
         list.sort((a, b) => (b.savedAt?.toDate?.() ?? 0) - (a.savedAt?.toDate?.() ?? 0));
         setBookmarks(list);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [user, decrypt]);
 
   const removeBookmark = useCallback(async (id: string) => {
     await deleteDoc(doc(db, 'bookmarks', id));

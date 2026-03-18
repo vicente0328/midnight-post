@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useAuth } from '../components/AuthContext';
+import { useVault } from '../components/VaultContext';
 import { useSound } from '../components/SoundContext';
 import { db } from '../firebase';
 import { collection, query, where, orderBy, limit, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
@@ -93,6 +94,7 @@ export default function Home() {
   const [greeting, setGreeting] = useState('');
   const [timePeriod, setTimePeriod] = useState('night');
   const { user, setShowAuthModal } = useAuth();
+  const { encrypt, decrypt } = useVault();
   const { setTyping } = useSound();
   const navigate = useNavigate();
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -129,10 +131,10 @@ export default function Home() {
     if (!isCrisis) setShowAnimation(true);
 
     try {
-      // 1. Save entry
+      // 1. Save entry (content encrypted if vault is active)
       const entryRef = await addDoc(collection(db, 'entries'), {
         uid: user.uid,
-        content: trimmed,
+        content: await encrypt(trimmed),
         emotion: 'unknown',
         createdAt: serverTimestamp(),
         status: 'replied',
@@ -149,17 +151,23 @@ export default function Home() {
             limit(6),
           )
         );
+        const rawList: { content: string; emotion?: string; date?: string }[] = [];
         recentSnap.forEach(d => {
           if (d.id !== entryRef.id) { // 현재 entry 제외
             const data = d.data();
-            recentEntries.push({
+            rawList.push({
               content: data.content,
               emotion: data.emotion,
               date: data.createdAt?.toDate?.()?.toLocaleDateString('ko-KR') ?? undefined,
             });
           }
         });
-        recentEntries = recentEntries.slice(0, 5); // 최대 5개
+        // 복호화 (암호화된 이전 일기를 AI 컨텍스트로 전달)
+        recentEntries = await Promise.all(
+          rawList.slice(0, 5).map(async e => ({ ...e, content: await decrypt(e.content) }))
+        );
+        // 복호화 실패한 항목(잠긴 내용) 제외
+        recentEntries = recentEntries.filter(e => e.content !== '[잠긴 내용]');
       } catch {
         // 실패해도 편지 생성은 계속 진행
       }
@@ -192,12 +200,12 @@ export default function Home() {
               uid: user.uid,
               entryId: entryRef.id,
               mentorId: reply.mentorId,
-              quote: reply.quote,
-              translation: reply.translation,
-              advice: reply.advice,
+              quote: await encrypt(reply.quote),
+              translation: await encrypt(reply.translation),
+              advice: await encrypt(reply.advice),
               createdAt: serverTimestamp(),
             };
-            if (reply.source) replyData.source = reply.source;
+            if (reply.source) replyData.source = await encrypt(reply.source);
             await addDoc(collection(db, 'replies'), replyData);
           } catch (error) {
             console.error(`Failed to generate reply for ${mentorId}:`, error);
