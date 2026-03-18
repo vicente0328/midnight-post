@@ -424,9 +424,10 @@ function LetterModal({
             </button>
             <button
               onClick={onClose}
-              className="font-serif text-xs italic opacity-25 hover:opacity-55 transition-opacity duration-300 tracking-wide"
+              className="font-serif text-xs italic opacity-25 hover:opacity-55 transition-opacity duration-300 tracking-wide flex items-center gap-1"
             >
               닫기
+              <X size={11} strokeWidth={1.5} />
             </button>
           </div>
         </div>
