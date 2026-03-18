@@ -199,230 +199,229 @@ export default function Layout() {
           <span className="sm:hidden text-base">The Midnight Post</span>
         </Link>
 
-        {/* 알림 벨 + 패널 (로그인 시 항상 표시) */}
-        {user && (
-          <div ref={notifPanelRef} className="relative flex items-center">
-            <button
-              onClick={() => { setShowNotifPanel(prev => !prev); if (!showNotifPanel) markAllRead(); }}
-              className="relative flex items-center justify-center transition-opacity hover:opacity-70"
-              style={{ opacity: showNotifPanel ? 0.85 : 0.5, padding: '4px' }}
-              title="알림"
-            >
-              <Bell size={18} strokeWidth={1.4} />
-              {unreadCount > 0 && (
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute -top-0.5 -right-0.5 flex items-center justify-center rounded-full text-white font-mono"
-                  style={{
-                    backgroundColor: '#c0392b',
-                    fontSize: '9px',
-                    minWidth: '15px',
-                    height: '15px',
-                    padding: '0 3px',
-                    lineHeight: 1,
-                  }}
-                >
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </motion.span>
-              )}
-            </button>
+        {/* 우측 컨트롤 영역 */}
+        <div className="flex items-center gap-2">
 
-            {/* 알림 패널 드롭다운 */}
-            <AnimatePresence>
-              {showNotifPanel && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8, scale: 0.97 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -8, scale: 0.97 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                  className="absolute top-full right-0 mt-2 z-50 border border-ink/12 shadow-xl"
-                  style={{
-                    backgroundColor: '#fdfbf7',
-                    backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
-                    width: '300px',
-                    maxHeight: '420px',
-                    overflowY: 'auto',
-                  }}
+          {/* 데스크톱 nav — 모바일에서 숨김 */}
+          <nav className="hidden sm:flex gap-4 items-center text-sm tracking-widest uppercase mr-2">
+            {user ? (
+              <>
+                <Link to="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Desk">
+                  <PenTool size={16} />
+                  <span>Desk</span>
+                </Link>
+                <Link to="/mailbox" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Mailbox">
+                  <Inbox size={16} />
+                  <span>Mailbox</span>
+                </Link>
+                <Link to="/study" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="멘토의 연구실">
+                  <BookOpen size={16} />
+                  <span>Library</span>
+                </Link>
+                <Link to="/archive" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Archive">
+                  <Feather size={16} strokeWidth={1.4} />
+                  <span>Archive</span>
+                </Link>
+                <button
+                  onClick={() => setShowGuideModal(true)}
+                  className="flex items-center gap-1.5 hover:opacity-70 transition-opacity opacity-50"
+                  title="Guide"
                 >
-                  <div className="px-5 py-3 border-b border-ink/8 flex items-center justify-between">
-                    <p className="font-serif text-xs uppercase tracking-widest opacity-50">알림</p>
-                    {notifications.length > 0 && (
-                      <button
-                        onClick={() => { setNotifications([]); saveNotifications([]); }}
-                        className="font-serif text-[10px] italic opacity-30 hover:opacity-60 transition-opacity"
-                      >
-                        모두 지우기
-                      </button>
-                    )}
-                  </div>
+                  <Feather size={15} strokeWidth={1.4} />
+                  <span>Guide</span>
+                </button>
+                <button onClick={signOut} className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Logout">
+                  <LogOut size={16} />
+                  <span>Logout</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setShowGuideModal(true)}
+                  className="flex items-center gap-1.5 hover:opacity-70 transition-opacity opacity-50"
+                  title="Guide"
+                >
+                  <Feather size={15} strokeWidth={1.4} />
+                  <span>Guide</span>
+                </button>
+                <button onClick={() => setShowAuthModal(true)} className="hover:opacity-70 transition-opacity">
+                  Login
+                </button>
+              </>
+            )}
+          </nav>
 
-                  {notifications.length === 0 ? (
-                    <div className="px-5 py-8 text-center">
-                      <p className="font-serif text-sm italic opacity-35">아직 도착한 편지가 없습니다</p>
+          {/* 알림 벨 + 패널 (로그인 시만) */}
+          {user && (
+            <div ref={notifPanelRef} className="relative flex items-center">
+              <button
+                onClick={() => { setShowNotifPanel(prev => !prev); if (!showNotifPanel) markAllRead(); }}
+                className="relative flex items-center justify-center transition-opacity hover:opacity-70"
+                style={{ opacity: showNotifPanel ? 0.85 : 0.45, padding: '6px' }}
+                title="알림"
+              >
+                <Bell size={17} strokeWidth={1.4} />
+                <AnimatePresence>
+                  {unreadCount > 0 && (
+                    <motion.span
+                      key="badge"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      className="absolute top-0.5 right-0.5 flex items-center justify-center rounded-full text-white font-mono"
+                      style={{
+                        backgroundColor: '#c0392b',
+                        fontSize: '8px',
+                        minWidth: '14px',
+                        height: '14px',
+                        padding: '0 3px',
+                        lineHeight: 1,
+                      }}
+                    >
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </button>
+
+              {/* 알림 패널 드롭다운 */}
+              <AnimatePresence>
+                {showNotifPanel && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                    className="absolute top-full right-0 mt-2 z-50 border border-ink/12 shadow-xl"
+                    style={{
+                      backgroundColor: '#fdfbf7',
+                      width: '290px',
+                      maxHeight: '400px',
+                      overflowY: 'auto',
+                    }}
+                  >
+                    <div className="px-5 py-3 border-b border-ink/8 flex items-center justify-between">
+                      <p className="font-serif text-[11px] uppercase tracking-widest opacity-40">알림</p>
+                      {notifications.length > 0 && (
+                        <button
+                          onClick={() => { setNotifications([]); saveNotifications([]); }}
+                          className="font-serif text-[10px] italic opacity-30 hover:opacity-60 transition-opacity"
+                        >
+                          모두 지우기
+                        </button>
+                      )}
                     </div>
-                  ) : (
-                    <div className="flex flex-col divide-y divide-ink/6">
-                      {notifications.map(n => (
-                        <div key={n.id} className="flex items-start gap-3 px-5 py-4 hover:bg-ink/[0.02] transition-colors">
-                          {/* 멘토 색상 점 */}
+
+                    {notifications.length === 0 ? (
+                      <div className="px-5 py-8 text-center">
+                        <p className="font-serif text-sm italic opacity-30">아직 도착한 편지가 없습니다</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col divide-y divide-ink/6">
+                        {notifications.map(n => (
                           <div
-                            className="w-1.5 h-1.5 rotate-45 shrink-0 mt-2"
-                            style={{ background: MENTOR_COLORS[n.mentorId] ?? '#D4AF37' }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-serif text-sm leading-snug" style={{ color: 'rgba(44,42,41,0.85)' }}>
-                              <span className="font-semibold">{MENTOR_NAMES[n.mentorId] ?? '현자'}</span>의 편지가 도착했습니다
-                            </p>
-                            <p className="font-serif text-[11px] opacity-35 mt-0.5">
-                              {formatRelativeTime(n.arrivedAt)}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
+                            key={n.id}
+                            className="flex items-start gap-3 px-4 py-3.5 hover:bg-ink/[0.025] transition-colors cursor-pointer"
+                            onClick={() => { setShowNotifPanel(false); navigate(`/mailbox?entryId=${n.entryId}`); }}
+                          >
+                            <div
+                              className="w-1.5 h-1.5 rotate-45 shrink-0 mt-[7px]"
+                              style={{ background: MENTOR_COLORS[n.mentorId] ?? '#D4AF37' }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-serif text-[13px] leading-snug" style={{ color: 'rgba(44,42,41,0.82)' }}>
+                                <span style={{ fontWeight: 600 }}>{MENTOR_NAMES[n.mentorId] ?? '현자'}</span>의 편지가 도착했습니다
+                              </p>
+                              <p className="font-serif text-[11px] opacity-30 mt-0.5">
+                                {formatRelativeTime(n.arrivedAt)}
+                              </p>
+                            </div>
                             <button
-                              onClick={() => {
-                                setShowNotifPanel(false);
-                                navigate(`/mailbox?entryId=${n.entryId}`);
-                              }}
-                              className="font-serif italic text-[11px] transition-colors border-b"
-                              style={{ color: '#8B7355', borderColor: 'rgba(139,115,85,0.4)' }}
-                            >
-                              열어보기
-                            </button>
-                            <button
-                              onClick={() => clearNotification(n.id)}
-                              className="opacity-25 hover:opacity-60 transition-opacity"
+                              onClick={e => { e.stopPropagation(); clearNotification(n.id); }}
+                              className="opacity-20 hover:opacity-50 transition-opacity shrink-0 mt-0.5"
                             >
                               <X size={11} />
                             </button>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {/* 모바일 햄버거 메뉴 */}
+          <div ref={mobileMenuRef} className="sm:hidden relative flex items-center">
+            {user ? (
+              <button
+                onClick={() => setShowMobileMenu(prev => !prev)}
+                className="flex items-center transition-opacity p-1.5"
+                style={{ opacity: showMobileMenu ? 0.85 : 0.45 }}
+                onTouchStart={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.85'; }}
+                onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.opacity = showMobileMenu ? '0.85' : '0.45'; }}
+                title="Menu"
+              >
+                {showMobileMenu
+                  ? <X size={20} strokeWidth={1.3} />
+                  : <Menu size={20} strokeWidth={1.3} />
+                }
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="hover:opacity-70 transition-opacity text-sm tracking-widest uppercase"
+              >
+                Login
+              </button>
+            )}
+
+            {/* 모바일 드롭다운 메뉴 */}
+            <AnimatePresence>
+              {showMobileMenu && user && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="absolute top-full right-0 mt-2 z-50 border border-ink/12 shadow-lg min-w-[160px]"
+                  style={{
+                    backgroundColor: '#fdfbf7',
+                    backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
+                  }}
+                >
+                  <div className="flex flex-col py-2">
+                    <button
+                      onClick={() => { setShowMobileMenu(false); setShowGuideModal(true); }}
+                      className="flex items-center gap-3 px-5 py-3 text-sm font-serif opacity-55 hover:opacity-90 transition-opacity text-left"
+                    >
+                      <Feather size={14} strokeWidth={1.4} />
+                      <span>Guide</span>
+                    </button>
+                    <Link
+                      to="/account"
+                      onClick={() => setShowMobileMenu(false)}
+                      className="flex items-center gap-3 px-5 py-3 text-sm font-serif opacity-55 hover:opacity-90 transition-opacity"
+                    >
+                      <UserRound size={14} strokeWidth={1.4} />
+                      <span>Account</span>
+                    </Link>
+                    <div className="mx-5 my-1 h-px bg-ink/8" />
+                    <button
+                      onClick={() => { setShowMobileMenu(false); signOut(); }}
+                      className="flex items-center gap-3 px-5 py-3 text-sm font-serif opacity-40 hover:opacity-75 transition-opacity text-left"
+                    >
+                      <LogOut size={14} strokeWidth={1.4} />
+                      <span>Logout</span>
+                    </button>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
-        )}
 
-        {/* 데스크톱 nav — 모바일에서 숨김 */}
-        <nav className="hidden sm:flex gap-4 items-center text-sm tracking-widest uppercase">
-          {user ? (
-            <>
-              <Link to="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Desk">
-                <PenTool size={16} />
-                <span>Desk</span>
-              </Link>
-              <Link to="/mailbox" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Mailbox">
-                <Inbox size={16} />
-                <span>Mailbox</span>
-              </Link>
-              <Link to="/study" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="멘토의 연구실">
-                <BookOpen size={16} />
-                <span>Library</span>
-              </Link>
-              <Link to="/archive" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Archive">
-                <Feather size={16} strokeWidth={1.4} />
-                <span>Archive</span>
-              </Link>
-              <button
-                onClick={() => setShowGuideModal(true)}
-                className="flex items-center gap-1.5 hover:opacity-70 transition-opacity opacity-50"
-                title="Guide"
-              >
-                <Feather size={15} strokeWidth={1.4} />
-                <span>Guide</span>
-              </button>
-              <button onClick={signOut} className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Logout">
-                <LogOut size={16} />
-                <span>Logout</span>
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setShowGuideModal(true)}
-                className="flex items-center gap-1.5 hover:opacity-70 transition-opacity opacity-50"
-                title="Guide"
-              >
-                <Feather size={15} strokeWidth={1.4} />
-                <span>Guide</span>
-              </button>
-              <button onClick={() => setShowAuthModal(true)} className="hover:opacity-70 transition-opacity">
-                Login
-              </button>
-            </>
-          )}
-        </nav>
-
-        {/* 모바일 우측: 햄버거 메뉴 + 드롭다운 */}
-        <div ref={mobileMenuRef} className="sm:hidden relative flex items-center gap-3">
-          {user ? (
-            <button
-              onClick={() => setShowMobileMenu(prev => !prev)}
-              className="flex items-center transition-opacity"
-              style={{ opacity: showMobileMenu ? 0.85 : 0.45 }}
-              onTouchStart={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.85'; }}
-              onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.opacity = showMobileMenu ? '0.85' : '0.45'; }}
-              title="Menu"
-            >
-              {showMobileMenu
-                ? <X size={20} strokeWidth={1.3} />
-                : <Menu size={20} strokeWidth={1.3} />
-              }
-            </button>
-          ) : (
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="hover:opacity-70 transition-opacity text-sm tracking-widest uppercase"
-            >
-              Login
-            </button>
-          )}
-
-          {/* 모바일 드롭다운 메뉴 */}
-          <AnimatePresence>
-            {showMobileMenu && user && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                className="absolute top-full right-0 mt-2 z-50 border border-ink/12 shadow-lg min-w-[160px]"
-                style={{
-                  backgroundColor: '#fdfbf7',
-                  backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
-                }}
-              >
-                <div className="flex flex-col py-2">
-                  <button
-                    onClick={() => { setShowMobileMenu(false); setShowGuideModal(true); }}
-                    className="flex items-center gap-3 px-5 py-3 text-sm font-serif opacity-55 hover:opacity-90 transition-opacity text-left"
-                  >
-                    <Feather size={14} strokeWidth={1.4} />
-                    <span>Guide</span>
-                  </button>
-                  <Link
-                    to="/account"
-                    onClick={() => setShowMobileMenu(false)}
-                    className="flex items-center gap-3 px-5 py-3 text-sm font-serif opacity-55 hover:opacity-90 transition-opacity"
-                  >
-                    <UserRound size={14} strokeWidth={1.4} />
-                    <span>Account</span>
-                  </Link>
-                  <div className="mx-5 my-1 h-px bg-ink/8" />
-                  <button
-                    onClick={() => { setShowMobileMenu(false); signOut(); }}
-                    className="flex items-center gap-3 px-5 py-3 text-sm font-serif opacity-40 hover:opacity-75 transition-opacity text-left"
-                  >
-                    <LogOut size={14} strokeWidth={1.4} />
-                    <span>Logout</span>
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </header>
 
