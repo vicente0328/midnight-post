@@ -611,10 +611,10 @@ export const generateKnowledge = onCall(async (request) => {
   return entries;
 });
 
-// 5-b. 스케줄 함수 — 매일 KST 08:00 · 12:00 · 17:00 · 23:00 자동 생성
+// 5-b. 스케줄 함수 — 매일 KST 08:00 · 12:00 · 17:00 · 22:00 자동 생성
 export const scheduledKnowledgeGeneration = onSchedule(
   {
-    schedule: '0 8,12,17,23 * * *',
+    schedule: '0 8,12,17,22 * * *',
     timeZone: 'Asia/Seoul',
     memory:          '512MiB',
     timeoutSeconds:  300,
