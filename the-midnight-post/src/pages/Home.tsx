@@ -128,7 +128,8 @@ export default function Home() {
 
     const isCrisis = hasCrisis(trimmed);
     setIsSubmitting(true);
-    if (!isCrisis) setShowAnimation(true);
+    // 애니메이션은 두 번의 Firestore 쓰기가 완료된 후에만 표시
+    // (쓰기 완료 = 트리거 발동 보장 = 폰을 잠가도 답장 생성됨)
 
     try {
       // 1. Save entry (content encrypted if vault is active)
@@ -140,20 +141,23 @@ export default function Home() {
         status: 'replied',
       });
 
-      // 2. 답장 생성 작업 등록 — entry 저장 직후 즉시 Firestore에 기록
-      // Firestore 트리거가 서버에서 완전히 독립적으로 실행하므로
-      // 클라이언트가 폰을 잠그거나 앱을 닫아도 답장이 생성됨.
+      // 2. 답장 생성 작업 등록
+      // await 완료 시점에 Firestore 서버가 문서를 수신 → 트리거 발동 확정
+      // 이후 폰을 잠그거나 앱을 꺼도 서버에서 독립적으로 답장 생성됨
       const rankedMentors = rankMentors(trimmed);
       const writtenHour = new Date().getHours();
 
-      addDoc(collection(db, 'reply_jobs'), {
+      await addDoc(collection(db, 'reply_jobs'), {
         uid: user.uid,
         entryId: entryRef.id,
         content: trimmed,
         writtenHour,
         rankedMentors,
         createdAt: serverTimestamp(),
-      }).catch(err => console.error('Failed to create reply job:', err));
+      });
+
+      // 두 쓰기 모두 완료 → 이제 안전하게 애니메이션 표시
+      if (!isCrisis) setShowAnimation(true);
 
       // 3. UI 타이밍 (편지 도착 연출)
       const submittedAt = Date.now();
