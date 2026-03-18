@@ -83,7 +83,7 @@ async function getRecentKnowledgeForDamso(mentorId: MentorId, count = 4): Promis
   const today = new Date().toISOString().slice(0, 10);
   const entries: KnowledgeEntry[] = [];
 
-  for (const period of ['h08', 'h12', 'h17', 'h23', 'am', 'pm']) {
+  for (const period of ['h08', 'h12', 'h17', 'h22', 'am', 'pm']) {
     if (entries.length >= count) break;
     try {
       const snap = await db.doc(`mentor_knowledge/${mentorId}_${today}_${period}`).get();
@@ -99,7 +99,7 @@ async function getRecentKnowledgeForDamso(mentorId: MentorId, count = 4): Promis
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yd = yesterday.toISOString().slice(0, 10);
-    for (const period of ['h08', 'h12', 'h17', 'h23', 'am', 'pm']) {
+    for (const period of ['h08', 'h12', 'h17', 'h22', 'am', 'pm']) {
       if (entries.length >= count) break;
       try {
         const snap = await db.doc(`mentor_knowledge/${mentorId}_${yd}_${period}`).get();
@@ -596,7 +596,7 @@ async function collectRecentQuotes(mentorId: MentorId, days = 14): Promise<strin
     const d = new Date(now);
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().slice(0, 10);
-    for (const period of ['h08', 'h12', 'h17', 'h23', 'am', 'pm', '']) {
+    for (const period of ['h08', 'h12', 'h17', 'h22', 'am', 'pm', '']) {
       const key = period ? `${mentorId}_${dateStr}_${period}` : `${mentorId}_${dateStr}`;
       try {
         const snap = await db.doc(`mentor_knowledge/${key}`).get();
@@ -637,7 +637,7 @@ export const scheduledKnowledgeGeneration = onSchedule(
     const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
     const today  = nowKst.toISOString().slice(0, 10);
     const hour   = nowKst.getUTCHours();
-    const period = `h${String(hour).padStart(2, '0')}`; // h08 | h12 | h17 | h23
+    const period = `h${String(hour).padStart(2, '0')}`; // h08 | h12 | h17 | h22
 
     console.log(`[Schedule] 시작 — ${today} ${period}`);
 
