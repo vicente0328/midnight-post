@@ -5,8 +5,8 @@ import { useAuth } from '../components/AuthContext';
 import { useVault } from '../components/VaultContext';
 import { useSound } from '../components/SoundContext';
 import { db } from '../firebase';
-import { collection, query, where, orderBy, limit, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
-import { generateSingleMentorReply, rankMentors } from '../services/ai';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { rankMentors } from '../services/ai';
 
 // ── 위기 키워드 (클라이언트 사이드) ──────────────────────────────────────────
 
@@ -94,7 +94,7 @@ export default function Home() {
   const [greeting, setGreeting] = useState('');
   const [timePeriod, setTimePeriod] = useState('night');
   const { user, setShowAuthModal } = useAuth();
-  const { encrypt, decrypt } = useVault();
+  const { encrypt } = useVault();
   const { setTyping } = useSound();
   const navigate = useNavigate();
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -140,41 +140,22 @@ export default function Home() {
         status: 'replied',
       });
 
-      // 2. 최근 일기 조회 (멘토 기억 — 맥락 연속성)
-      let recentEntries: { content: string; emotion?: string; date?: string }[] = [];
-      try {
-        const recentSnap = await getDocs(
-          query(
-            collection(db, 'entries'),
-            where('uid', '==', user.uid),
-            orderBy('createdAt', 'desc'),
-            limit(6),
-          )
-        );
-        const rawList: { content: string; emotion?: string; date?: string }[] = [];
-        recentSnap.forEach(d => {
-          if (d.id !== entryRef.id) { // 현재 entry 제외
-            const data = d.data();
-            rawList.push({
-              content: data.content,
-              emotion: data.emotion,
-              date: data.createdAt?.toDate?.()?.toLocaleDateString('ko-KR') ?? undefined,
-            });
-          }
-        });
-        // 복호화 (암호화된 이전 일기를 AI 컨텍스트로 전달)
-        recentEntries = await Promise.all(
-          rawList.slice(0, 5).map(async e => ({ ...e, content: await decrypt(e.content) }))
-        );
-        // 복호화 실패한 항목(잠긴 내용) 제외
-        recentEntries = recentEntries.filter(e => e.content !== '[잠긴 내용]');
-      } catch {
-        // 실패해도 편지 생성은 계속 진행
-      }
-
-      // 3. Fire off letter generation (always, regardless of crisis)
+      // 2. 답장 생성 작업 등록 — entry 저장 직후 즉시 Firestore에 기록
+      // Firestore 트리거가 서버에서 완전히 독립적으로 실행하므로
+      // 클라이언트가 폰을 잠그거나 앱을 닫아도 답장이 생성됨.
       const rankedMentors = rankMentors(trimmed);
       const writtenHour = new Date().getHours();
+
+      addDoc(collection(db, 'reply_jobs'), {
+        uid: user.uid,
+        entryId: entryRef.id,
+        content: trimmed,
+        writtenHour,
+        rankedMentors,
+        createdAt: serverTimestamp(),
+      }).catch(err => console.error('Failed to create reply job:', err));
+
+      // 3. UI 타이밍 (편지 도착 연출)
       const submittedAt = Date.now();
 
       // 브라우저 알림 권한 요청 (비차단)
@@ -191,27 +172,6 @@ export default function Home() {
       localStorage.setItem('pendingEntryId', entryRef.id);
       localStorage.setItem('pendingDeliverTimes', JSON.stringify(deliverTimes));
       window.dispatchEvent(new Event('pendingEntryUpdated'));
-
-      rankedMentors.forEach((mentorId, index) => {
-        setTimeout(async () => {
-          try {
-            const reply = await generateSingleMentorReply(trimmed, mentorId, writtenHour, recentEntries);
-            const replyData: any = {
-              uid: user.uid,
-              entryId: entryRef.id,
-              mentorId: reply.mentorId,
-              quote: await encrypt(reply.quote),
-              translation: await encrypt(reply.translation),
-              advice: await encrypt(reply.advice),
-              createdAt: serverTimestamp(),
-            };
-            if (reply.source) replyData.source = await encrypt(reply.source);
-            await addDoc(collection(db, 'replies'), replyData);
-          } catch (error) {
-            console.error(`Failed to generate reply for ${mentorId}:`, error);
-          }
-        }, index * 150);
-      });
 
       // 4. Route based on crisis
       if (isCrisis) {

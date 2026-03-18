@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { GoogleGenAI, Type } from '@google/genai';
 import Anthropic from '@anthropic-ai/sdk';
@@ -6,6 +7,13 @@ import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 if (getApps().length === 0) initializeApp();
+
+// ── Firestore 헬퍼 — 항상 올바른 DB ID 사용 ──────────────────────────────────
+// FIRESTORE_DB_ID 환경변수로 커스텀 DB를 지정. 미설정 시 기본 DB 사용.
+function getDb() {
+  const dbId = process.env.FIRESTORE_DB_ID;
+  return dbId ? getFirestore(dbId) : getFirestore();
+}
 
 // ── AI 클라이언트 초기화 (함수 호출 시점에 env 읽음) ──────────────────────────
 
@@ -79,7 +87,7 @@ function buildKnowledgeContext(entries: KnowledgeEntry[]): string {
 }
 
 async function getRecentKnowledgeForDamso(mentorId: MentorId, count = 4): Promise<KnowledgeEntry[]> {
-  const db = getFirestore();
+  const db = getDb();
   const today = new Date().toISOString().slice(0, 10);
   const entries: KnowledgeEntry[] = [];
 
@@ -199,23 +207,17 @@ const MENTOR_DOMAINS: Record<MentorId, string> = {
 
 // ── 1. 멘토 편지 생성 ─────────────────────────────────────────────────────────
 
-export const generateMentorReply = onCall({ timeoutSeconds: 300, memory: '512MiB' }, async (request) => {
-  if (!request.auth) throw new HttpsError('unauthenticated', '로그인이 필요합니다.');
-
-  const { content, mentorId, writtenHour, knowledgeEntries = [], recentEntries = [] } = request.data as {
-    content: string;
-    mentorId: MentorId;
-    writtenHour?: number;
-    knowledgeEntries?: KnowledgeEntry[];
-    recentEntries?: { content: string; emotion?: string; date?: string }[];
-  };
-
-  if (!content || !mentorId) throw new HttpsError('invalid-argument', 'content와 mentorId가 필요합니다.');
-
+/** 핵심 AI 생성 로직 — onCall과 generateAllRepliesForEntry가 공용으로 사용 */
+async function generateMentorReplyCore(
+  content: string,
+  mentorId: MentorId,
+  writtenHour: number | undefined,
+  knowledgeEntries: KnowledgeEntry[],
+  recentEntries: { content: string; emotion?: string; date?: string }[],
+): Promise<MentorReply> {
   const { timeLabel, closing } = getTimeContext(writtenHour ?? new Date().getHours());
   const knowledgeContext = buildKnowledgeContext(knowledgeEntries);
 
-  // 최근 일기 맥락 — 멘토가 "나를 아는 현자"처럼 느껴지게
   const recentContext = recentEntries.length > 0
     ? `\n\n[최근에 쓴 일기들 — 이 맥락을 자연스럽게 반영해 주세요. 직접 언급하지 말고, 편지의 깊이와 공감에 녹여주세요]\n` +
       recentEntries.map((e, i) =>
@@ -296,7 +298,192 @@ ${knowledgeContext}
 
     return JSON.parse(jsonMatch[0]) as MentorReply;
   }
+}
+
+export const generateMentorReply = onCall({ timeoutSeconds: 300, memory: '512MiB' }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', '로그인이 필요합니다.');
+
+  const { content, mentorId, writtenHour, knowledgeEntries = [], recentEntries = [] } = request.data as {
+    content: string;
+    mentorId: MentorId;
+    writtenHour?: number;
+    knowledgeEntries?: KnowledgeEntry[];
+    recentEntries?: { content: string; emotion?: string; date?: string }[];
+  };
+
+  if (!content || !mentorId) throw new HttpsError('invalid-argument', 'content와 mentorId가 필요합니다.');
+
+  return generateMentorReplyCore(content, mentorId, writtenHour, knowledgeEntries, recentEntries);
 });
+
+// ── 1-b. 모든 멘토 답장 백그라운드 생성 (앱 종료 후에도 서버에서 완료) ────────
+
+export const generateAllRepliesForEntry = onCall({ timeoutSeconds: 540, memory: '1GiB' }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', '로그인이 필요합니다.');
+
+  const uid = request.auth.uid;
+  const { entryId, content, writtenHour, recentEntries = [], rankedMentors } = request.data as {
+    entryId: string;
+    content: string;
+    writtenHour?: number;
+    recentEntries?: { content: string; emotion?: string; date?: string }[];
+    rankedMentors?: MentorId[];
+  };
+
+  if (!entryId || !content) throw new HttpsError('invalid-argument', 'entryId와 content가 필요합니다.');
+
+  const mentors: MentorId[] = rankedMentors ?? ['hyewoon', 'benedicto', 'theodore', 'yeonam'];
+  const adminDb = getDb();
+
+  // 모든 멘토의 지식 데이터 병렬 수집
+  const knowledgeResults = await Promise.all(
+    mentors.map(m => getRecentKnowledgeForDamso(m, 5).catch(() => [] as KnowledgeEntry[]))
+  );
+
+  // 4개 멘토 편지 병렬 생성
+  const results = await Promise.allSettled(
+    mentors.map((mentorId, idx) =>
+      generateMentorReplyCore(content, mentorId, writtenHour, knowledgeResults[idx], recentEntries)
+    )
+  );
+
+  // 생성된 답장을 Firestore에 저장
+  let generated = 0;
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      const reply = result.value;
+      const replyData: Record<string, unknown> = {
+        uid,
+        entryId,
+        mentorId: reply.mentorId,
+        quote: reply.quote,
+        translation: reply.translation,
+        advice: reply.advice,
+        createdAt: FieldValue.serverTimestamp(),
+      };
+      if (reply.source) replyData.source = reply.source;
+      try {
+        await adminDb.collection('replies').add(replyData);
+        generated++;
+      } catch (e) {
+        console.error(`Failed to save reply for ${reply.mentorId}:`, e);
+      }
+    } else {
+      console.error('Reply generation failed:', result.reason);
+    }
+  }
+
+  return { success: true, generated };
+});
+
+// ── 1-c. Firestore 트리거 — reply_jobs 문서 생성 시 답장 자동 생성 ────────────
+// 클라이언트가 앱을 닫거나 폰을 잠가도 서버에서 완전히 독립적으로 실행됨.
+
+/** Vault 암호화 여부 판별 (서버사이드) */
+function isEncryptedContent(value: string): boolean {
+  try {
+    const parsed = JSON.parse(value);
+    return parsed.v === 1 && typeof parsed.iv === 'string' && typeof parsed.ct === 'string';
+  } catch {
+    return false;
+  }
+}
+
+/** 최근 일기 컨텍스트 서버사이드 조회 — 암호화된 항목은 건너뜀 */
+async function fetchRecentEntriesForContext(
+  uid: string,
+  excludeEntryId: string,
+): Promise<{ content: string; emotion?: string; date?: string }[]> {
+  const snap = await getDb().collection('entries')
+    .where('uid', '==', uid)
+    .orderBy('createdAt', 'desc')
+    .limit(6)
+    .get();
+
+  const entries: { content: string; emotion?: string; date?: string }[] = [];
+  snap.forEach(doc => {
+    if (doc.id === excludeEntryId || entries.length >= 5) return;
+    const data = doc.data();
+    const content: string = data.content ?? '';
+    if (isEncryptedContent(content)) return; // Vault 암호화 항목 — 복호화 불가
+    entries.push({
+      content,
+      emotion: data.emotion,
+      date: data.createdAt?.toDate?.()?.toLocaleDateString('ko-KR') ?? undefined,
+    });
+  });
+  return entries;
+}
+
+// 트리거 database 옵션은 배포 시 평가되므로 .env 대신 직접 지정
+// (런타임 getDb()는 여전히 process.env.FIRESTORE_DB_ID 사용)
+const TRIGGER_DB_ID = 'ai-studio-d9e6a0c6-59eb-4796-a108-83ee3d57b90c';
+
+export const generateRepliesOnJobCreated = onDocumentCreated(
+  { document: 'reply_jobs/{entryId}', database: TRIGGER_DB_ID, timeoutSeconds: 540, memory: '1GiB' },
+  async (event) => {
+    const job = event.data?.data();
+    if (!job) return;
+
+    const { uid, entryId, content, writtenHour, rankedMentors } = job as {
+      uid: string;
+      entryId: string;
+      content: string;
+      writtenHour?: number;
+      rankedMentors?: MentorId[];
+    };
+
+    if (!uid || !entryId || !content) {
+      console.error('reply_jobs 문서에 필수 필드 누락:', { uid, entryId, content });
+      return;
+    }
+
+    const mentors: MentorId[] = rankedMentors ?? ['hyewoon', 'benedicto', 'theodore', 'yeonam'];
+
+    // 최근 일기 컨텍스트 서버사이드 조회
+    const recentEntries = await fetchRecentEntriesForContext(uid, entryId).catch(() => []);
+
+    // 모든 멘토의 지식 데이터 병렬 수집
+    const knowledgeResults = await Promise.all(
+      mentors.map(m => getRecentKnowledgeForDamso(m, 5).catch(() => [] as KnowledgeEntry[]))
+    );
+
+    // 4개 멘토 편지 병렬 생성
+    const results = await Promise.allSettled(
+      mentors.map((mentorId, idx) =>
+        generateMentorReplyCore(content, mentorId, writtenHour, knowledgeResults[idx], recentEntries)
+      )
+    );
+
+    // Firestore에 저장
+    const adminDb = getDb();
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        const reply = result.value;
+        const replyData: Record<string, unknown> = {
+          uid,
+          entryId,
+          mentorId: reply.mentorId,
+          quote: reply.quote,
+          translation: reply.translation,
+          advice: reply.advice,
+          createdAt: FieldValue.serverTimestamp(),
+        };
+        if (reply.source) replyData.source = reply.source;
+        try {
+          await adminDb.collection('replies').add(replyData);
+        } catch (e) {
+          console.error(`Failed to save reply for ${reply.mentorId}:`, e);
+        }
+      } else {
+        console.error('Reply generation failed:', result.reason);
+      }
+    }
+
+    // 작업 문서 정리
+    await event.data?.ref.delete().catch(() => {});
+  }
+);
 
 // ── 2. 담소 오프닝 ────────────────────────────────────────────────────────────
 
@@ -588,7 +775,7 @@ ${avoidSection}
 
 /** 최근 N일치 사용된 quote 목록 수집 (중복 방지용) */
 async function collectRecentQuotes(mentorId: MentorId, days = 14): Promise<string[]> {
-  const db = getFirestore();
+  const db = getDb();
   const quotes: string[] = [];
   const now = new Date();
 
@@ -631,7 +818,7 @@ export const scheduledKnowledgeGeneration = onSchedule(
     timeoutSeconds:  300,
   },
   async () => {
-    const db = getFirestore();
+    const db = getDb();
 
     // KST 기준 날짜·시간대 결정
     const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
