@@ -825,7 +825,7 @@ async function generateKnowledgeEntries(
     : '';
 
   const prompt = `오늘(${today}) 다음 분야에서 심리 위로와 정서 치유에 실제로 도움이 되는,
-잘 알려지지 않은 깊이 있는 지식 4개를 발굴해주세요.
+${mentorId === 'hyewoon' ? '현대인의 마음에 깊이 와닿는 지식 4개를 발굴해주세요. 유명한 구절도 괜찮습니다.' : '잘 알려지지 않은 깊이 있는 지식 4개를 발굴해주세요.'}
 ${gutenbergSection}
 [현자의 분야]
 ${MENTOR_DOMAINS[mentorId]}
