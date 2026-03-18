@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "gutenberg_quotes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mentorId",    "order": "ASCENDING" },
+        { "fieldPath": "randomOrder", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
