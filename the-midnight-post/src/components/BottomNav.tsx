@@ -1,12 +1,12 @@
 import React, { useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { PenTool, BookOpen, Scroll, UserRound } from 'lucide-react';
+import { PenTool, BookOpen, Scroll, Inbox } from 'lucide-react';
 
 const TABS = [
-  { path: '/',        icon: PenTool,    label: 'Desk'    },
-  { path: '/study',   icon: BookOpen,   label: 'Library' },
-  { path: '/archive', icon: Scroll,     label: 'Archive' },
-  { path: '/account', icon: UserRound,  label: 'Account' },
+  { path: '/',        icon: PenTool,  label: 'Desk'    },
+  { path: '/mailbox', icon: Inbox,    label: 'Mailbox' },
+  { path: '/study',   icon: BookOpen, label: 'Library' },
+  { path: '/archive', icon: Scroll,   label: 'Archive' },
 ] as const;
 
 export default function BottomNav() {

@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { collection, query, where, getDocs, doc, getDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Flower2, Cross, Feather, Brush, Trash2, Bookmark } from 'lucide-react';
@@ -67,6 +67,9 @@ type Tab = 'letters' | 'damso' | 'bookmarks';
 export default function Archive() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const highlightEntryId = searchParams.get('entryId');
+  const highlightRef = useRef<HTMLDivElement | null>(null);
   const [tab, setTab] = useState<Tab>('letters');
 
   // 편지 탭
@@ -158,6 +161,15 @@ export default function Archive() {
       .finally(() => setLoadingEntries(false));
   }, [user]);
 
+  // highlightEntryId 있으면 해당 카드로 스크롤
+  useEffect(() => {
+    if (!loadingEntries && highlightEntryId && highlightRef.current) {
+      setTimeout(() => {
+        highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 350);
+    }
+  }, [loadingEntries, highlightEntryId]);
+
   // 담소 목록 — 탭 전환 시 매번 로드
   const fetchSessions = useCallback(() => {
     if (!user) return;
@@ -238,17 +250,24 @@ export default function Archive() {
             <p className="font-serif italic opacity-40 text-center py-12">아직 남겨진 기록이 없습니다.</p>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
-            {!loadingEntries && entries.map((entry, index) => (
+            {!loadingEntries && entries.map((entry, index) => {
+              const isHighlighted = entry.id === highlightEntryId;
+              return (
               <motion.div
                 key={entry.id}
+                ref={isHighlighted ? (el) => { highlightRef.current = el; } : undefined}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                 className="group relative"
               >
                 <button
-                  onClick={() => navigate(`/envelopes/${entry.id}`)}
-                  className="w-full text-left relative flex flex-col p-6 border border-ink/20 bg-[#fdfbf7] shadow-sm hover:shadow-md transition-shadow duration-500 select-none"
+                  onClick={() => navigate(`/mailbox?entryId=${entry.id}`)}
+                  className={`w-full text-left relative flex flex-col p-6 shadow-sm hover:shadow-md transition-all duration-500 select-none ${
+                    isHighlighted
+                      ? 'border border-[#D4AF37]/55 bg-[#fef9e8]'
+                      : 'border border-ink/20 bg-[#fdfbf7]'
+                  }`}
                   style={{ touchAction: 'manipulation' }}
                 >
                   <div className="absolute top-2 left-2 right-2 bottom-2 border border-ink/5 pointer-events-none" />
@@ -261,7 +280,7 @@ export default function Archive() {
                     {entry.content}
                   </p>
                   <p className="mt-4 text-[10px] opacity-25 group-hover:opacity-50 transition-opacity duration-300 tracking-wide self-end">
-                    답장 읽기 →
+                    멘토의 답장 보러가기 →
                   </p>
                 </button>
                 {confirmDeleteId === entry.id ? (
@@ -288,7 +307,8 @@ export default function Archive() {
                   </button>
                 )}
               </motion.div>
-            ))}
+            );
+            })}
           </div>
         </motion.div>
       )}

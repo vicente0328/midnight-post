@@ -8,6 +8,7 @@ import Home from './pages/Home';
 import Envelopes from './pages/Envelopes';
 import Archive from './pages/Archive';
 import Library from './pages/Library';
+import Mailbox from './pages/Mailbox';
 import Study from './pages/Study';
 import Account from './pages/Account';
 import Damso from './pages/Damso';
@@ -29,6 +30,7 @@ function AppRoutes() {
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="envelopes/:entryId" element={<Envelopes />} />
+          <Route path="mailbox" element={<Mailbox />} />
           <Route path="archive" element={<Archive />} />
           <Route path="library" element={<Library />} />
           <Route path="study" element={<Study />} />

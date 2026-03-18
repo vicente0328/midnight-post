@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import AuthModal from './AuthModal';
-import { LogOut, BookOpen, PenTool, FlaskConical, Feather, Mail } from 'lucide-react';
+import { LogOut, BookOpen, PenTool, Feather, Mail, Menu, X, UserRound, Inbox } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import BottomNav from './BottomNav';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -26,6 +26,7 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const pendingRepliesRef = useRef<Map<string, any>>(new Map());
   const notifiedRef = useRef<Set<string>>(new Set());
 
@@ -104,7 +105,7 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col items-center w-full max-w-4xl mx-auto px-4 py-8 pb-24 sm:pb-8">
-      <header className="w-full flex justify-between items-center mb-12 border-b border-ink/10 pb-4">
+      <header className="w-full flex justify-between items-center mb-12 border-b border-ink/10 pb-4 relative">
         <Link to="/" className="font-bold tracking-widest uppercase">
           <span className="hidden sm:inline text-2xl">The Midnight Post</span>
           <span className="sm:hidden text-base">The Midnight Post</span>
@@ -118,13 +119,17 @@ export default function Layout() {
                 <PenTool size={16} />
                 <span>Desk</span>
               </Link>
-              <Link to="/archive" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Archive">
-                <BookOpen size={16} />
-                <span>Archive</span>
+              <Link to="/mailbox" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Mailbox">
+                <Inbox size={16} />
+                <span>Mailbox</span>
               </Link>
               <Link to="/study" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="멘토의 연구실">
-                <FlaskConical size={16} />
+                <BookOpen size={16} />
                 <span>Library</span>
+              </Link>
+              <Link to="/archive" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Archive">
+                <Feather size={16} strokeWidth={1.4} />
+                <span>Archive</span>
               </Link>
               <button
                 onClick={() => setShowGuideModal(true)}
@@ -156,19 +161,23 @@ export default function Layout() {
           )}
         </nav>
 
-        {/* 모바일 우측: Guide 아이콘 (항상) + 비로그인시 Login */}
+        {/* 모바일 우측: 햄버거 메뉴 + 비로그인시 Login */}
         <div className="sm:hidden flex items-center gap-3">
-          <button
-            onClick={() => setShowGuideModal(true)}
-            className="flex items-center gap-1.5 transition-opacity"
-            style={{ opacity: 0.45 }}
-            onTouchStart={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.85'; }}
-            onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.45'; }}
-            title="Guide"
-          >
-            <Feather size={15} strokeWidth={1.4} />
-          </button>
-          {!user && (
+          {user ? (
+            <button
+              onClick={() => setShowMobileMenu(prev => !prev)}
+              className="flex items-center transition-opacity"
+              style={{ opacity: showMobileMenu ? 0.85 : 0.45 }}
+              onTouchStart={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.85'; }}
+              onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.opacity = showMobileMenu ? '0.85' : '0.45'; }}
+              title="Menu"
+            >
+              {showMobileMenu
+                ? <X size={20} strokeWidth={1.3} />
+                : <Menu size={20} strokeWidth={1.3} />
+              }
+            </button>
+          ) : (
             <button
               onClick={() => setShowAuthModal(true)}
               className="hover:opacity-70 transition-opacity text-sm tracking-widest uppercase"
@@ -177,6 +186,49 @@ export default function Layout() {
             </button>
           )}
         </div>
+
+        {/* 모바일 드롭다운 메뉴 */}
+        <AnimatePresence>
+          {showMobileMenu && user && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="sm:hidden absolute top-full right-0 mt-1 z-50 border border-ink/12 shadow-lg min-w-[160px]"
+              style={{
+                backgroundColor: '#fdfbf7',
+                backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
+              }}
+            >
+              <div className="flex flex-col py-2">
+                <button
+                  onClick={() => { setShowMobileMenu(false); setShowGuideModal(true); }}
+                  className="flex items-center gap-3 px-5 py-3 text-sm font-serif opacity-55 hover:opacity-90 transition-opacity text-left"
+                >
+                  <Feather size={14} strokeWidth={1.4} />
+                  <span>Guide</span>
+                </button>
+                <Link
+                  to="/account"
+                  onClick={() => setShowMobileMenu(false)}
+                  className="flex items-center gap-3 px-5 py-3 text-sm font-serif opacity-55 hover:opacity-90 transition-opacity"
+                >
+                  <UserRound size={14} strokeWidth={1.4} />
+                  <span>Account</span>
+                </Link>
+                <div className="mx-5 my-1 h-px bg-ink/8" />
+                <button
+                  onClick={() => { setShowMobileMenu(false); signOut(); }}
+                  className="flex items-center gap-3 px-5 py-3 text-sm font-serif opacity-40 hover:opacity-75 transition-opacity text-left"
+                >
+                  <LogOut size={14} strokeWidth={1.4} />
+                  <span>Logout</span>
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       <main className="flex-1 w-full flex flex-col items-center justify-center">
@@ -203,7 +255,7 @@ export default function Layout() {
             <LetterToast
               key={toast.id}
               mentorName={MENTOR_NAMES[toast.mentorId] ?? '현자'}
-              onOpen={() => { dismissToast(toast.id); navigate(`/envelopes/${toast.entryId}`); }}
+              onOpen={() => { dismissToast(toast.id); navigate(`/mailbox?entryId=${toast.entryId}`); }}
               onDismiss={() => dismissToast(toast.id)}
             />
           ))}

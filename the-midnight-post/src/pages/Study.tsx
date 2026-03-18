@@ -451,7 +451,7 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
             mentorId={mentorId}
             room={room}
             onClose={() => setShowLetterModal(false)}
-            onSent={(entryId) => { setShowLetterModal(false); navigate(`/envelopes/${entryId}`); }}
+            onSent={() => setShowLetterModal(false)}
           />
         )}
       </AnimatePresence>
@@ -751,11 +751,12 @@ function LetterWritingModal({
   mentorId: MentorKey;
   room: typeof ROOMS[MentorKey];
   onClose: () => void;
-  onSent: (entryId: string) => void;
+  onSent: () => void;
 }) {
   const { user, setShowAuthModal } = useAuth();
   const [content, setContent] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isSent, setIsSent] = useState(false);
   const Icon = room.icon;
   const MAX = 100;
 
@@ -815,7 +816,9 @@ function LetterWritingModal({
       if (reply.source) replyData.source = reply.source;
       await addDoc(collection(db, 'replies'), replyData);
 
-      onSent(entryRef.id);
+      setIsSent(true);
+      // 2초 후 모달 닫기
+      setTimeout(() => onSent(), 2200);
     } catch (err) {
       console.error('편지 전송 실패:', err);
       setIsSending(false);
@@ -867,7 +870,19 @@ function LetterWritingModal({
           <p className="text-[10px] opacity-35 italic mt-0.5">{room.desc}</p>
         </div>
 
-        {isSending ? (
+        {isSent ? (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col items-center gap-4 py-8 text-center"
+          >
+            <p className="font-serif italic text-sm opacity-70">편지를 발송했습니다.</p>
+            <p className="text-[11px] opacity-35 font-serif leading-relaxed break-keep" style={{ wordBreak: 'keep-all' }}>
+              답장이 오면 알려드릴게요.
+            </p>
+          </motion.div>
+        ) : isSending ? (
           <div className="flex flex-col items-center gap-4 py-8">
             <motion.div
               animate={{ opacity: [0.3, 0.7, 0.3] }}

@@ -208,9 +208,9 @@ export default function Home() {
       // 4. Route based on crisis
       if (isCrisis) {
         setCrisisEntryId(entryRef.id);
-      } else {
-        setTimeout(() => navigate(`/envelopes/${entryRef.id}`), 1500);
       }
+      // 위기 아닌 경우: 발송 애니메이션을 유지하며 Library 안내
+      // (자동 이동 없음 — 답장 도착 알람으로 Mailbox 이동 유도)
     } catch (error) {
       console.error('Error submitting entry:', error);
       setIsSubmitting(false);
@@ -264,7 +264,7 @@ export default function Home() {
             현자들의 편지도 함께 보내드렸습니다.
           </p>
           <Link
-            to={`/envelopes/${crisisEntryId}`}
+            to={`/mailbox?entryId=${crisisEntryId}`}
             className="font-serif text-sm italic opacity-55 hover:opacity-90 transition-opacity border-b border-ink/20 pb-px"
           >
             편지 확인하기 →
@@ -285,24 +285,49 @@ export default function Home() {
   if (showAnimation) {
     return (
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
+        initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0 }}
-        className="flex flex-col items-center justify-center space-y-8"
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="flex flex-col items-center justify-center text-center gap-8 py-8"
       >
+        {/* 봉투 일러스트 */}
         <div className="w-24 h-16 bg-ink/10 relative flex items-center justify-center shadow-md">
           <div className="absolute inset-0 border border-ink/20 m-1" />
           <div className="w-6 h-6 rounded-full bg-red-800/80 flex items-center justify-center shadow-sm">
             <span className="text-[8px] text-white/80 font-serif">M</span>
           </div>
         </div>
-        <div className="flex flex-col items-center space-y-4 min-h-[120px] text-center">
-          <p className="text-lg font-serif italic opacity-70 tracking-widest">편지를 부쳤습니다.</p>
-          <p className="text-sm font-serif opacity-40 leading-relaxed">
-            현자들이 고심하여 답장을 쓰고 있습니다.<br />
-            오늘의 지혜 카드를 읽으면서 쉬어가세요.
+
+        {/* 발송 완료 메시지 */}
+        <div className="flex flex-col items-center gap-3">
+          <p className="text-lg font-serif italic opacity-75 tracking-widest">편지를 부쳤습니다.</p>
+          <p className="text-sm font-serif opacity-45 leading-relaxed break-keep" style={{ wordBreak: 'keep-all' }}>
+            답장을 기다리는 동안<br />멘토들의 연구실을 둘러보세요.
           </p>
         </div>
+
+        {/* 구분선 */}
+        <div className="flex items-center gap-3 opacity-20 w-24">
+          <div className="flex-1 h-px bg-ink" />
+          <div className="w-1 h-1 rotate-45 bg-[#D4AF37]" />
+          <div className="flex-1 h-px bg-ink" />
+        </div>
+
+        {/* Library 이동 버튼 */}
+        <Link
+          to="/study"
+          className="font-serif italic text-sm opacity-50 hover:opacity-85 transition-opacity duration-300 border-b border-ink/20 pb-px"
+        >
+          Mentor's Library 둘러보기 →
+        </Link>
+
+        {/* 홈으로 돌아가기 */}
+        <button
+          onClick={() => { setShowAnimation(false); setContent(''); setIsSubmitting(false); }}
+          className="font-serif text-xs italic opacity-25 hover:opacity-50 transition-opacity duration-300 mt-2"
+        >
+          The Desk로 돌아가기
+        </button>
       </motion.div>
     );
   }
