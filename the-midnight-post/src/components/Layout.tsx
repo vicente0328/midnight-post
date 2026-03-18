@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import AuthModal from './AuthModal';
-import { LogOut, BookOpen, PenTool, Feather, Mail, Menu, X, UserRound, Inbox } from 'lucide-react';
+import { LogOut, BookOpen, PenTool, Feather, Mail, Menu, X, UserRound, Inbox, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import BottomNav from './BottomNav';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -15,10 +15,47 @@ const MENTOR_NAMES: Record<string, string> = {
   yeonam: '연암 선생',
 };
 
+const MENTOR_COLORS: Record<string, string> = {
+  hyewoon:   '#7c6a50',
+  benedicto: '#7a3030',
+  theodore:  '#3a4a5c',
+  yeonam:    '#2d5a3d',
+};
+
 interface ToastItem {
   id: string;
   mentorId: string;
   entryId: string;
+}
+
+interface NotificationItem {
+  id: string;
+  mentorId: string;
+  entryId: string;
+  arrivedAt: number;
+  read: boolean;
+}
+
+const NOTIF_KEY = 'mp_notifications';
+
+function loadNotifications(): NotificationItem[] {
+  try { return JSON.parse(localStorage.getItem(NOTIF_KEY) ?? '[]'); } catch { return []; }
+}
+function saveNotifications(items: NotificationItem[]) {
+  // 최대 30개만 보관
+  localStorage.setItem(NOTIF_KEY, JSON.stringify(items.slice(0, 30)));
+}
+
+function formatRelativeTime(ts: number): string {
+  const diffMs = Date.now() - ts;
+  const diffMin = Math.floor(diffMs / 60_000);
+  if (diffMin < 1) return '방금 전';
+  if (diffMin < 60) return `${diffMin}분 전`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}시간 전`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay === 1) return '어제';
+  return `${diffDay}일 전`;
 }
 
 export default function Layout() {
@@ -27,9 +64,40 @@ export default function Layout() {
   const navigate = useNavigate();
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(loadNotifications);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const notifPanelRef = useRef<HTMLDivElement>(null);
   const pendingRepliesRef = useRef<Map<string, any>>(new Map());
   const notifiedRef = useRef<Set<string>>(new Set());
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const addNotification = useCallback((item: ToastItem) => {
+    setNotifications(prev => {
+      const already = prev.some(n => n.id === item.id);
+      if (already) return prev;
+      const updated = [{ ...item, arrivedAt: Date.now(), read: false }, ...prev];
+      saveNotifications(updated);
+      return updated;
+    });
+  }, []);
+
+  const markAllRead = useCallback(() => {
+    setNotifications(prev => {
+      const updated = prev.map(n => ({ ...n, read: true }));
+      saveNotifications(updated);
+      return updated;
+    });
+  }, []);
+
+  const clearNotification = useCallback((id: string) => {
+    setNotifications(prev => {
+      const updated = prev.filter(n => n.id !== id);
+      saveNotifications(updated);
+      return updated;
+    });
+  }, []);
 
   // 전역 편지 도착 감지
   useEffect(() => {
@@ -84,6 +152,7 @@ export default function Layout() {
         });
         if (newlyArrived.length > 0) {
           setToasts(prev => [...prev, ...newlyArrived]);
+          newlyArrived.forEach(addNotification);
         }
         if (notifiedRef.current.size >= 4) {
           localStorage.removeItem('pendingEntryId');
@@ -103,10 +172,13 @@ export default function Layout() {
   }, [user]);
 
   useEffect(() => {
-    if (!showMobileMenu) return;
+    if (!showMobileMenu && !showNotifPanel) return;
     const handler = (e: MouseEvent | TouchEvent) => {
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
         setShowMobileMenu(false);
+      }
+      if (notifPanelRef.current && !notifPanelRef.current.contains(e.target as Node)) {
+        setShowNotifPanel(false);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -115,7 +187,7 @@ export default function Layout() {
       document.removeEventListener('mousedown', handler);
       document.removeEventListener('touchstart', handler);
     };
-  }, [showMobileMenu]);
+  }, [showMobileMenu, showNotifPanel]);
 
   const dismissToast = (id: string) => setToasts(prev => prev.filter(t => t.id !== id));
 
@@ -126,6 +198,113 @@ export default function Layout() {
           <span className="hidden sm:inline text-2xl">The Midnight Post</span>
           <span className="sm:hidden text-base">The Midnight Post</span>
         </Link>
+
+        {/* 알림 벨 + 패널 (로그인 시 항상 표시) */}
+        {user && (
+          <div ref={notifPanelRef} className="relative flex items-center">
+            <button
+              onClick={() => { setShowNotifPanel(prev => !prev); if (!showNotifPanel) markAllRead(); }}
+              className="relative flex items-center justify-center transition-opacity hover:opacity-70"
+              style={{ opacity: showNotifPanel ? 0.85 : 0.5, padding: '4px' }}
+              title="알림"
+            >
+              <Bell size={18} strokeWidth={1.4} />
+              {unreadCount > 0 && (
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-0.5 -right-0.5 flex items-center justify-center rounded-full text-white font-mono"
+                  style={{
+                    backgroundColor: '#c0392b',
+                    fontSize: '9px',
+                    minWidth: '15px',
+                    height: '15px',
+                    padding: '0 3px',
+                    lineHeight: 1,
+                  }}
+                >
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </motion.span>
+              )}
+            </button>
+
+            {/* 알림 패널 드롭다운 */}
+            <AnimatePresence>
+              {showNotifPanel && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="absolute top-full right-0 mt-2 z-50 border border-ink/12 shadow-xl"
+                  style={{
+                    backgroundColor: '#fdfbf7',
+                    backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
+                    width: '300px',
+                    maxHeight: '420px',
+                    overflowY: 'auto',
+                  }}
+                >
+                  <div className="px-5 py-3 border-b border-ink/8 flex items-center justify-between">
+                    <p className="font-serif text-xs uppercase tracking-widest opacity-50">알림</p>
+                    {notifications.length > 0 && (
+                      <button
+                        onClick={() => { setNotifications([]); saveNotifications([]); }}
+                        className="font-serif text-[10px] italic opacity-30 hover:opacity-60 transition-opacity"
+                      >
+                        모두 지우기
+                      </button>
+                    )}
+                  </div>
+
+                  {notifications.length === 0 ? (
+                    <div className="px-5 py-8 text-center">
+                      <p className="font-serif text-sm italic opacity-35">아직 도착한 편지가 없습니다</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col divide-y divide-ink/6">
+                      {notifications.map(n => (
+                        <div key={n.id} className="flex items-start gap-3 px-5 py-4 hover:bg-ink/[0.02] transition-colors">
+                          {/* 멘토 색상 점 */}
+                          <div
+                            className="w-1.5 h-1.5 rotate-45 shrink-0 mt-2"
+                            style={{ background: MENTOR_COLORS[n.mentorId] ?? '#D4AF37' }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-serif text-sm leading-snug" style={{ color: 'rgba(44,42,41,0.85)' }}>
+                              <span className="font-semibold">{MENTOR_NAMES[n.mentorId] ?? '현자'}</span>의 편지가 도착했습니다
+                            </p>
+                            <p className="font-serif text-[11px] opacity-35 mt-0.5">
+                              {formatRelativeTime(n.arrivedAt)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              onClick={() => {
+                                setShowNotifPanel(false);
+                                navigate(`/mailbox?entryId=${n.entryId}`);
+                              }}
+                              className="font-serif italic text-[11px] transition-colors border-b"
+                              style={{ color: '#8B7355', borderColor: 'rgba(139,115,85,0.4)' }}
+                            >
+                              열어보기
+                            </button>
+                            <button
+                              onClick={() => clearNotification(n.id)}
+                              className="opacity-25 hover:opacity-60 transition-opacity"
+                            >
+                              <X size={11} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
 
         {/* 데스크톱 nav — 모바일에서 숨김 */}
         <nav className="hidden sm:flex gap-4 items-center text-sm tracking-widest uppercase">
