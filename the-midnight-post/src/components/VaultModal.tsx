@@ -37,8 +37,7 @@ export default function VaultModal() {
         await setupVault(passphrase);
       } catch (err) {
         console.error('[VaultModal] setupVault error:', err);
-        const msg = err instanceof Error ? err.message : String(err);
-        setError(`오류: ${msg}`);
+        setError('설정 중 오류가 발생했습니다. 다시 시도해주세요.');
       } finally {
         setLoading(false);
       }
