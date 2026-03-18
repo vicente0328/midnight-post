@@ -39,12 +39,14 @@ export interface DamsoConversationEntry {
 export interface DamsoOpening {
   stageDirection: string;
   mentorGreeting: string;
+  suggestedQuestions: string[];
 }
 
 export interface DamsoTurn {
   transformedInput: string;
   stageDirection: string;
   mentorSpeech: string;
+  suggestedQuestions: string[];
 }
 
 export async function generateDamsoOpening(

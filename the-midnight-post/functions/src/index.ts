@@ -44,12 +44,14 @@ interface MentorReply {
 interface DamsoOpening {
   stageDirection: string;
   mentorGreeting: string;
+  suggestedQuestions: string[];
 }
 
 interface DamsoTurn {
   transformedInput: string;
   stageDirection: string;
   mentorSpeech: string;
+  suggestedQuestions: string[];
 }
 
 interface DamsoConversationEntry {
@@ -316,7 +318,8 @@ export const generateDamsoOpening = onCall({ timeoutSeconds: 180, memory: '512Mi
 
 JSON 필드:
 - stageDirection: 공간의 분위기와 당신의 첫 동작을 묘사하는 2-3문장의 지문. 현재형, 서정적으로. (예: "방 안에는 은은한 차 향기가 가득하다. 스님은 조용히 찻잔을 건네며 부드러운 미소를 지으셨다.")
-- mentorGreeting: 사용자를 맞이하는 첫 인사말. ${mentor.style} 일기 내용을 직접 언급하지 않고 마음을 자연스럽게 여는 말. 위 구절들 중 하나를 자연스럽게 녹여도 좋습니다. 80-120자 내외.
+- mentorGreeting: 사용자를 맞이하는 첫 인사말. ${mentor.style} 일기 내용을 직접 언급하지 않고 마음을 자연스럽게 여는 말. 위 구절들 중 하나를 멘토 특유의 말투로 자연스럽게 인용하여 오늘의 대화 분위기를 열어주세요. 100-140자 내외.
+- suggestedQuestions: 사용자가 첫 말문을 트기 좋은 질문 또는 말 3개. 일기 내용과 멘토의 분야를 고려하여. 형식은 자유롭게 — 질문일 수도 있고, "오늘 일기에 쓴 감정에 대해 더 이야기하고 싶습니다"처럼 말을 건네는 형식도 좋습니다. 각 20-35자 내외.
 
 JSON만 응답하세요.`;
 
@@ -333,8 +336,9 @@ JSON만 응답하세요.`;
           properties: {
             stageDirection: { type: Type.STRING },
             mentorGreeting: { type: Type.STRING },
+            suggestedQuestions: { type: Type.ARRAY, items: { type: Type.STRING } },
           },
-          required: ['stageDirection', 'mentorGreeting'],
+          required: ['stageDirection', 'mentorGreeting', 'suggestedQuestions'],
         },
       },
     });
@@ -384,7 +388,9 @@ JSON 필드:
 
 2. stageDirection: 당신의 반응 행동을 묘사하는 1-2문장의 지문. 현재형, 서정적으로. (예: "스님은 잠시 눈을 감고 대나무 숲 소리에 귀를 기울이셨다. 그리고는 천천히 입을 열어 말씀하셨다.")
 
-3. mentorSpeech: 당신의 대사. ${mentor.style} 사용자의 감정과 상황에 먼저 충분히 공감하고, 그 마음을 있는 그대로 따뜻하게 품어주세요. 대화 맥락을 이어받아 깊이 있게 응답. 위 구절들 중 대화 흐름에 자연스럽게 어울리는 것이 있다면 멘토의 말투로 자연스럽게 녹여 인용하세요 (억지로 끼워넣지 말 것). 120-200자 내외. 50% 확률로 마지막에 질문 하나를 덧붙이되, 절반은 삶·존재·가치에 관한 철학적 질문, 절반은 사용자의 일상과 생각을 자연스럽게 묻는 가벼운 질문으로 하세요.
+3. mentorSpeech: 당신의 대사. ${mentor.style} 사용자의 감정과 상황에 먼저 충분히 공감하고, 그 마음을 있는 그대로 따뜻하게 품어주세요. 대화 맥락을 이어받아 깊이 있게 응답. 위 구절들 중 하나를 반드시 자연스럽게 인용하되, "어느 경전에 이런 말이 있지요…", "옛 현자가 이리 말했습니다…" 처럼 멘토 특유의 말투로 녹여 쓰세요 — 사용자가 그 구절의 뜻을 마음에 새길 수 있도록. 구절 인용 후 그것이 사용자의 상황과 어떻게 연결되는지 한 문장으로 이어주세요. 150-220자 내외. 50% 확률로 마지막에 질문 하나를 덧붙이되, 절반은 삶·존재·가치에 관한 철학적 질문, 절반은 사용자의 일상과 생각을 자연스럽게 묻는 가벼운 질문으로 하세요.
+
+4. suggestedQuestions: 사용자가 다음 말문을 트기 좋은 질문 또는 말 3개. 이번 대화 맥락과 멘토의 분야를 고려하여. 형식은 자유롭게 — 질문일 수도 있고, "방금 말씀하신 구절에 대해 더 여쭙고 싶습니다"처럼 대화를 이어가는 형식도 좋습니다. 각 20-35자 내외.
 
 JSON만 응답하세요.`;
 
@@ -402,8 +408,9 @@ JSON만 응답하세요.`;
             transformedInput: { type: Type.STRING },
             stageDirection: { type: Type.STRING },
             mentorSpeech: { type: Type.STRING },
+            suggestedQuestions: { type: Type.ARRAY, items: { type: Type.STRING } },
           },
-          required: ['transformedInput', 'stageDirection', 'mentorSpeech'],
+          required: ['transformedInput', 'stageDirection', 'mentorSpeech', 'suggestedQuestions'],
         },
       },
     });
@@ -455,7 +462,9 @@ JSON 필드:
 
 2. stageDirection: 마무리 분위기를 담은 지문 1-2문장. 현재형, 서정적으로. (예: "스님은 찻잔을 조심스레 내려놓으시며 창밖 먼 산을 한참 바라보셨다.")
 
-3. mentorSpeech: ${mentor.style} 사용자의 마지막 말에 따뜻하게 응답하고, 자연스럽게 작별을 고하는 말. 오늘 이 자리에 와준 것에 대한 감사와, 사용자가 앞으로 나아갈 수 있도록 진심 어린 축복 혹은 기원의 말을 담아 마무리. 위 구절들 중 마무리에 어울리는 것이 있다면 자연스럽게 인용해도 좋습니다. 120-180자 내외.
+3. mentorSpeech: ${mentor.style} 사용자의 마지막 말에 따뜻하게 응답하고, 자연스럽게 작별을 고하는 말. 위 구절들 중 마무리에 어울리는 하나를 인용하여 오늘 나눈 대화의 핵심을 한 줄로 갈무리해 주세요. 오늘 이 자리에 와준 것에 대한 감사와, 사용자가 앞으로 나아갈 수 있도록 진심 어린 축복 혹은 기원의 말을 담아 마무리. 140-200자 내외.
+
+4. suggestedQuestions: [] (마무리 단계이므로 빈 배열)
 
 JSON만 응답하세요.`;
 
@@ -473,8 +482,9 @@ JSON만 응답하세요.`;
             transformedInput: { type: Type.STRING },
             stageDirection: { type: Type.STRING },
             mentorSpeech: { type: Type.STRING },
+            suggestedQuestions: { type: Type.ARRAY, items: { type: Type.STRING } },
           },
-          required: ['transformedInput', 'stageDirection', 'mentorSpeech'],
+          required: ['transformedInput', 'stageDirection', 'mentorSpeech', 'suggestedQuestions'],
         },
       },
     });

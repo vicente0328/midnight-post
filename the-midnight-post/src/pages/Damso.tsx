@@ -88,50 +88,6 @@ function calcOpacity(index: number, total: number): number {
   return 0.22;
 }
 
-// ─── Typing animation for mentor speech ──────────────────────────────────────
-
-function TypingMentorText({
-  mentorName,
-  content,
-  onComplete,
-}: {
-  mentorName: string;
-  content: string;
-  onComplete: () => void;
-}) {
-  const [displayed, setDisplayed] = useState('');
-  const completedRef = useRef(false);
-
-  useEffect(() => {
-    let i = 0;
-    const interval = setInterval(() => {
-      i++;
-      setDisplayed(content.slice(0, i));
-      if (i >= content.length) {
-        clearInterval(interval);
-        if (!completedRef.current) {
-          completedRef.current = true;
-          setTimeout(onComplete, 700);
-        }
-      }
-    }, 42); // 42ms/자 ≈ 서정적이고 차분한 속도
-    return () => clearInterval(interval);
-  }, [content, onComplete]);
-
-  return (
-    <p className="font-serif text-base md:text-lg leading-[2] md:leading-[2.1]"
-      style={{ color: 'rgba(44,42,41,0.9)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
-      <span className="font-bold">{mentorName}:</span>
-      {' '}
-      &ldquo;{displayed}
-      {displayed.length < content.length && (
-        <span style={{ opacity: 0.5 }}>▎</span>
-      )}
-      &rdquo;
-    </p>
-  );
-}
-
 // ─── Message block ────────────────────────────────────────────────────────────
 
 function MessageBlock({
@@ -149,16 +105,8 @@ function MessageBlock({
 }) {
   const calledRef = useRef(false);
 
-  const handleMotionComplete = () => {
-    // mentor 타입은 TypingMentorText에서 완료 처리하므로 여기선 skip
-    if (isAnimating && message.type !== 'mentor' && !calledRef.current) {
-      calledRef.current = true;
-      onAnimationComplete?.();
-    }
-  };
-
-  const handleTypingComplete = () => {
-    if (!calledRef.current) {
+  const handleAnimationComplete = () => {
+    if (isAnimating && !calledRef.current) {
       calledRef.current = true;
       onAnimationComplete?.();
     }
@@ -168,8 +116,8 @@ function MessageBlock({
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: targetOpacity, y: 0 }}
-      transition={{ duration: isAnimating && message.type === 'mentor' ? 0.4 : isAnimating ? 1.6 : 0.8, ease: 'easeOut' }}
-      onAnimationComplete={handleMotionComplete}
+      transition={{ duration: isAnimating ? 1.6 : 0.8, ease: 'easeOut' }}
+      onAnimationComplete={handleAnimationComplete}
       className="mb-7 md:mb-9"
     >
       {message.type === 'stage_direction' && (
@@ -179,13 +127,7 @@ function MessageBlock({
         </p>
       )}
 
-      {message.type === 'mentor' && isAnimating ? (
-        <TypingMentorText
-          mentorName={mentorName}
-          content={message.content}
-          onComplete={handleTypingComplete}
-        />
-      ) : message.type === 'mentor' && (
+      {message.type === 'mentor' && (
         <p className="font-serif text-base md:text-lg leading-[2] md:leading-[2.1]"
           style={{ color: 'rgba(44,42,41,0.9)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
           <span className="font-bold">{mentorName}:</span>
@@ -327,6 +269,7 @@ export default function Damso() {
   const [sessionSaveFailed, setSessionSaveFailed] = useState(false);
   const [userTurnCount, setUserTurnCount] = useState(0);
   const [showCrisisBanner, setShowCrisisBanner] = useState(false);
+  const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationRef = useRef<DamsoConversationEntry[]>([]);
@@ -419,7 +362,8 @@ export default function Damso() {
     if (!overlayDone || !openingData || !user) return;
     if (messages.length > 0) return; // already shown
 
-    const { stageDirection, mentorGreeting } = openingData;
+    const { stageDirection, mentorGreeting, suggestedQuestions: sq } = openingData;
+    setSuggestedQuestions(sq ?? []);
     const sdId = `sd-open-${Date.now()}`;
     const mId = `m-open-${Date.now() + 1}`;
 
@@ -507,6 +451,7 @@ export default function Damso() {
       const sdMsg: Message = { id: `sd-${ts + 1}`, type: 'stage_direction', content: turn.stageDirection };
       const mMsg: Message = { id: `m-${ts + 2}`, type: 'mentor', content: turn.mentorSpeech };
 
+      setSuggestedQuestions(turn.suggestedQuestions ?? []);
       setMessages(prev => [...prev, uMsg, sdMsg, mMsg]);
       setAnimatingId(mMsg.id);
 
@@ -747,6 +692,46 @@ export default function Damso() {
                   borderTop: '1px solid rgba(44,42,41,0.05)',
                 }}
               >
+                {/* 추천 질문 칩 */}
+                <AnimatePresence>
+                  {suggestedQuestions.length > 0 && !animatingId && !isSending && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 4 }}
+                      transition={{ duration: 0.5 }}
+                      className="max-w-xl mx-auto mb-3 flex flex-wrap gap-2"
+                    >
+                      {suggestedQuestions.map((q, i) => (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            setSuggestedQuestions([]);
+                            setInputValue(q);
+                          }}
+                          className="font-serif text-xs italic transition-all duration-300 px-3 py-1.5"
+                          style={{
+                            color: `${space.accent}cc`,
+                            border: `1px solid ${space.accent}33`,
+                            background: `${space.accent}08`,
+                            wordBreak: 'keep-all',
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.borderColor = `${space.accent}88`;
+                            e.currentTarget.style.background = `${space.accent}14`;
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.borderColor = `${space.accent}33`;
+                            e.currentTarget.style.background = `${space.accent}08`;
+                          }}
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 <div className="max-w-xl mx-auto flex items-end gap-3">
                   <textarea
                     value={inputValue}
