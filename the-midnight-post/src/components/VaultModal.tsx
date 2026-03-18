@@ -24,8 +24,8 @@ export default function VaultModal() {
     setError('');
 
     if (isSetup) {
-      if (passphrase.length < 6) {
-        setError('비밀번호는 6자 이상이어야 합니다.');
+      if (passphrase.length < 4) {
+        setError('비밀번호는 4자 이상이어야 합니다.');
         return;
       }
       if (passphrase !== confirm) {
@@ -74,10 +74,13 @@ export default function VaultModal() {
             <h2 className="text-base tracking-widest uppercase mb-3" style={{ letterSpacing: '0.2em' }}>
               {isSetup ? '일기 보호' : '잠금 해제'}
             </h2>
-            <p className="text-xs leading-relaxed" style={{ color: 'rgba(44,42,41,0.45)' }}>
-              {isSetup
-                ? '비밀번호를 설정하면 당신의 일기와 편지가\n암호화되어 안전하게 보호됩니다.'
-                : '계속하려면 보호 비밀번호를 입력해주세요.'}
+            <p className="text-xs leading-relaxed" style={{ color: 'rgba(44,42,41,0.45)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
+              {isSetup ? (
+                <>
+                  2차 비밀번호를 설정하여<br />
+                  일기와 편지를 암호화하고 안전하게 보호합니다
+                </>
+              ) : '계속하려면 보호 비밀번호를 입력해주세요.'}
             </p>
           </div>
 
@@ -88,7 +91,7 @@ export default function VaultModal() {
                 type={showPass ? 'text' : 'password'}
                 value={passphrase}
                 onChange={e => { setPassphrase(e.target.value); setError(''); }}
-                placeholder={isSetup ? '새 비밀번호 (6자 이상)' : '비밀번호'}
+                placeholder={isSetup ? '새 비밀번호 (4자 이상)' : '비밀번호'}
                 autoFocus
                 className="w-full bg-transparent border-b py-2 pr-8 text-sm outline-none transition-colors placeholder:italic"
                 style={{
