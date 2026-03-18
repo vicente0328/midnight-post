@@ -686,11 +686,8 @@ export default function Damso() {
               <TornPaperEdge fill={space.bg} />
 
               <div
-                className="px-6 pb-6 pt-1"
-                style={{
-                  backgroundColor: space.bg,
-                  borderTop: '1px solid rgba(44,42,41,0.05)',
-                }}
+                className="px-5 pb-5 pt-2"
+                style={{ backgroundColor: space.bg }}
               >
                 {/* 추천 질문 칩 */}
                 <AnimatePresence>
@@ -732,7 +729,15 @@ export default function Damso() {
                   )}
                 </AnimatePresence>
 
-                <div className="max-w-xl mx-auto flex items-end gap-3">
+                {/* 입력 박스 */}
+                <div
+                  className="max-w-xl mx-auto flex items-end gap-3 px-4 py-3 transition-shadow duration-300"
+                  style={{
+                    border: `1px solid rgba(44,42,41,0.14)`,
+                    boxShadow: '0 2px 12px rgba(44,42,41,0.06)',
+                    background: 'rgba(255,255,255,0.55)',
+                  }}
+                >
                   <textarea
                     value={inputValue}
                     onChange={e => setInputValue(e.target.value)}
@@ -745,26 +750,19 @@ export default function Damso() {
                     placeholder={space.placeholder}
                     rows={2}
                     disabled={isSending || !!animatingId}
-                    className="flex-1 font-serif bg-transparent outline-none resize-none leading-relaxed transition-colors duration-300 py-2 placeholder:text-xs placeholder:tracking-wide"
+                    className="flex-1 font-serif bg-transparent outline-none resize-none leading-relaxed transition-colors duration-300 py-1 placeholder:text-xs placeholder:tracking-wide"
                     style={{
                       fontSize: '16px', // iOS 자동 확대 방지
                       color: 'rgba(44,42,41,0.85)',
-                      borderBottom: `1px solid rgba(44,42,41,0.2)`,
-                    }}
-                    onFocus={e => {
-                      e.target.style.borderBottomColor = `${space.accent}99`;
-                    }}
-                    onBlur={e => {
-                      e.target.style.borderBottomColor = 'rgba(44,42,41,0.2)';
                     }}
                   />
                   <button
                     onClick={handleSend}
                     disabled={!inputValue.trim() || isSending || !!animatingId}
-                    className="font-serif italic transition-colors duration-300 whitespace-nowrap"
+                    className="font-serif italic transition-colors duration-300 whitespace-nowrap pb-1"
                     style={{
                       fontSize: '14px',
-                      padding: '14px 4px 14px 16px', // 터치 영역 확보
+                      padding: '14px 4px 14px 12px',
                       color: inputValue.trim() && !isSending && !animatingId ? space.accent : 'rgba(44,42,41,0.25)',
                     }}
                   >
