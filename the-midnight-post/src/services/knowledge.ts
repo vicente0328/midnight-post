@@ -220,31 +220,24 @@ export async function getTodayKnowledge(
   return fallback;
 }
 
-// gutenberg_quotes에서 멘토별 무작위 구절 조회
-// (베네딕토·테오도르만 — 한문 원문 멘토는 Gutenberg 영역본 제외)
-const GUTENBERG_MENTORS = new Set<MentorId>(['benedicto', 'theodore']);
-
-async function getGutenbergQuotes(mentorId: MentorId, count = 2): Promise<KnowledgeEntry[]> {
-  if (!GUTENBERG_MENTORS.has(mentorId)) return [];
+// 임의 구절 조회 헬퍼 (randomOrder 필드 활용)
+async function getRandomQuotes(collectionName: string, mentorId: MentorId, count: number): Promise<KnowledgeEntry[]> {
   try {
     const randomVal = Math.random();
-    const q = query(
-      collection(db, 'gutenberg_quotes'),
+    let snap = await getDocs(query(
+      collection(db, collectionName),
       where('mentorId', '==', mentorId),
       where('randomOrder', '>=', randomVal),
       orderBy('randomOrder'),
       limit(count),
-    );
-    let snap = await getDocs(q);
+    ));
     if (snap.empty) {
-      // wrap-around: 처음부터 다시
-      const q2 = query(
-        collection(db, 'gutenberg_quotes'),
+      snap = await getDocs(query(
+        collection(db, collectionName),
         where('mentorId', '==', mentorId),
         orderBy('randomOrder'),
         limit(count),
-      );
-      snap = await getDocs(q2);
+      ));
     }
     const entries: KnowledgeEntry[] = [];
     snap.forEach(d => {
@@ -253,7 +246,7 @@ async function getGutenbergQuotes(mentorId: MentorId, count = 2): Promise<Knowle
     });
     return entries;
   } catch {
-    return []; // 인덱스 미생성 또는 데이터 없음
+    return [];
   }
 }
 
@@ -280,9 +273,17 @@ export async function getRecentKnowledge(
     }
   }
 
-  // Gutenberg 구절 보충
-  const gutenbergEntries = await getGutenbergQuotes(mentorId, 2);
-  allEntries.push(...gutenbergEntries);
+  // Gutenberg 구절 보충 (베네딕토·테오도르)
+  if (mentorId === 'benedicto' || mentorId === 'theodore') {
+    const gutenbergEntries = await getRandomQuotes('gutenberg_quotes', mentorId, 2);
+    allEntries.push(...gutenbergEntries);
+  }
+
+  // 불교 경전 구절 보충 (혜운)
+  if (mentorId === 'hyewoon') {
+    const buddhistEntries = await getRandomQuotes('buddhist_quotes', mentorId, 2);
+    allEntries.push(...buddhistEntries);
+  }
 
   return allEntries;
 }

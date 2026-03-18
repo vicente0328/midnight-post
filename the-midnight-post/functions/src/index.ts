@@ -143,6 +143,30 @@ async function getRecentKnowledgeForDamso(mentorId: MentorId, count = 4): Promis
     } catch { /* gutenberg_quotes 없거나 인덱스 미생성 시 skip */ }
   }
 
+  // buddhist_quotes 보충 (혜운 스님 전용 한문 불교 경전 구절)
+  if (mentorId === 'hyewoon' && entries.length < count) {
+    try {
+      const randomVal = Math.random();
+      let bSnap = await db.collection('buddhist_quotes')
+        .where('mentorId', '==', mentorId)
+        .where('randomOrder', '>=', randomVal)
+        .orderBy('randomOrder')
+        .limit(count - entries.length)
+        .get();
+      if (bSnap.empty) {
+        bSnap = await db.collection('buddhist_quotes')
+          .where('mentorId', '==', mentorId)
+          .orderBy('randomOrder')
+          .limit(count - entries.length)
+          .get();
+      }
+      bSnap.forEach(d => {
+        const data = d.data();
+        entries.push({ quote: data.quote, source: data.source, translation: data.translation, context: data.context, tags: data.tags ?? [] });
+      });
+    } catch { /* buddhist_quotes 없거나 인덱스 미생성 시 skip */ }
+  }
+
   return entries.slice(0, count);
 }
 
@@ -201,10 +225,13 @@ const MENTOR_PROFILES: Record<MentorId, { name: string; space: string; personali
 
 const MENTOR_DOMAINS: Record<MentorId, string> = {
   hyewoon: `마음이 지치고 힘든 이를 위한 불교 심리 치유 지혜.
-- 초기 불교 팔리어 경전(법구경·숫타니파타·앙굿타라 니카야)의 치유 구절
-- 선불교 공안·일화 중 마음의 상처, 집착, 두려움, 슬픔을 다루는 이야기
-- 마음챙김 기반 심리치료(MBSR/MBCT)와 불교 철학의 접점
-- 자비명상(慈悲冥想), 무상(無常), 고통의 원인과 해소에 관한 구체적 가르침
+- 법구경(法句經) 주요 품: 쌍요품(雙要品)·심품(心品)·화품(華品)·애욕품(愛欲品)·자기품(自己品)·천품(千品)·도품(道品)의 치유 구절
+- 숫타니파타(經集) 뱀품·팔게품(八偈品)·피안도품의 집착·해탈 가르침
+- 잡아함경(雜阿含經) 연기법(緣起法) 게송 — 고통의 조건적 발생과 소멸
+- 금강경(金剛般若波羅蜜經)의 무착(無著)·공(空) 지혜
+- 선불교 조사 어록(祖師語錄): 혜능·마조·조주·보조지눌의 심리 치유 일화
+- 화엄경(華嚴經) 야마천궁게찬품의 일심(一心) 가르침
+- 자비명상(慈悲冥想), 사념처(四念處), 무상(無常)에 관한 구체적 가르침
 - 상담 현장에서 실제 활용되는 불교 심리학 이야기`,
 
   benedicto: `마음의 상처와 고통을 안아주는 기독교 영적 위로의 지혜.
@@ -762,7 +789,7 @@ JSON만 응답하세요.`;
 // ── 5. 지혜 카드 생성 ─────────────────────────────────────────────────────────
 
 const QUOTE_LANG: Record<MentorId, string> = {
-  hyewoon:   '한문(漢文) — 불교 경전의 한역본(법구경·숫타니파타·중부니카야 등) 원문',
+  hyewoon:   '한문(漢文) — 법구경(法句經 T04n0210)·화엄경·금강경·잡아함경·선사 어록 등 불교 한역 원문. 반드시 한문(漢文)으로만 쓰세요. 팔리어·영어·한글 번역문을 quote로 쓰지 마세요.',
   benedicto: '라틴어(Vulgata) 또는 영어 — 성경 원문이나 영문 신학 고전',
   theodore:  '영어 또는 라틴어 — 스토아·실존주의 철학 원문이나 표준 영역',
   yeonam:    '한문(漢文) — 논어·맹자·노자·중용 등 동양 고전 원문',
@@ -821,7 +848,12 @@ ${avoidSection}
 [공통 요구사항]
 - 뻔하고 유명한 구절(예: "나는 생각한다, 고로 존재한다")은 절대 피하세요.
 - 실제 경전·문헌·저서에서 출처가 명확한 내용만 사용하세요.
-- 각 항목은 서로 다른 삶의 상황(외로움·불안·상실·분노·의미 등)을 다루도록 다양하게 구성하세요.`;
+- 각 항목은 서로 다른 삶의 상황(외로움·불안·상실·분노·의미 등)을 다루도록 다양하게 구성하세요.${mentorId === 'hyewoon' ? `
+
+[혜운 스님 전용 추가 지침]
+- quote는 반드시 순수 한문(漢文)이어야 합니다. 팔리어 로마자 표기(예: "Manopubbaṅgamā")나 영어는 절대 금지.
+- 법구경 한역본(T04n0210)이나 선종 조사 어록은 잘 알려지지 않은 품·절을 우선 발굴하세요.
+- 선사 어록 인용 시 "○○禪師 語錄" 또는 "○○禪師 偈頌" 형식으로 출처를 명기하세요.` : ''}`;
 
   const ai = getGemini();
   const response = await ai.models.generateContent({
@@ -1061,5 +1093,126 @@ JSON 배열만 반환하세요.`;
     }
 
     return { success: true, indexed: totalIndexed, book: book.title };
+  }
+);
+
+// ── 7. 불교 경전 사이트 스크래핑 + 인덱싱 (혜운 스님 전용) ──────────────────
+// 동국대 ABC 한글대장경 등 URL에서 HTML을 가져와 한문 원문·한국어 번역 쌍을 추출.
+// 결과는 buddhist_quotes 컬렉션에 저장.
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export const indexBuddhistCanon = onCall(
+  { timeoutSeconds: 300, memory: '512MiB' },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', '로그인이 필요합니다.');
+
+    const { url, sourceName } = request.data as { url: string; sourceName?: string };
+    if (!url) throw new HttpsError('invalid-argument', 'url이 필요합니다.');
+
+    // 페이지 로드
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(15000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Buddhist-Canon-Indexer/1.0)' },
+    });
+    if (!res.ok) throw new HttpsError('internal', `페이지를 가져오지 못했습니다. (${res.status})`);
+
+    const html = await res.text();
+    const text = stripHtml(html);
+
+    if (text.length < 200) throw new HttpsError('internal', '추출된 텍스트가 너무 짧습니다. URL을 확인해주세요.');
+
+    // 텍스트가 길면 최대 6000자로 분할 처리
+    const CHUNK_SIZE = 6000;
+    const chunks: string[] = [];
+    for (let i = 0; i < text.length; i += CHUNK_SIZE) {
+      chunks.push(text.slice(i, i + CHUNK_SIZE));
+      if (chunks.length >= 5) break; // 최대 5청크
+    }
+
+    const ai = getGemini();
+    const adminDb = getDb();
+    let totalIndexed = 0;
+
+    for (const chunk of chunks) {
+      try {
+        const prompt = `다음은 불교 경전 사이트의 텍스트입니다.
+이 텍스트에서 한문(漢文) 원문과 한국어 번역이 쌍을 이루는 경전·어록 구절을 최대 3개 추출해주세요.
+
+[텍스트]
+${chunk}
+
+[추출 규칙]
+- quote: 반드시 순수 한문(漢文) 원문만. 한글·영어·팔리어 혼용 금지.
+- source: 경전명(한자 병기) + 품명 + 게송 번호 (텍스트에 있는 경우)
+- translation: 텍스트의 한국어 번역을 그대로 사용. 없으면 직역.
+- context: 혜운 스님(선불교 수행자, 하십시오체)의 목소리로 이 구절의 치유적 의미 (80-100자)
+- tags: 관련 감정/상황 태그 2-3개
+
+텍스트에 적합한 한문 구절이 없으면 빈 배열을 반환하세요.`;
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.0-flash',
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  quote:       { type: Type.STRING },
+                  source:      { type: Type.STRING },
+                  translation: { type: Type.STRING },
+                  context:     { type: Type.STRING },
+                  tags:        { type: Type.ARRAY, items: { type: Type.STRING } },
+                },
+                required: ['quote', 'source', 'translation', 'context', 'tags'],
+              },
+            },
+          },
+        });
+
+        const responseText = response.text;
+        if (!responseText) continue;
+
+        const entries = JSON.parse(responseText) as KnowledgeEntry[];
+        for (const entry of entries) {
+          if (!entry.quote || entry.quote.length < 5) continue;
+          // 영문자가 절반 이상이면 한문이 아님 — skip
+          const latinChars = (entry.quote.match(/[a-zA-Z]/g) ?? []).length;
+          if (latinChars > entry.quote.length * 0.3) continue;
+
+          await adminDb.collection('buddhist_quotes').add({
+            mentorId: 'hyewoon',
+            sourceUrl: url,
+            sourceName: sourceName ?? url,
+            quote: entry.quote,
+            source: entry.source,
+            translation: entry.translation,
+            context: entry.context,
+            tags: entry.tags ?? [],
+            randomOrder: Math.random(),
+            createdAt: FieldValue.serverTimestamp(),
+          });
+          totalIndexed++;
+        }
+      } catch (err) {
+        console.error('[Buddhist] 청크 처리 실패:', err);
+      }
+    }
+
+    return { success: true, indexed: totalIndexed };
   }
 );
