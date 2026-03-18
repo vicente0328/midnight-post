@@ -7,6 +7,7 @@ import { useAuth } from '../components/AuthContext';
 import { useVault } from '../components/VaultContext';
 import { useSound } from '../components/SoundContext';
 import { MentorReply } from '../services/ai';
+import { prefetchDamso, type MentorId } from '../services/damso';
 import { X, Feather, Flower2, Cross, Brush, MessageCircle, Bookmark, ChevronLeft } from 'lucide-react';
 import { ShareCardButton } from '../utils/shareCard';
 
@@ -271,6 +272,11 @@ export default function Envelopes() {
             entryId={entryId ?? ''}
             onClose={() => setSelectedReply(null)}
             onStartDamso={(mentorId) => {
+              prefetchDamso(mentorId as MentorId, async () => {
+                const snap = await getDoc(doc(db, 'entries', entryId ?? ''));
+                const raw = snap.exists() ? String(snap.data().content ?? '') : '';
+                return decrypt(raw);
+              });
               setSelectedReply(null);
               navigate(`/damso/${entryId}/${mentorId}`);
             }}

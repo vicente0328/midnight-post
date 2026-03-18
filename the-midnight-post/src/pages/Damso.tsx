@@ -9,6 +9,7 @@ import {
   generateDamsoOpening,
   generateDamsoResponse,
   generateDamsoClosing,
+  consumePrefetchedDamso,
   type DamsoConversationEntry,
   type MentorId,
 } from '../services/damso';
@@ -308,20 +309,33 @@ export default function Damso() {
     if (!user || !entryId || !mentorId) return;
 
     const init = async () => {
-      const entrySnap = await getDoc(doc(db, 'entries', entryId));
-      const rawContent = entrySnap.exists() ? String(entrySnap.data().content ?? '') : '';
-      entryContentRef.current = await decrypt(rawContent);
+      // 버튼 클릭 시 미리 시작된 promise가 있으면 재사용 (없으면 직접 fetch)
+      const prefetched = consumePrefetchedDamso();
 
-      // 세션 생성과 오프닝 생성을 병렬로 실행 — 한쪽 실패해도 다른 쪽은 진행
-      const [sessionResult, openingResult] = await Promise.allSettled([
+      const contentPromise = prefetched?.contentPromise ?? (async () => {
+        const snap = await getDoc(doc(db, 'entries', entryId));
+        const raw = snap.exists() ? String(snap.data().content ?? '') : '';
+        return decrypt(raw);
+      })();
+
+      const openingPromise = prefetched?.openingPromise ??
+        contentPromise.then(content => generateDamsoOpening(mentorId as MentorId, content));
+
+      // 세션 생성, 컨텐츠 로드, 오프닝 생성을 모두 병렬로 실행
+      const [sessionResult, contentResult, openingResult] = await Promise.allSettled([
         addDoc(collection(db, 'damso_sessions'), {
           uid: user.uid,
           entryId,
           mentorId,
           startedAt: serverTimestamp(),
         }),
-        generateDamsoOpening(mentorId as MentorId, entryContentRef.current),
+        contentPromise,
+        openingPromise,
       ]);
+
+      if (contentResult.status === 'fulfilled') {
+        entryContentRef.current = contentResult.value;
+      }
 
       if (sessionResult.status === 'fulfilled') {
         sessionIdRef.current = sessionResult.value.id;
