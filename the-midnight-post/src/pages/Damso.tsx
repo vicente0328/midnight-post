@@ -610,7 +610,7 @@ export default function Damso() {
                     isAnimating={animatingId === msg.id}
                     onAnimationComplete={() => {
                       setAnimatingId(null);
-                      if (shouldCloseRef.current) setIsEnding(true);
+                      if (shouldCloseRef.current) setTimeout(() => setIsEnding(true), 2000);
                     }}
                   />
                 ))}
