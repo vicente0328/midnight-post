@@ -419,28 +419,24 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
       </div>
 
       {/* ── 액션 버튼 ── */}
-      <div className="flex flex-col items-center gap-4 mb-12 w-full">
+      <div className="flex items-center justify-center gap-6 mb-8 w-full">
         <button
           onClick={() => setShowLetterModal(true)}
-          className="flex items-center gap-2 font-serif italic text-sm opacity-60 hover:opacity-100 transition-opacity duration-300"
+          className="flex items-center gap-1.5 font-serif italic text-xs opacity-38 hover:opacity-70 transition-opacity duration-300"
           style={{ touchAction: 'manipulation' }}
         >
-          <PenLine size={13} strokeWidth={1.4} />
-          {room.name}께 편지 보내기
+          <PenLine size={11} strokeWidth={1.4} />
+          편지 보내기
         </button>
-        <div className="flex items-center gap-3 opacity-20 w-24">
-          <div className="flex-1 h-px bg-ink" />
-          <div className="w-1 h-1 rotate-45 bg-[#D4AF37]" />
-          <div className="flex-1 h-px bg-ink" />
-        </div>
+        <div className="w-px h-3 bg-ink/15" />
         <button
           onClick={handleDamso}
           disabled={damsoLoading}
-          className="flex items-center gap-2 font-serif italic text-sm opacity-60 hover:opacity-100 transition-opacity duration-300 disabled:opacity-25"
+          className="flex items-center gap-1.5 font-serif italic text-xs opacity-38 hover:opacity-70 transition-opacity duration-300 disabled:opacity-20"
           style={{ touchAction: 'manipulation' }}
         >
-          <MessageCircle size={13} strokeWidth={1.4} />
-          {damsoLoading ? '연결 중…' : `${room.name}${room.particle} 담소 나누기`}
+          <MessageCircle size={11} strokeWidth={1.4} />
+          {damsoLoading ? '연결 중…' : '담소 나누기'}
         </button>
       </div>
 
@@ -546,9 +542,9 @@ function KnowledgeCard({
         }}
       />
 
-      {/* 명언 */}
+      {/* 명언 원문 */}
       <p
-        className="font-serif text-sm italic leading-[1.85] mb-4 line-clamp-3 flex-1 transition-colors duration-500"
+        className="font-serif text-sm italic leading-[1.85] mb-3 line-clamp-2 transition-colors duration-500"
         style={{
           color: hovered ? 'rgba(26,18,8,0.88)' : 'rgba(26,18,8,0.68)',
           wordBreak: 'keep-all',
@@ -556,6 +552,17 @@ function KnowledgeCard({
         }}
       >
         {entry.quote.split('\n')[0]}
+      </p>
+
+      {/* 한국어 번역 */}
+      <p
+        className="text-[11px] leading-[1.75] mb-4 flex-1 line-clamp-2 transition-colors duration-500 break-keep"
+        style={{
+          color: hovered ? 'rgba(26,18,8,0.60)' : 'rgba(26,18,8,0.42)',
+          wordBreak: 'keep-all',
+        }}
+      >
+        {entry.translation}
       </p>
 
       {/* 출처 구분선 */}
