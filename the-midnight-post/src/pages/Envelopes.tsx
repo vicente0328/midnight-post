@@ -427,17 +427,17 @@ function LetterModal({
           <div className="text-center mb-6 md:mb-16 relative px-0 md:px-12">
             <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-7xl sm:text-8xl text-[#D4AF37]/15 font-serif leading-none select-none">"</span>
 
-            <p className="text-base sm:text-2xl md:text-3xl leading-relaxed italic text-ink/90 mb-5 relative z-10 font-medium break-keep" style={{ textWrap: 'balance' } as React.CSSProperties}>
+            <p className="text-base sm:text-2xl md:text-3xl leading-relaxed italic text-ink/90 mb-5 relative z-10 font-medium break-keep break-words" style={{ textWrap: 'balance' } as React.CSSProperties}>
               {reply.quote}
             </p>
 
             <div className="flex items-center justify-center gap-3 mb-5 opacity-60">
               <div className="h-px flex-1 max-w-[48px] bg-gradient-to-r from-transparent via-ink/40 to-transparent"></div>
-              {reply.source && <span className="text-xs sm:text-sm tracking-wider whitespace-nowrap shrink-0">{reply.source}</span>}
+              {reply.source && <span className="text-xs sm:text-sm tracking-wider break-keep break-words shrink-0" style={{ textWrap: 'balance' } as React.CSSProperties}>{reply.source}</span>}
               <div className="h-px flex-1 max-w-[48px] bg-gradient-to-r from-transparent via-ink/40 to-transparent"></div>
             </div>
 
-            <p className="text-sm sm:text-base md:text-lg leading-relaxed text-ink/70 mx-auto">
+            <p className="text-sm sm:text-base md:text-lg leading-relaxed text-ink/70 mx-auto break-keep break-words" style={{ textWrap: 'balance' } as React.CSSProperties}>
               {reply.translation}
             </p>
           </div>

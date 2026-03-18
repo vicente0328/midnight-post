@@ -375,19 +375,19 @@ function LetterModal({
             <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-7xl text-[#D4AF37]/13 font-serif leading-none select-none pointer-events-none">
               &ldquo;
             </span>
-            <p className="text-base sm:text-xl md:text-2xl leading-relaxed italic text-ink/90 mb-4 relative z-10 font-medium font-serif break-keep"
-              style={{ wordBreak: 'keep-all' }}>
+            <p className="text-base sm:text-xl md:text-2xl leading-relaxed italic text-ink/90 mb-4 relative z-10 font-medium font-serif break-keep break-words"
+              style={{ wordBreak: 'keep-all', textWrap: 'balance' } as React.CSSProperties}>
               {reply.quote}
             </p>
             {reply.source && (
               <div className="flex items-center justify-center gap-3 mb-4 opacity-55">
                 <div className="h-px w-10 bg-ink/40" />
-                <span className="text-xs tracking-wider">{reply.source}</span>
+                <span className="text-xs tracking-wider break-keep break-words" style={{ textWrap: 'balance' } as React.CSSProperties}>{reply.source}</span>
                 <div className="h-px w-10 bg-ink/40" />
               </div>
             )}
-            <p className="text-sm sm:text-base leading-relaxed text-ink/65 font-serif break-keep italic"
-              style={{ wordBreak: 'keep-all' }}>
+            <p className="text-sm sm:text-base leading-relaxed text-ink/65 font-serif break-keep break-words italic"
+              style={{ wordBreak: 'keep-all', textWrap: 'balance' } as React.CSSProperties}>
               {reply.translation}
             </p>
           </div>
