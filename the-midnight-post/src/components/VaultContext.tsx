@@ -60,7 +60,7 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
     const init = async () => {
       setVaultStatus('loading');
       try {
-        const snap = await getDoc(doc(db, 'users', user.uid));
+        const snap = await getDoc(doc(db, 'vault_meta', user.uid));
         const data = snap.data() ?? {};
         const salt = data.vaultSalt as string | undefined;
         const verifier = data.vaultVerifier as string | undefined;
@@ -100,8 +100,8 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
     const key = await deriveKey(passphrase, salt);
     const verifier = await createVerifier(key);
 
-    // salt와 verifier를 users/{uid}에 저장 (민감 정보 아님)
-    await setDoc(doc(db, 'users', user.uid), { vaultSalt: salt, vaultVerifier: verifier }, { merge: true });
+    // salt와 verifier를 vault_meta/{uid}에 저장 (민감 정보 아님)
+    await setDoc(doc(db, 'vault_meta', user.uid), { vaultSalt: salt, vaultVerifier: verifier });
 
     setSaltB64(salt);
     setVerifierStr(verifier);

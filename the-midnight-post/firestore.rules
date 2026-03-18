@@ -28,14 +28,12 @@ service cloud.firestore {
 
     // Validators
     function isValidUser(data) {
-      return hasOnlyAllowedFields(['uid', 'email', 'displayName', 'createdAt', 'onboarded', 'vaultSalt', 'vaultVerifier']) &&
+      return hasOnlyAllowedFields(['uid', 'email', 'displayName', 'createdAt', 'onboarded']) &&
              data.uid is string && data.uid.size() > 0 &&
              data.email is string && data.email.size() > 0 &&
              (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
              data.createdAt is timestamp &&
-             (!('onboarded' in data) || data.onboarded is bool) &&
-             (!('vaultSalt' in data) || (data.vaultSalt is string && data.vaultSalt.size() <= 100)) &&
-             (!('vaultVerifier' in data) || (data.vaultVerifier is string && data.vaultVerifier.size() <= 500));
+             (!('onboarded' in data) || data.onboarded is bool);
     }
 
     function isValidEntry(data) {
@@ -105,6 +103,11 @@ service cloud.firestore {
     match /meta/{docId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
+    }
+
+    // Vault 메타데이터 — 본인만 읽기/쓰기 (salt + verifier 저장)
+    match /vault_meta/{userId} {
+      allow read, write: if isOwner(userId);
     }
 
     // 담소 세션 — 본인 데이터만 접근
