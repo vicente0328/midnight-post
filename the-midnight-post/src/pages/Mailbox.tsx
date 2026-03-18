@@ -414,13 +414,19 @@ function LetterModal({
           </div>
 
           {/* 나의 편지 보러가기 */}
-          <div className="mt-10 pt-6 border-t border-ink/10 flex justify-center">
+          <div className="mt-10 pt-6 border-t border-ink/10 flex items-center justify-between">
             <button
               onClick={onGoToArchive}
               className="font-serif text-xs italic opacity-38 hover:opacity-65 transition-opacity duration-300 flex items-center gap-1.5 tracking-wide"
             >
               나의 편지 보러가기
               <ArrowRight size={11} strokeWidth={1.5} />
+            </button>
+            <button
+              onClick={onClose}
+              className="font-serif text-xs italic opacity-25 hover:opacity-55 transition-opacity duration-300 tracking-wide"
+            >
+              닫기
             </button>
           </div>
         </div>
