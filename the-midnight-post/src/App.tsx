@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './components/AuthContext';
 import { VaultProvider } from './components/VaultContext';
 import VaultModal from './components/VaultModal';
+import VaultAnnouncement from './components/VaultAnnouncement';
 import { SoundProvider } from './components/SoundContext';
 import SoundControls from './components/SoundControls';
 import Layout from './components/Layout';
@@ -63,6 +64,7 @@ export default function App() {
         <SoundProvider>
           <Router>
             <AppRoutes />
+            <VaultAnnouncement />
             <VaultModal />
           </Router>
         </SoundProvider>

@@ -94,10 +94,11 @@ export default function VaultModal() {
                 onChange={e => { setPassphrase(e.target.value); setError(''); }}
                 placeholder={isSetup ? '새 비밀번호 (4자 이상)' : '비밀번호'}
                 autoFocus
-                className="w-full bg-transparent border-b py-2 pr-8 text-sm outline-none transition-colors placeholder:italic"
+                className="w-full bg-transparent border-b py-2 pr-8 outline-none transition-colors placeholder:italic"
                 style={{
                   borderColor: 'rgba(44,42,41,0.2)',
                   color: 'rgba(44,42,41,0.85)',
+                  fontSize: 16,
                 }}
                 onFocus={e => (e.target.style.borderColor = 'rgba(44,42,41,0.5)')}
                 onBlur={e => (e.target.style.borderColor = 'rgba(44,42,41,0.2)')}
@@ -121,10 +122,11 @@ export default function VaultModal() {
                 value={confirm}
                 onChange={e => { setConfirm(e.target.value); setError(''); }}
                 placeholder="비밀번호 확인"
-                className="w-full bg-transparent border-b py-2 text-sm outline-none transition-colors placeholder:italic"
+                className="w-full bg-transparent border-b py-2 outline-none transition-colors placeholder:italic"
                 style={{
                   borderColor: 'rgba(44,42,41,0.2)',
                   color: 'rgba(44,42,41,0.85)',
+                  fontSize: 16,
                 }}
                 onFocus={e => (e.target.style.borderColor = 'rgba(44,42,41,0.5)')}
                 onBlur={e => (e.target.style.borderColor = 'rgba(44,42,41,0.2)')}
