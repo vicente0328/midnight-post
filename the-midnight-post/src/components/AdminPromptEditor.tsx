@@ -134,9 +134,41 @@ const DEFAULTS: Record<MentorId, AdminPromptOverride> = {
 - 상실·이별·고독·노화를 동양적 순리로 안아주는 이야기
 
 [번역 및 context 지침]
+- source: 반드시 한국어와 한문(漢文)으로만 표기하세요. 영어 절대 금지. (예: "논어(論語) 자로편(子路篇) 13:23", "노자(老子) 도덕경(道德經) 78장")
 - translation: 현대인에게 와닿도록 자연스럽게 의역해도 좋습니다.
 - context: 동양 선비의 목소리로. 예스럽고 품격 있는 문체. (-하오체)`,
   },
+};
+
+// 각 필드를 수정해야 하는 코드 위치 안내
+const CODE_LOCATIONS_MENTOR: Record<keyof AdminPromptOverride, string[]> = {
+  description: [
+    'src/components/AdminPromptEditor.tsx → DEFAULTS[mentorId].description',
+    'functions/src/index.ts → MENTOR_DESCRIPTIONS[mentorId]',
+  ],
+  personality: [
+    'src/components/AdminPromptEditor.tsx → DEFAULTS[mentorId].personality',
+    'functions/src/index.ts → MENTOR_PROFILES[mentorId].personality',
+  ],
+  style: [
+    'src/components/AdminPromptEditor.tsx → DEFAULTS[mentorId].style',
+    'functions/src/index.ts → MENTOR_PROFILES[mentorId].style',
+  ],
+  knowledgePrompt: [
+    'src/components/AdminPromptEditor.tsx → DEFAULTS[mentorId].knowledgePrompt',
+    'functions/src/index.ts → MENTOR_KNOWLEDGE_DEFAULTS[mentorId]',
+  ],
+};
+
+const CODE_LOCATIONS_GLOBAL: Partial<Record<keyof GlobalPromptOverride, string[]>> = {
+  replyInstruction: ['src/components/AdminPromptEditor.tsx → GLOBAL_DEFAULTS.replyInstruction'],
+  knowledgePromptCommon: [
+    'src/components/AdminPromptEditor.tsx → GLOBAL_DEFAULTS.knowledgePromptCommon',
+    'functions/src/index.ts → DEFAULT_KNOWLEDGE_COMMON_PROMPT',
+  ],
+  damsoOpeningScene: ['src/components/AdminPromptEditor.tsx → GLOBAL_DEFAULTS.damsoOpeningScene'],
+  damsoResponseFields: ['src/components/AdminPromptEditor.tsx → GLOBAL_DEFAULTS.damsoResponseFields'],
+  damsoClosingInstruction: ['src/components/AdminPromptEditor.tsx → GLOBAL_DEFAULTS.damsoClosingInstruction'],
 };
 
 const SECTIONS: { key: keyof AdminPromptOverride; label: string; hint: string; rows: number }[] = [
@@ -222,6 +254,7 @@ export default function AdminPromptEditor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Partial<Record<string, number>>>({});
+  const [copiedAt, setCopiedAt] = useState<Partial<Record<string, number>>>({});
 
   useEffect(() => {
     const load = async () => {
@@ -284,6 +317,17 @@ export default function AdminPromptEditor() {
     edits[mentorId]?.[field] !== overrides[mentorId]?.[field] &&
     !(edits[mentorId]?.[field] === undefined && overrides[mentorId]?.[field] === undefined);
 
+  const handleMentorCopy = async (mentorId: MentorId, field: keyof AdminPromptOverride) => {
+    const key = `${mentorId}_${field}`;
+    const value = getMentorValue(mentorId, field);
+    const label = SECTIONS.find(s => s.key === field)?.label ?? field;
+    const locations = CODE_LOCATIONS_MENTOR[field];
+    const header = `// [${MENTOR_NAMES[mentorId]}] ${label}\n// 붙여넣을 위치:\n${locations.map(l => `//   ${l}`).join('\n')}`;
+    await navigator.clipboard.writeText(`${header}\n\`${value}\``);
+    setCopiedAt(prev => ({ ...prev, [key]: Date.now() }));
+    setTimeout(() => setCopiedAt(prev => ({ ...prev, [key]: 0 })), 2000);
+  };
+
   // ── Global tab helpers ─────────────────────────────────────────────────────
   const getGlobalValue = (field: keyof GlobalPromptOverride): string =>
     globalEdits[field] ?? GLOBAL_DEFAULTS[field] ?? '';
@@ -313,6 +357,17 @@ export default function AdminPromptEditor() {
       setGlobalEdits(prev => { const c = { ...prev }; delete c[field]; return c; });
       setSavedAt(prev => ({ ...prev, [key]: Date.now() }));
     } finally { setSaving(null); }
+  };
+
+  const handleGlobalCopy = async (field: keyof GlobalPromptOverride) => {
+    const key = `global_${field}`;
+    const value = getGlobalValue(field);
+    const label = GLOBAL_SECTIONS.find(s => s.key === field)?.label ?? field;
+    const locations = CODE_LOCATIONS_GLOBAL[field] ?? [];
+    const header = `// [공통] ${label}\n// 붙여넣을 위치:\n${locations.map(l => `//   ${l}`).join('\n')}`;
+    await navigator.clipboard.writeText(`${header}\n\`${value}\``);
+    setCopiedAt(prev => ({ ...prev, [key]: Date.now() }));
+    setTimeout(() => setCopiedAt(prev => ({ ...prev, [key]: 0 })), 2000);
   };
 
   const isGlobalModified = (field: keyof GlobalPromptOverride) => globalOverride[field] !== undefined;
@@ -366,6 +421,7 @@ export default function AdminPromptEditor() {
             const dirty = isGlobalDirty(key);
             const justSaved = savedAt[saveKey] && Date.now() - (savedAt[saveKey] ?? 0) < 3000;
 
+            const justCopied = (copiedAt[saveKey] ?? 0) > 0;
             return (
               <div key={key} className="flex flex-col gap-2">
                 <div>
@@ -392,6 +448,12 @@ export default function AdminPromptEditor() {
                     </button>
                   )}
                   <button
+                    onClick={() => handleGlobalCopy(key)}
+                    className="px-3 py-1 border border-ink/20 font-mono text-xs opacity-50 hover:opacity-80 transition-all"
+                  >
+                    {justCopied ? '복사됨 ✓' : '코드 복사'}
+                  </button>
+                  <button
                     onClick={() => handleGlobalSave(key)}
                     disabled={isSaving || !dirty}
                     className="px-4 py-1 border border-ink/30 font-mono text-xs hover:bg-ink hover:text-paper disabled:opacity-20 transition-all"
@@ -410,6 +472,7 @@ export default function AdminPromptEditor() {
             const modified = isMentorModified(mentorId, key);
             const dirty = isMentorDirty(mentorId, key);
             const justSaved = savedAt[saveKey] && Date.now() - (savedAt[saveKey] ?? 0) < 3000;
+            const justCopied = (copiedAt[saveKey] ?? 0) > 0;
 
             return (
               <div key={key} className="flex flex-col gap-2">
@@ -437,6 +500,12 @@ export default function AdminPromptEditor() {
                       기본값으로 초기화
                     </button>
                   )}
+                  <button
+                    onClick={() => handleMentorCopy(mentorId, key)}
+                    className="px-3 py-1 border border-ink/20 font-mono text-xs opacity-50 hover:opacity-80 transition-all"
+                  >
+                    {justCopied ? '복사됨 ✓' : '코드 복사'}
+                  </button>
                   <button
                     onClick={() => handleMentorSave(mentorId, key)}
                     disabled={isSaving || !dirty}
