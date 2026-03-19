@@ -884,9 +884,58 @@ ${mentorPrompt}
 ${avoidSection}
 ${commonPrompt}`;
 
+  // 1차: Gemini 3.1 Pro Preview
+  try {
+    const ai = getGemini();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.1-pro-preview',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              quote:       { type: Type.STRING },
+              source:      { type: Type.STRING },
+              translation: { type: Type.STRING },
+              context:     { type: Type.STRING },
+              tags:        { type: Type.ARRAY, items: { type: Type.STRING } },
+            },
+            required: ['quote', 'source', 'translation', 'context', 'tags'],
+          },
+        },
+      },
+    });
+    const text = response.text;
+    if (!text) throw new Error('빈 응답');
+    return JSON.parse(text) as KnowledgeEntry[];
+  } catch (geminiErr) {
+    console.warn('[Knowledge] Gemini 3.1 Pro 실패, Claude Opus 4.6으로 fallback:', geminiErr);
+  }
+
+  // 2차 fallback: Claude Opus 4.6
+  try {
+    const claude = getClaude();
+    const claudeRes = await claude.messages.create({
+      model: 'claude-opus-4-6',
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt + '\n\nJSON 배열만 응답하세요. 마크다운 코드블록 없이 순수 JSON만.' }],
+    });
+    const claudeText = claudeRes.content[0].type === 'text' ? claudeRes.content[0].text : '';
+    if (!claudeText) throw new Error('빈 응답');
+    const jsonMatch = claudeText.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error('JSON 파싱 실패');
+    return JSON.parse(jsonMatch[0]) as KnowledgeEntry[];
+  } catch (claudeErr) {
+    console.warn('[Knowledge] Claude Opus 4.6 실패, Gemini Flash로 최종 fallback:', claudeErr);
+  }
+
+  // 3차 최종 fallback: Gemini 3.1 Flash Lite Preview
   const ai = getGemini();
   const response = await ai.models.generateContent({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-3.1-flash-lite-preview',
     contents: prompt,
     config: {
       responseMimeType: 'application/json',
@@ -906,7 +955,6 @@ ${commonPrompt}`;
       },
     },
   });
-
   const text = response.text;
   if (!text) throw new Error('AI 응답을 받지 못했습니다.');
   return JSON.parse(text) as KnowledgeEntry[];
