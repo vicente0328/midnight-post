@@ -991,7 +991,19 @@ export const generateKnowledge = onCall(async (request) => {
   const { mentorId } = request.data as { mentorId: MentorId };
   if (!mentorId) throw new HttpsError('invalid-argument', 'mentorId가 필요합니다.');
 
+  const db = getDb();
   const avoidItems = await collectRecentQuotes(mentorId);
+
+  // 강제 재생성 시 클라이언트가 삭제 전 저장해둔 오늘 구절 보충
+  try {
+    const forceAvoidSnap = await db.doc(`meta/force_regen_avoid_${mentorId}`).get();
+    if (forceAvoidSnap.exists) {
+      const extra: { quote: string; source: string }[] = forceAvoidSnap.data()?.items ?? [];
+      avoidItems.push(...extra);
+      await db.doc(`meta/force_regen_avoid_${mentorId}`).delete();
+    }
+  } catch {}
+
   const entries = await generateKnowledgeEntries(mentorId, avoidItems);
   return entries;
 });

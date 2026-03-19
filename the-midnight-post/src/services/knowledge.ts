@@ -235,6 +235,23 @@ export async function forceRegenerateKnowledge(): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
   const mentors: MentorId[] = ['hyewoon', 'benedicto', 'theodore', 'yeonam'];
 
+  // 삭제 전에 오늘 구절을 수집해 임시 저장 (중복 방지용)
+  for (const mentorId of mentors) {
+    const items: { quote: string; source: string }[] = [];
+    for (const suffix of ALL_SUFFIXES) {
+      try {
+        const snap = await getDoc(doc(db, 'mentor_knowledge', `${mentorId}_${today}${suffix}`));
+        if (snap.exists()) {
+          const entries: KnowledgeEntry[] = snap.data()?.entries ?? [];
+          entries.forEach(e => { if (e.quote) items.push({ quote: e.quote, source: e.source ?? '' }); });
+        }
+      } catch {}
+    }
+    if (items.length > 0) {
+      try { await setDoc(doc(db, 'meta', `force_regen_avoid_${mentorId}`), { items }); } catch {}
+    }
+  }
+
   // 오늘 잠금 및 지식 문서 모두 삭제 (모든 슬롯 포함)
   for (const suffix of ALL_SUFFIXES) {
     const period = suffix.slice(1); // '_h08' → 'h08'
