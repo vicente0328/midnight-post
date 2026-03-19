@@ -7,6 +7,7 @@ import { useSound } from '../components/SoundContext';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { rankMentors } from '../services/ai';
+import { useTranslation } from 'react-i18next';
 
 // ── 위기 키워드 (클라이언트 사이드) ──────────────────────────────────────────
 
@@ -20,63 +21,6 @@ function hasCrisis(text: string): boolean {
   return CRISIS_PATTERNS.some(k => text.includes(k));
 }
 
-// ── 시간대별 문구 ──────────────────────────────────────────────────────────────
-
-const TIME_CONTENT: Record<string, { subtitle: string; greetings: string[] }> = {
-  dawn: {
-    subtitle: "새벽에 찾아온 당신의\n마음을 한 줄로 남겨주세요.",
-    greetings: [
-      "이른 새벽,\n무엇이 당신을 깨웠나요?",
-      "새벽의 고요 속에서\n어떤 생각이 머무나요?",
-      "남들이 잠든 시간,\n혼자 깨어있는 당신에게.",
-      "새벽빛이 스미기 전,\n마음속 이야기를 나눠요.",
-      "당신의 모든 순간을 존중합니다.",
-    ],
-  },
-  morning: {
-    subtitle: "오늘 하루,\n어떤 마음으로 시작하시나요?",
-    greetings: [
-      "좋은 아침입니다.\n오늘은 어떤 하루를 보내실 건가요?",
-      "새로운 하루가 시작되었습니다.\n오늘의 마음은 어떤가요?",
-      "아침의 첫 마음을\n한 줄로 남겨주세요.",
-      "오늘 하루를\n어떻게 맞이하고 싶으신가요?",
-      "천천히,\n당신의 속도대로 이야기해주세요.",
-    ],
-  },
-  afternoon: {
-    subtitle: "오후의 한 자락,\n당신의 이야기를 들려주세요.",
-    greetings: [
-      "오후의 햇살 속에서\n어떤 생각이 스치나요?",
-      "하루의 중간,\n잠시 마음을 들여다보세요.",
-      "오늘 하루는\n지금까지 어떠신가요?",
-      "잠깐 멈추어,\n당신의 마음을 살펴보세요.",
-      "마음속에 담아둔 말을\n조용히 꺼내보세요.",
-    ],
-  },
-  evening: {
-    subtitle: "하루의 끝자락,\n마음을 한 줄로 남겨주세요.",
-    greetings: [
-      "하루를 마무리하며\n어떤 감정이 남아있나요?",
-      "저녁 노을처럼,\n오늘 하루를 되돌아보세요.",
-      "수고한 하루를 함께 돌아봐요.",
-      "저녁이 왔습니다.\n오늘 당신의 마음은 어땠나요?",
-      "이곳에서는 어떤 감정이든 괜찮습니다.",
-    ],
-  },
-  night: {
-    subtitle: "지친 밤, 당신의\n마음을 한 줄로 남겨주세요.",
-    greetings: [
-      "오늘 하루는 어땠나요?",
-      "당신의 밤이 평안하기를 바랍니다.",
-      "밤이 깊어가는 시간,\n어떤 생각에 잠겨 있나요?",
-      "누구에게도 하지 못한 말이 있다면\n이곳에 남겨주세요.",
-      "오늘 하루도 견뎌내느라 애썼습니다.",
-      "당신의 발걸음이 머무는 이 밤.",
-      "오늘 하루의 무게를\n이곳에 덜어두세요.",
-    ],
-  },
-};
-
 function getTimePeriod(hour: number): string {
   if (hour >= 0 && hour < 5) return 'dawn';
   if (hour < 12) return 'morning';
@@ -86,10 +30,10 @@ function getTimePeriod(hour: number): string {
 }
 
 export default function Home() {
+  const { t } = useTranslation();
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAnimation, setShowAnimation] = useState(false);
-  // crisisEntryId: entry ID when crisis detected (non-null = crisis UI visible)
   const [crisisEntryId, setCrisisEntryId] = useState<string | null>(null);
   const [greeting, setGreeting] = useState('');
   const [timePeriod, setTimePeriod] = useState('night');
@@ -102,7 +46,7 @@ export default function Home() {
   useEffect(() => {
     const period = getTimePeriod(new Date().getHours());
     setTimePeriod(period);
-    const greetings = TIME_CONTENT[period].greetings;
+    const greetings = t(`home.time.${period}.greetings`, { returnObjects: true }) as string[];
     setGreeting(greetings[Math.floor(Math.random() * greetings.length)]);
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -128,11 +72,8 @@ export default function Home() {
 
     const isCrisis = hasCrisis(trimmed);
     setIsSubmitting(true);
-    // 애니메이션은 두 번의 Firestore 쓰기가 완료된 후에만 표시
-    // (쓰기 완료 = 트리거 발동 보장 = 폰을 잠가도 답장 생성됨)
 
     try {
-      // 1. Save entry (content encrypted if vault is active)
       const entryRef = await addDoc(collection(db, 'entries'), {
         uid: user.uid,
         content: await encrypt(trimmed),
@@ -141,9 +82,6 @@ export default function Home() {
         status: 'replied',
       });
 
-      // 2. 답장 생성 작업 등록
-      // await 완료 시점에 Firestore 서버가 문서를 수신 → 트리거 발동 확정
-      // 이후 폰을 잠그거나 앱을 꺼도 서버에서 독립적으로 답장 생성됨
       const rankedMentors = rankMentors(trimmed);
       const writtenHour = new Date().getHours();
 
@@ -156,18 +94,14 @@ export default function Home() {
         createdAt: serverTimestamp(),
       });
 
-      // 두 쓰기 모두 완료 → 이제 안전하게 애니메이션 표시
       if (!isCrisis) setShowAnimation(true);
 
-      // 3. UI 타이밍 (편지 도착 연출)
       const submittedAt = Date.now();
 
-      // 브라우저 알림 권한 요청 (비차단)
       if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission();
       }
 
-      // 멘토별 발송 시간: 1번째 즉시, 2번째 1분 이내, 3번째 2분 이내, 4번째 3분 이내
       const deliverTimes: Record<string, number> = {};
       const maxDelaysMs = [0, 60 * 1000, 2 * 60 * 1000, 3 * 60 * 1000];
       rankedMentors.forEach((mentorId, idx) => {
@@ -177,12 +111,9 @@ export default function Home() {
       localStorage.setItem('pendingDeliverTimes', JSON.stringify(deliverTimes));
       window.dispatchEvent(new Event('pendingEntryUpdated'));
 
-      // 4. Route based on crisis
       if (isCrisis) {
         setCrisisEntryId(entryRef.id);
       }
-      // 위기 아닌 경우: 발송 애니메이션을 유지하며 Library 안내
-      // (자동 이동 없음 — 답장 도착 알람으로 Mailbox 이동 유도)
     } catch (error) {
       console.error('Error submitting entry:', error);
       setIsSubmitting(false);
@@ -206,40 +137,39 @@ export default function Home() {
         </div>
 
         <p className="font-serif text-xl leading-relaxed opacity-85">
-          지금 많이 힘드시군요.
+          {t('home.crisis.title')}
         </p>
-        <p className="font-serif text-sm leading-[1.9] opacity-55">
-          혼자 감당하기 너무 무거울 때는<br />
-          전문적인 도움을 받으시는 것이 좋습니다.
+        <p className="font-serif text-sm leading-[1.9] opacity-55" style={{ whiteSpace: 'pre-line' }}>
+          {t('home.crisis.subtitle')}
         </p>
 
         <div className="border border-ink/15 bg-[#fdfbf7] w-full px-8 py-7 flex flex-col items-center gap-2">
-          <p className="text-[9px] uppercase tracking-[0.35em] opacity-35 mb-1">24시간 위기상담전화</p>
+          <p className="text-[9px] uppercase tracking-[0.35em] opacity-35 mb-1">{t('home.crisis.hotlineLabel')}</p>
           <a
             href="tel:1393"
             className="font-serif text-4xl font-bold tracking-widest opacity-75 hover:opacity-100 transition-opacity"
           >
             1393
           </a>
-          <p className="text-[10px] opacity-35">자살예방상담전화 · 무료 · 24시간</p>
+          <p className="text-[10px] opacity-35">{t('home.crisis.hotlineDesc')}</p>
         </div>
 
         <a
           href="tel:1577-0199"
           className="text-xs opacity-35 hover:opacity-60 transition-opacity"
         >
-          정신건강 위기상담 1577-0199
+          {t('home.crisis.mentalHealth')}
         </a>
 
         <div className="flex flex-col items-center gap-3 mt-2">
           <p className="text-xs opacity-35 font-serif italic">
-            현자들의 편지도 함께 보내드렸습니다.
+            {t('home.crisis.mentorLetters')}
           </p>
           <Link
             to={`/mailbox?entryId=${crisisEntryId}`}
             className="font-serif text-sm italic opacity-55 hover:opacity-90 transition-opacity border-b border-ink/20 pb-px"
           >
-            편지 확인하기 →
+            {t('home.crisis.checkLetters')}
           </Link>
         </div>
 
@@ -247,7 +177,7 @@ export default function Home() {
           onClick={() => { setCrisisEntryId(null); setContent(''); setIsSubmitting(false); }}
           className="mt-2 font-serif text-xs italic opacity-30 hover:opacity-55 transition-opacity"
         >
-          돌아가기
+          {t('home.crisis.back')}
         </button>
       </motion.div>
     );
@@ -270,35 +200,31 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 발송 완료 메시지 */}
         <div className="flex flex-col items-center gap-3">
-          <p className="text-lg font-serif italic opacity-75 tracking-widest">편지를 부쳤습니다.</p>
-          <p className="text-sm font-serif opacity-45 leading-relaxed break-keep" style={{ wordBreak: 'keep-all' }}>
-            답장을 기다리는 동안<br />멘토들의 연구실을 둘러보세요.
+          <p className="text-lg font-serif italic opacity-75 tracking-widest">{t('home.sentTitle')}</p>
+          <p className="text-sm font-serif opacity-45 leading-relaxed break-keep" style={{ wordBreak: 'keep-all', whiteSpace: 'pre-line' }}>
+            {t('home.sentSubtitle')}
           </p>
         </div>
 
-        {/* 구분선 */}
         <div className="flex items-center gap-3 opacity-20 w-24">
           <div className="flex-1 h-px bg-ink" />
           <div className="w-1 h-1 rotate-45 bg-[#D4AF37]" />
           <div className="flex-1 h-px bg-ink" />
         </div>
 
-        {/* Library 이동 버튼 */}
         <Link
           to="/study"
           className="font-serif italic text-sm opacity-50 hover:opacity-85 transition-opacity duration-300 border-b border-ink/20 pb-px"
         >
-          Mentor's Library 둘러보기 →
+          {t('home.browseLibrary')}
         </Link>
 
-        {/* 홈으로 돌아가기 */}
         <button
           onClick={() => { setShowAnimation(false); setContent(''); setIsSubmitting(false); }}
           className="font-serif text-xs italic opacity-25 hover:opacity-50 transition-opacity duration-300 mt-2"
         >
-          The Desk로 돌아가기
+          {t('home.backToDesk')}
         </button>
       </motion.div>
     );
@@ -308,9 +234,9 @@ export default function Home() {
   return (
     <div className="w-full max-w-2xl flex flex-col items-center">
       <div className="text-center mb-12">
-        <h1 className="text-3xl font-serif mb-4">The Desk</h1>
+        <h1 className="text-3xl font-serif mb-4">{t('home.title')}</h1>
         <p className="opacity-60 italic text-sm whitespace-pre-line break-keep" style={{ wordBreak: 'keep-all' }}>
-          {TIME_CONTENT[timePeriod].subtitle}
+          {t(`home.time.${timePeriod}.subtitle`)}
         </p>
       </div>
 
@@ -335,7 +261,7 @@ export default function Home() {
           disabled={!content.trim() || isSubmitting}
           className="mt-10 px-8 py-3 border border-ink/30 rounded-full hover:bg-ink hover:text-paper transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ink tracking-widest uppercase text-sm"
         >
-          {isSubmitting ? 'Writing...' : 'Send to Mentors'}
+          {isSubmitting ? t('home.sending') : t('home.sendButton')}
         </button>
       </form>
     </div>

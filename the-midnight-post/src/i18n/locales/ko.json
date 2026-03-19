@@ -1,0 +1,407 @@
+{
+  "mentors": {
+    "hyewoon":   { "name": "혜운 스님",    "title": "비움과 머무름의 수행자", "space": "청명각(淸明閣)", "tradition": "선불교",          "particle": "과" },
+    "benedicto": { "name": "베네딕토 신부", "title": "사랑과 위로의 동반자",   "space": "고해소",         "tradition": "가톨릭 영성",      "particle": "와" },
+    "theodore":  { "name": "테오도르 교수", "title": "이성과 실존의 철학자",   "space": "서재",           "tradition": "스토아 · 실존주의", "particle": "와" },
+    "yeonam":    { "name": "연암 선생",    "title": "순리와 조화의 선비",     "space": "취락헌(聚樂軒)", "tradition": "유교 · 도가",      "particle": "과" },
+    "unknown":   "현자"
+  },
+  "nav": {
+    "desk":    "Desk",
+    "mailbox": "Mailbox",
+    "library": "Library",
+    "archive": "Archive",
+    "guide":   "Guide",
+    "account": "Account",
+    "admin":   "Admin",
+    "login":   "Login",
+    "logout":  "Logout"
+  },
+  "notifications": {
+    "title":           "알림",
+    "clearAll":        "모두 지우기",
+    "empty":           "아직 도착한 편지가 없습니다",
+    "letterArrived":   "{{name}}의 편지가 도착했습니다",
+    "knowledgeArrived":"{{name}}의 새 지혜카드가 도착했습니다"
+  },
+  "toast": {
+    "letterArrived": "{{name}}의 편지가 도착했습니다",
+    "open":          "열어보기"
+  },
+  "relativeTime": {
+    "justNow":    "방금 전",
+    "minutesAgo": "{{n}}분 전",
+    "hoursAgo":   "{{n}}시간 전",
+    "yesterday":  "어제",
+    "daysAgo":    "{{n}}일 전"
+  },
+  "auth": {
+    "loginTitle":    "다시 오셨군요",
+    "signupTitle":   "처음 오셨나요",
+    "resetTitle":    "비밀번호 재설정",
+    "loginSubtitle": "당신의 서재로 돌아오세요.",
+    "signupSubtitle":"새로운 밤, 새로운 이야기.",
+    "resetSubtitle": "가입한 이메일을 입력해주세요.",
+    "loginTab":      "로그인",
+    "signupTab":     "회원가입",
+    "googleLogin":   "Google로 로그인",
+    "googleSignup":  "Google로 시작하기",
+    "or":            "또는",
+    "emailPlaceholder":    "이메일",
+    "passwordPlaceholder": "비밀번호",
+    "submitLogin":   "로그인",
+    "submitSignup":  "가입하기",
+    "submitReset":   "재설정 링크 보내기",
+    "resetSent":     "재설정 링크를 이메일로 보냈습니다.",
+    "forgotPassword":"비밀번호를 잊으셨나요?",
+    "backToLogin":   "돌아가기",
+    "errors": {
+      "invalidEmail":      "이메일 형식이 올바르지 않습니다.",
+      "userNotFound":      "등록되지 않은 이메일입니다.",
+      "wrongPassword":     "비밀번호가 틀렸습니다.",
+      "invalidCredential": "이메일 또는 비밀번호가 올바르지 않습니다.",
+      "emailInUse":        "이미 사용 중인 이메일입니다.",
+      "weakPassword":      "비밀번호는 6자 이상이어야 합니다.",
+      "tooManyRequests":   "잠시 후 다시 시도해주세요.",
+      "default":           "오류가 발생했습니다. 다시 시도해주세요."
+    }
+  },
+  "home": {
+    "title":       "The Desk",
+    "sendButton":  "Send to Mentors",
+    "sending":     "Writing...",
+    "sentTitle":   "편지를 부쳤습니다.",
+    "sentSubtitle":"답장을 기다리는 동안\n멘토들의 연구실을 둘러보세요.",
+    "browseLibrary":"Mentor's Library 둘러보기 →",
+    "backToDesk":  "The Desk로 돌아가기",
+    "crisis": {
+      "title":        "지금 많이 힘드시군요.",
+      "subtitle":     "혼자 감당하기 너무 무거울 때는\n전문적인 도움을 받으시는 것이 좋습니다.",
+      "hotlineLabel": "24시간 위기상담전화",
+      "hotlineDesc":  "자살예방상담전화 · 무료 · 24시간",
+      "mentalHealth": "정신건강 위기상담 1577-0199",
+      "mentorLetters":"현자들의 편지도 함께 보내드렸습니다.",
+      "checkLetters": "편지 확인하기 →",
+      "back":         "돌아가기"
+    },
+    "time": {
+      "dawn": {
+        "subtitle": "새벽에 찾아온 당신의\n마음을 한 줄로 남겨주세요.",
+        "greetings": [
+          "이른 새벽,\n무엇이 당신을 깨웠나요?",
+          "새벽의 고요 속에서\n어떤 생각이 머무나요?",
+          "남들이 잠든 시간,\n혼자 깨어있는 당신에게.",
+          "새벽빛이 스미기 전,\n마음속 이야기를 나눠요.",
+          "당신의 모든 순간을 존중합니다."
+        ]
+      },
+      "morning": {
+        "subtitle": "오늘 하루,\n어떤 마음으로 시작하시나요?",
+        "greetings": [
+          "좋은 아침입니다.\n오늘은 어떤 하루를 보내실 건가요?",
+          "새로운 하루가 시작되었습니다.\n오늘의 마음은 어떤가요?",
+          "아침의 첫 마음을\n한 줄로 남겨주세요.",
+          "오늘 하루를\n어떻게 맞이하고 싶으신가요?",
+          "천천히,\n당신의 속도대로 이야기해주세요."
+        ]
+      },
+      "afternoon": {
+        "subtitle": "오후의 한 자락,\n당신의 이야기를 들려주세요.",
+        "greetings": [
+          "오후의 햇살 속에서\n어떤 생각이 스치나요?",
+          "하루의 중간,\n잠시 마음을 들여다보세요.",
+          "오늘 하루는\n지금까지 어떠신가요?",
+          "잠깐 멈추어,\n당신의 마음을 살펴보세요.",
+          "마음속에 담아둔 말을\n조용히 꺼내보세요."
+        ]
+      },
+      "evening": {
+        "subtitle": "하루의 끝자락,\n마음을 한 줄로 남겨주세요.",
+        "greetings": [
+          "하루를 마무리하며\n어떤 감정이 남아있나요?",
+          "저녁 노을처럼,\n오늘 하루를 되돌아보세요.",
+          "수고한 하루를 함께 돌아봐요.",
+          "저녁이 왔습니다.\n오늘 당신의 마음은 어땠나요?",
+          "이곳에서는 어떤 감정이든 괜찮습니다."
+        ]
+      },
+      "night": {
+        "subtitle": "지친 밤, 당신의\n마음을 한 줄로 남겨주세요.",
+        "greetings": [
+          "오늘 하루는 어땠나요?",
+          "당신의 밤이 평안하기를 바랍니다.",
+          "밤이 깊어가는 시간,\n어떤 생각에 잠겨 있나요?",
+          "누구에게도 하지 못한 말이 있다면\n이곳에 남겨주세요.",
+          "오늘 하루도 견뎌내느라 애썼습니다.",
+          "당신의 발걸음이 머무는 이 밤.",
+          "오늘 하루의 무게를\n이곳에 덜어두세요."
+        ]
+      }
+    }
+  },
+  "mailbox": {
+    "title":       "Mailbox",
+    "subtitle":    "현자들의 편지가 모이는 곳입니다.",
+    "loading":     "편지함을 열고 있습니다…",
+    "empty":       "아직 도착한 편지가 없습니다.",
+    "emptyHint":   "The Desk에서 첫 번째 마음을 남겨보세요.",
+    "loginRequired":"로그인 후 편지함을 확인할 수 있습니다.",
+    "letter": {
+      "goToArchive": "나의 편지 보러가기",
+      "close":       "닫기",
+      "from":        "{{name}} 드림"
+    }
+  },
+  "envelopes": {
+    "title":       "The Four Envelopes",
+    "subtitle":    "네 명의 현자가 당신에게 보내는 위로의 편지입니다.",
+    "back":        "돌아가기",
+    "allArrived":  "— 모든 편지가 도착하였습니다 —",
+    "writing":     "편지를 쓰고 있습니다...",
+    "waitHint":    "마음을 다해 쓴 편지는 서두르지 않습니다.\n현자들의 답장이 하나씩, 조용히 당신 곁에 닿을 것입니다.",
+    "visitLibrary":"기다리는 동안 연구실을 방문해보세요 →",
+    "startDamso":  "{{name}}{{particle}} 담소 나누기",
+    "footer":         "당신의 평안을 기원하며,",
+    "from":           "{{name}} 드림",
+    "bookmarkSave":   "나의 서재에 저장",
+    "bookmarkRemove": "서재에서 제거",
+    "waitingPhrases": [
+      "당신의 마음에 귀 기울이고 있습니다.",
+      "오래된 책장을 넘기며 지혜를 찾고 있습니다.",
+      "촛불 아래 붓을 들고 있습니다.",
+      "깊은 사유 끝에 말씀을 가다듬고 있습니다.",
+      "먹을 갈며 마음을 정돈하고 있습니다.",
+      "당신의 하루를 조용히 헤아리고 있습니다."
+    ]
+  },
+  "archive": {
+    "title":    "Archive",
+    "subtitle": "당신이 남긴 마음의 기록입니다.",
+    "tabs": {
+      "letters":   "편지",
+      "damso":     "담소",
+      "bookmarks": "책갈피"
+    },
+    "loginRequired": "로그인 후 아카이브를 확인할 수 있습니다.",
+    "letters": {
+      "loading":       "기록을 불러오고 있습니다…",
+      "empty":         "아직 남긴 편지가 없습니다.",
+      "emptyHint":     "The Desk에서 첫 번째 마음을 남겨보세요.",
+      "replies":       "{{n}}통의 답장",
+      "confirmDelete": "삭제할까요?",
+      "viewReplies":   "멘토의 답장 보러가기 →",
+      "cancel":        "취소",
+      "delete":        "삭제"
+    },
+    "damso": {
+      "loading":       "담소 기록을 불러오고 있습니다…",
+      "empty":         "아직 나눈 담소가 없습니다.",
+      "emptyHint":     "편지를 열어 현자와 담소를 나눠보세요.",
+      "error":         "담소 기록을 불러오지 못했습니다.",
+      "turns":         "{{n}}번의 대화",
+      "close":         "닫기",
+      "noMessages":    "대화 내용이 없습니다.",
+      "retry":         "다시 시도 →",
+      "ended":         "마무리됨",
+      "open":          "열어보기 →",
+      "originalEntry": "그날의 일기",
+      "sessionWith":   "{{name}}{{particle}}의 담소",
+      "userLabel":     "나"
+    },
+    "bookmarks": {
+      "loading":       "책갈피를 불러오고 있습니다…",
+      "empty":         "아직 저장한 책갈피가 없습니다.",
+      "emptyHint":     "마음에 드는 편지에 책갈피를 달아보세요.",
+      "from":          "{{name}} 드림",
+      "close":         "닫기",
+      "savedAt":       "저장일",
+      "confirmDelete": "제거할까요?"
+    }
+  },
+  "study": {
+    "title":       "Library",
+    "subtitle":    "각자의 방에 불이 켜져 있습니다.",
+    "backToLobby": "연구실 목록으로",
+    "roomTitle":   "{{name}}의 {{room}}",
+    "sendLetter":  "편지 보내기",
+    "startDamso":  "담소 나누기",
+    "connecting":  "연결 중…",
+    "todayWisdom": "오늘의 지혜",
+    "sent":        "편지를 발송했습니다.",
+    "sentHint":    "답장이 오면 알려드릴게요.",
+    "sending":     "편지를 전하고 있습니다…",
+    "waitingFor":  "{{name}}의 답장을 기다려주세요",
+    "letterPlaceholder": "{{name}}께 오늘의 마음을 전해보세요…",
+    "sendAction":  "편지 보내기 →",
+    "loading":      "지혜를 불러오고 있습니다…",
+    "empty":        "아직 지혜 카드가 없습니다.",
+    "regenerating": "재생성 중...",
+    "regenerate":   "↻ 지혜 재생성",
+    "emptyHint":   "잠시 후 현자들의 지혜가 도착합니다.",
+    "card": {
+      "source":      "출처",
+      "translation": "번역",
+      "context":     "현자의 말"
+    },
+    "wisdom": {
+      "title":  "지혜 카드",
+      "close":  "닫기"
+    },
+    "rooms": {
+      "hyewoon":   { "ambience": "고요한 선원의 향내가 번진다.\n빛이 창호지를 투과해 바닥에 내려앉는다." },
+      "benedicto": { "ambience": "촛불이 흔들리며 작은 방을 밝힌다.\n나무 향이 조용히 감돈다." },
+      "theodore":  { "ambience": "책들이 빼곡한 서가. 잉크 냄새와\n오래된 종이 사이로 사유가 깃든다." },
+      "yeonam":    { "ambience": "먹빛 향기와 대나무 그림자.\n창 너머 산이 숨을 고른다." }
+    }
+  },
+  "damso": {
+    "back":               "나가기",
+    "inputPlaceholder":   "말씀드립니다",
+    "send":               "전하다",
+    "sending":            "...",
+    "endConversation":    "담소 마치기",
+    "sessionTitle":       "{{name}}{{particle}}의 담소",
+    "sessionSaved":       "나눈 이야기는 기록보관소에 고이 담겨 있습니다.",
+    "saveFailedWarning":  "연결 문제로 이 대화는 기록보관소에 저장되지 않습니다.",
+    "userLabel":          "나",
+    "sessionEnding":      "오늘의 담소가 마무리되었습니다.",
+    "crisis": {
+      "notice":    "힘드실 때는 언제든지 전화하세요.",
+      "hotline":   "자살예방상담전화 1393 · 24시간 무료",
+      "continue":  "계속 이야기하기"
+    },
+    "loading":     "잠시만 기다려주세요…",
+    "turnLimit":   "오늘의 담소가 마무리되었습니다.",
+    "rooms": {
+      "hyewoon":   {
+        "loading":     "혜운 스님이 정진하시는 청명각으로 발걸음을 옮깁니다. 은은한 향나무 냄새가 코끝을 스치고, 대나무 숲을 흔드는 바람 소리가 마음의 먼지를 씻어냅니다. 스님이 내어주시는 따뜻한 찻잔의 온기를 느끼며 잠시 숨을 고르십시오.",
+        "placeholder": "찻잔을 내려놓으며 말씀드립니다"
+      },
+      "benedicto": {
+        "loading":     "신부님이 당신을 기다리시는 고해소로 향합니다. 흔들리는 작은 촛불이 당신의 그림자를 다정하게 감싸 안으며, 이곳은 당신의 모든 진심이 안전하게 지켜질 성소임을 말해줍니다. 무거운 짐을 내려놓고 고요한 평화를 마주해 보세요.",
+        "placeholder": "촛불 앞에서 솔직하게 말씀드립니다"
+      },
+      "theodore":  {
+        "loading":     "지적인 잉크 향과 오래된 가죽 책 냄새가 가득한 테오도르의 개인 서재로 초대받았습니다. 명료한 이성의 불빛 아래서 당신의 고민을 객관화해 볼 시간입니다. 날카로운 통찰이 당신의 삶을 다시 설계할 이정표가 되어줄 것입니다.",
+        "placeholder": "생각을 정리하며 말씀드립니다"
+      },
+      "yeonam":    {
+        "loading":     "벗을 반기는 호탕한 웃음소리가 들려오는 취락헌의 문이 열립니다. 세상의 격식은 잠시 마당에 던져두고, 달빛 아래 술잔을 부딪치듯 진솔한 이야기를 나누러 오십시오. 자연의 순리에 몸을 맡긴 채 나누는 대화는 당신을 자유롭게 할 것입니다.",
+        "placeholder": "마루에 걸터앉아 이야기합니다"
+      }
+    }
+  },
+  "onboarding": {
+    "welcome": {
+      "title":    "밤의 우편함에\n오신 것을 환영합니다.",
+      "body":     "지친 마음을 한 줄로 적어 보내면,\n네 명의 현자가 편지로 답합니다."
+    },
+    "mentors": {
+      "title": "네 명의 현자가\n기다리고 있습니다.",
+      "hyewoon":   { "desc": "비움과 머무름의 수행자. 집착을 내려놓고 지금 이 순간에 머무는 법을 전합니다." },
+      "benedicto": { "desc": "사랑과 위로의 동반자. 연약함을 긍정하고 모든 존재의 존엄을 포용합니다." },
+      "theodore":  { "desc": "이성과 실존의 철학자. 내면의 자유로 이끄는 길을 밝힙니다." },
+      "yeonam":    { "desc": "순리와 조화의 선비. 자연의 흐름에서 삶의 지혜를 길어 올립니다." }
+    },
+    "howItWorks": {
+      "title":    "단 100자면\n충분합니다.",
+      "body":     "완벽한 문장이 아니어도 됩니다.\n지금 이 마음을 그대로 꺼내 보세요.",
+      "letter":   { "title": "편지",  "desc": "책상에서 100자의 마음을\n현자들에게 부칩니다." },
+      "reply":    { "title": "답장",  "desc": "네 현자가 각자의 고전으로\n위로의 편지를 씁니다." },
+      "damso":    { "title": "담소",  "desc": "현자의 방을 찾아가\n마주 앉아 이야기 나눕니다." }
+    },
+    "sampleLetters": {
+      "title":      "이런 편지가\n도착합니다.",
+      "sampleDiary":"오늘 하루가 너무 힘들었다",
+      "sampleLabel":"샘플 일기",
+      "hyewoon": {
+        "quote": "一切有爲法，如夢幻泡影",
+        "source": "금강경",
+        "translation": "모든 인연은 꿈이요, 환영이요, 거품이요, 그림자입니다.",
+        "snippet": "도반이여, 오늘 하루가 얼마나 무거웠는지 압니다. 그 무게를 이고 여기까지 걸어온 것만으로도 충분합니다. 강물은 바위를 만나도 돌아가며 흐르듯, 마음도 막히면 또 다른 길을 찾게 되어 있습니다. 지금의 이 어둠은 영원하지 않습니다. 오늘 밤은 그냥 쉬십시오."
+      },
+      "benedicto": {
+        "quote": "Omnia tempus habent",
+        "source": "코헬렛 3:1",
+        "translation": "모든 것에는 때가 있습니다.",
+        "snippet": "형제님, 오늘 하루가 참 힘드셨겠어요. 이렇게 마음을 꺼내주셔서 고맙습니다. 지금의 무거움은 당신이 약해서가 아닙니다. 오히려 진심으로 살고 있다는 증거입니다. 주님은 무너지는 사람을 멀리하지 않으십니다. 가장 낮은 곳에 가장 가까이 계십니다. 오늘 밤, 잠시 그 품에 기대어도 됩니다."
+      }
+    },
+    "features": {
+      "title":     "지혜는 계속\n쌓여갑니다.",
+      "knowledge": {
+        "title": "지혜 카드",
+        "desc":  "매일 아침과 저녁, 현자들이 선별한 고전의 구절이 새롭게 업데이트됩니다. 하단 탭 Library에서 만날 수 있습니다."
+      },
+      "bookmark": {
+        "title": "책갈피",
+        "desc":  "마음에 울림을 준 편지나 지혜 구절은 책갈피로 저장해 Archive에서 언제든 다시 꺼내볼 수 있습니다."
+      }
+    },
+    "cta": [
+      "현자들을 만나볼게요",
+      "어떻게 쓰는 건가요?",
+      "편지가 어떻게 오는지 볼게요",
+      "또 무엇이 있나요?",
+      "편지를 쓰러 가겠습니다"
+    ],
+    "skipForNow": "나중에 읽겠습니다",
+    "close":      "닫기"
+  },
+  "vault": {
+    "setup": {
+      "title":       "일기 보호",
+      "description": "2차 비밀번호를 설정하여\n일기와 편지를 암호화하고 안전하게 보호합니다",
+      "newPassword":      "새 비밀번호 (4자 이상)",
+      "confirmPassword":  "비밀번호 확인",
+      "warning":          "비밀번호를 잊으면 일기를 복구할 수 없습니다.\n안전한 곳에 보관해주세요.",
+      "submit":           "설정하기",
+      "skip":             "나중에 설정하기 — 일기가 암호화되지 않습니다",
+      "errors": {
+        "tooShort":   "비밀번호는 4자 이상이어야 합니다.",
+        "mismatch":   "비밀번호가 일치하지 않습니다.",
+        "setupFailed":"설정 중 오류가 발생했습니다. 다시 시도해주세요."
+      }
+    },
+    "unlock": {
+      "title":       "잠금 해제",
+      "description": "계속하려면 보호 비밀번호를 입력해주세요.",
+      "password":    "비밀번호",
+      "submit":      "열기",
+      "wrongPassword":"비밀번호가 올바르지 않습니다."
+    },
+    "processing": "처리 중…",
+    "announcement": {
+      "body1": "안녕하세요, <em>'The Midnight Post'</em>입니다.",
+      "body2": "당신의 가장 소중한 생각과 기록을 위한 안전한 공간이 되어드리고자, <em>'Vault'</em> 기능을 도입하였습니다.",
+      "body3": "이제 당신의 모든 기록은 서버에 저장되기 전, 당신의 기기에서 먼저 암호화됩니다.",
+      "body4": "이는 마치 당신의 일기를 아무도 열 수 없는 견고한 개인 금고에 넣고, 그 열쇠는 오직 당신만 갖게 되는 것과 같습니다.",
+      "body5": "이 금고를 열 수 있는 유일한 방법은 당신이 직접 설정하는 <em>'Vault 비밀번호'</em>입니다. 이 비밀번호 덕분에, 저희 관리자를 포함한 그 누구도 당신의 기록을 절대 열어볼 수 없습니다. 모든 프라이버시는 완벽히 당신의 손에 달려 있습니다.",
+      "body6": "서버에는 암호화된 문장만 저장됩니다. <locked>은 관리자가 데이터를 열어봐도 원본이 보이지 않습니다.",
+      "body7": "<em>'Vault 비밀번호'</em>는 당신의 프라이버시를 위한 가장 강력한 보호 장치이므로, 저희 서버에 저장되지 않습니다.",
+      "warningTitle": "주의사항",
+      "warning": "만약 비밀번호를 잃어버리면 저희도 도와드릴 방법이 없습니다. 비밀번호를 분실하면 당신의 소중한 기록은 영원히 잠기게 되니, 반드시 잊어버리지 않을 안전한 곳에 보관해주세요.",
+      "lockedLabel": "[잠긴 내용]",
+      "confirm": "이해했습니다"
+    }
+  },
+  "account": {
+    "joinedSince":  "{{date}}부터 함께하고 있습니다",
+    "stats": {
+      "letters":   "받은 편지",
+      "bookmarks": "간직한 편지",
+      "damso":     "나눈 담소"
+    },
+    "logout":      "로그아웃",
+    "language":    "언어 / Language"
+  },
+  "footer": "© {{year}} The Midnight Post. All rights reserved.",
+  "common": {
+    "close":  "닫기",
+    "back":   "돌아가기",
+    "save":   "저장",
+    "cancel": "취소",
+    "delete": "삭제",
+    "loading":"불러오는 중…"
+  }
+}

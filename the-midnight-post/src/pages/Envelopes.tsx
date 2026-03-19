@@ -10,42 +10,14 @@ import { MentorReply } from '../services/ai';
 import { prefetchDamso, type MentorId } from '../services/damso';
 import { X, Feather, Flower2, Cross, Brush, MessageCircle, Bookmark, ChevronLeft } from 'lucide-react';
 import { ShareCardButton } from '../utils/shareCard';
+import { useTranslation } from 'react-i18next';
 
 
-const WAITING_PHRASES = [
-  "당신의 마음에 귀 기울이고 있습니다.",
-  "오래된 책장을 넘기며 지혜를 찾고 있습니다.",
-  "촛불 아래 붓을 들고 있습니다.",
-  "깊은 사유 끝에 말씀을 가다듬고 있습니다.",
-  "먹을 갈며 마음을 정돈하고 있습니다.",
-  "당신의 하루를 조용히 헤아리고 있습니다.",
-];
-
-const MENTORS = {
-  hyewoon: { 
-    name: '혜운 스님', 
-    title: '비움과 머무름의 수행자', 
-    icon: <Flower2 className="w-8 h-8 text-[#D4AF37]" strokeWidth={1.5} />,
-    color: 'from-stone-700 to-stone-900'
-  },
-  benedicto: { 
-    name: '베네딕토 신부', 
-    title: '사랑과 위로의 동반자', 
-    icon: <Cross className="w-8 h-8 text-[#D4AF37]" strokeWidth={1.5} />,
-    color: 'from-red-900 to-red-950'
-  },
-  theodore: { 
-    name: '테오도르 교수', 
-    title: '이성과 실존의 철학자', 
-    icon: <Feather className="w-8 h-8 text-[#D4AF37]" strokeWidth={1.5} />,
-    color: 'from-slate-800 to-slate-950'
-  },
-  yeonam: { 
-    name: '연암 선생', 
-    title: '순리와 조화의 선비', 
-    icon: <Brush className="w-8 h-8 text-[#D4AF37]" strokeWidth={1.5} />,
-    color: 'from-emerald-900 to-emerald-950'
-  }
+const MENTOR_ICONS: Record<string, { icon: React.ReactElement; color: string }> = {
+  hyewoon:   { icon: <Flower2 className="w-8 h-8 text-[#D4AF37]" strokeWidth={1.5} />, color: 'from-stone-700 to-stone-900' },
+  benedicto: { icon: <Cross   className="w-8 h-8 text-[#D4AF37]" strokeWidth={1.5} />, color: 'from-red-900 to-red-950' },
+  theodore:  { icon: <Feather className="w-8 h-8 text-[#D4AF37]" strokeWidth={1.5} />, color: 'from-slate-800 to-slate-950' },
+  yeonam:    { icon: <Brush   className="w-8 h-8 text-[#D4AF37]" strokeWidth={1.5} />, color: 'from-emerald-900 to-emerald-950' },
 };
 
 // 항상 고정 순서로 4칸 유지 — 레이아웃 흔들림 방지
@@ -57,12 +29,15 @@ export default function Envelopes() {
   const { decrypt } = useVault();
   const { playArrivalSound } = useSound();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [allReplies, setAllReplies] = useState<MentorReply[]>([]);
   const [now, setNow] = useState(() => new Date());
   const [selectedReply, setSelectedReply] = useState<MentorReply | null>(null);
   const [phraseIndex, setPhraseIndex] = useState(0);
   // 페이지 전환 완료 후 애니메이션 시작 — 전환 중 글리치 방지
   const [ready, setReady] = useState(false);
+
+  const waitingPhrases = t('envelopes.waitingPhrases', { returnObjects: true }) as string[];
 
   // localStorage의 deliverTimes 기준 필터링
   const pendingEntryId = localStorage.getItem('pendingEntryId');
@@ -81,8 +56,8 @@ export default function Envelopes() {
 
   // 페이지 마운트 후 짧은 대기 후 애니메이션 허용
   useEffect(() => {
-    const t = setTimeout(() => setReady(true), 80);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setReady(true), 80);
+    return () => clearTimeout(timer);
   }, []);
 
   // now 갱신 — 미래의 deliverAt이 지나면 카드 자동 표시
@@ -94,10 +69,10 @@ export default function Envelopes() {
   useEffect(() => {
     if (replies.length >= MENTOR_ORDER.length) return;
     const interval = setInterval(() => {
-      setPhraseIndex((prev) => (prev + 1) % WAITING_PHRASES.length);
+      setPhraseIndex((prev) => (prev + 1) % waitingPhrases.length);
     }, 3500);
     return () => clearInterval(interval);
-  }, [replies.length]);
+  }, [replies.length, waitingPhrases.length]);
 
   // 새 편지 도착 감지 (deliverAt 기준) → 사운드 재생
   useEffect(() => {
@@ -154,11 +129,11 @@ export default function Envelopes() {
         className="self-start flex items-center gap-2 mb-6 opacity-40 hover:opacity-80 transition-opacity duration-300 text-sm font-serif italic"
       >
         <ChevronLeft size={16} strokeWidth={1.5} />
-        돌아가기
+        {t('envelopes.back')}
       </button>
 
-      <h1 className="text-3xl font-serif mb-6">The Four Envelopes</h1>
-      <p className="opacity-60 italic text-sm mb-8">네 명의 현자가 당신에게 보내는 위로의 편지입니다.</p>
+      <h1 className="text-3xl font-serif mb-6">{t('envelopes.title')}</h1>
+      <p className="opacity-60 italic text-sm mb-8">{t('envelopes.subtitle')}</p>
 
       {/* 대기 문구 + 안내 */}
       <div className="min-h-[7rem] flex flex-col items-center justify-center gap-3 mb-10">
@@ -180,7 +155,7 @@ export default function Envelopes() {
                 transition={{ duration: 0.8, ease: 'easeInOut' }}
                 className="font-serif italic text-sm text-[#8B7355] tracking-wide text-center px-4"
               >
-                — {WAITING_PHRASES[phraseIndex]} —
+                — {waitingPhrases[phraseIndex]} —
               </motion.p>
               <motion.div
                 initial={{ opacity: 0 }}
@@ -188,15 +163,14 @@ export default function Envelopes() {
                 transition={{ delay: 1.5, duration: 1.2 }}
                 className="flex flex-col items-center gap-2"
               >
-                <p className="font-serif text-xs text-ink/35 text-center leading-relaxed px-6">
-                  마음을 다해 쓴 편지는 서두르지 않습니다.<br />
-                  현자들의 답장이 하나씩, 조용히 당신 곁에 닿을 것입니다.
+                <p className="font-serif text-xs text-ink/35 text-center leading-relaxed px-6" style={{ whiteSpace: 'pre-line' }}>
+                  {t('envelopes.waitHint')}
                 </p>
                 <button
                   onClick={() => navigate('/study')}
                   className="font-serif italic text-xs text-[#8B7355] hover:text-[#6b5a3e] transition-colors duration-300 border-b border-[#8B7355]/50 hover:border-[#6b5a3e] pb-px mt-1"
                 >
-                  기다리는 동안 연구실을 방문해보세요 →
+                  {t('envelopes.visitLibrary')}
                 </button>
               </motion.div>
             </motion.div>
@@ -208,7 +182,7 @@ export default function Envelopes() {
               transition={{ duration: 1, ease: 'easeOut', delay: 0.4 }}
               className="font-serif italic text-sm text-[#8B7355]/55 tracking-wide text-center"
             >
-              — 모든 편지가 도착하였습니다 —
+              {t('envelopes.allArrived')}
             </motion.p>
           )}
         </AnimatePresence>
@@ -217,7 +191,9 @@ export default function Envelopes() {
       {/* 항상 4칸 고정 그리드 — 카드 추가로 인한 리플로우 없음 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 w-full">
         {MENTOR_ORDER.map((mentorId) => {
-          const mentor = MENTORS[mentorId];
+          const mentor = MENTOR_ICONS[mentorId];
+          const mentorName = t(`mentors.${mentorId}.name`);
+          const mentorTitle = t(`mentors.${mentorId}.title`);
           const reply = replies.find(r => r.mentorId === mentorId);
           const hasArrived = !!reply;
           // 도착 순서 기반 stagger: 연속 도착해도 순차적으로 부드럽게
@@ -254,11 +230,11 @@ export default function Envelopes() {
                 {mentor.icon}
               </div>
 
-              <h3 className="font-serif text-lg font-bold mb-2 text-ink/90">{mentor.name}</h3>
+              <h3 className="font-serif text-lg font-bold mb-2 text-ink/90">{mentorName}</h3>
               {hasArrived ? (
-                <p className="text-[10px] opacity-60 uppercase tracking-widest text-center">{mentor.title}</p>
+                <p className="text-[10px] opacity-60 uppercase tracking-widest text-center">{mentorTitle}</p>
               ) : (
-                <p className="font-serif italic text-[11px] text-[#8B7355]/60 animate-pulse mt-1">편지를 쓰고 있습니다...</p>
+                <p className="font-serif italic text-[11px] text-[#8B7355]/60 animate-pulse mt-1">{t('envelopes.writing')}</p>
               )}
             </motion.div>
           );
@@ -285,15 +261,6 @@ export default function Envelopes() {
       </AnimatePresence>
     </div>
   );
-}
-
-// 한국어 조사 와/과 선택 (받침 있으면 '과', 없으면 '와')
-function waOrGwa(word: string): string {
-  const lastChar = word[word.length - 1];
-  const code = lastChar.charCodeAt(0);
-  if (code < 0xAC00 || code > 0xD7A3) return '와'; // 한글이 아니면 기본값
-  const jongseong = (code - 0xAC00) % 28;
-  return jongseong !== 0 ? '과' : '와';
 }
 
 // Split a paragraph into dialogue and non-dialogue segments
@@ -327,7 +294,11 @@ function LetterModal({
 }) {
   const { user } = useAuth();
   const { encrypt } = useVault();
-  const mentor = MENTORS[reply.mentorId];
+  const { t } = useTranslation();
+  const mentor = MENTOR_ICONS[reply.mentorId];
+  const mentorName = t(`mentors.${reply.mentorId}.name`);
+  const mentorTitle = t(`mentors.${reply.mentorId}.title`);
+  const mentorParticle = t(`mentors.${reply.mentorId}.particle`);
   const [bookmarkDocId, setBookmarkDocId] = useState<string | null>(null);
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
 
@@ -405,7 +376,7 @@ function LetterModal({
           <button
             onClick={toggleBookmark}
             disabled={bookmarkLoading}
-            title={bookmarkDocId ? '서재에서 제거' : '나의 서재에 저장'}
+            title={bookmarkDocId ? t('envelopes.bookmarkRemove') : t('envelopes.bookmarkSave')}
             className="absolute top-4 right-12 sm:top-8 sm:right-16 transition-all duration-300 disabled:opacity-30"
           >
             <Bookmark
@@ -424,8 +395,8 @@ function LetterModal({
             <div className="absolute inset-1 rounded-full border border-[#D4AF37]/50"></div>
             {React.cloneElement(mentor.icon as React.ReactElement, { className: "w-5 h-5 sm:w-6 sm:h-6 text-[#D4AF37]" })}
           </div>
-          <h2 className="font-serif text-xl sm:text-2xl font-bold tracking-wider sm:tracking-widest text-ink/90">{mentor.name}</h2>
-          <p className="text-[10px] sm:text-xs opacity-50 uppercase tracking-[0.2em] sm:tracking-[0.3em] mt-1 sm:mt-2">{mentor.title}</p>
+          <h2 className="font-serif text-xl sm:text-2xl font-bold tracking-wider sm:tracking-widest text-ink/90">{mentorName}</h2>
+          <p className="text-[10px] sm:text-xs opacity-50 uppercase tracking-[0.2em] sm:tracking-[0.3em] mt-1 sm:mt-2">{mentorTitle}</p>
         </div>
 
         <div className="font-serif text-ink/90">
@@ -478,8 +449,8 @@ function LetterModal({
 
           {/* Footer Signature */}
           <div className="mt-8 md:mt-24 text-right opacity-60 italic">
-            <p className="text-sm sm:text-lg">당신의 평안을 기원하며,</p>
-            <p className="text-base sm:text-xl mt-1 sm:mt-2 font-bold">{mentor.name} 드림</p>
+            <p className="text-sm sm:text-lg">{t('envelopes.footer')}</p>
+            <p className="text-base sm:text-xl mt-1 sm:mt-2 font-bold">{t('envelopes.from', { name: mentorName })}</p>
           </div>
 
           {/* 담소 나누기 버튼 */}
@@ -498,7 +469,7 @@ function LetterModal({
                 className="text-[#D4AF37]/70 group-hover:text-[#D4AF37] transition-colors duration-500"
               />
               <span className="italic text-ink/60 group-hover:text-ink/90 transition-colors duration-500">
-                {mentor.name}{waOrGwa(mentor.name)} 담소 나누기
+                {t('envelopes.startDamso', { name: mentorName, particle: mentorParticle })}
               </span>
             </button>
           </div>
@@ -508,7 +479,7 @@ function LetterModal({
             <div className="h-px w-full bg-ink/8" />
             <div className="mt-3">
               <ShareCardButton
-                mentorName={mentor.name}
+                mentorName={mentorName}
                 quote={reply.quote}
                 source={reply.source ?? ''}
                 translation={reply.translation}

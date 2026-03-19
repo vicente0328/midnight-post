@@ -5,6 +5,7 @@ import { collection, addDoc, doc, getDoc, updateDoc, serverTimestamp } from 'fir
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
 import { useVault } from '../components/VaultContext';
+import { useTranslation } from 'react-i18next';
 import {
   generateDamsoOpening,
   generateDamsoResponse,
@@ -24,7 +25,7 @@ function hasCrisis(text: string): boolean {
   return CRISIS_PATTERNS.some(k => text.includes(k));
 }
 
-const MAX_USER_TURNS = 5; // 질문 5개 제한
+const MAX_USER_TURNS = 5;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,45 +36,13 @@ interface Message {
   rawInput?: string;
 }
 
-// ─── Mentor spaces ────────────────────────────────────────────────────────────
+// ─── Mentor space static data (accent colors only) ────────────────────────────
 
 const MENTOR_SPACES = {
-  hyewoon: {
-    name: '혜운 스님',
-    spaceName: '청명각(淸明閣)',
-    loadingText:
-      '혜운 스님이 정진하시는 청명각으로 발걸음을 옮깁니다. 은은한 향나무 냄새가 코끝을 스치고, 대나무 숲을 흔드는 바람 소리가 마음의 먼지를 씻어냅니다. 스님이 내어주시는 따뜻한 찻잔의 온기를 느끼며 잠시 숨을 고르십시오.',
-    placeholder: '찻잔을 내려놓으며 말씀드립니다',
-    bg: '#f8f6f1',
-    accent: '#7c6a50',
-  },
-  benedicto: {
-    name: '베네딕토 신부',
-    spaceName: '고해소',
-    loadingText:
-      '신부님이 당신을 기다리시는 고해소로 향합니다. 흔들리는 작은 촛불이 당신의 그림자를 다정하게 감싸 안으며, 이곳은 당신의 모든 진심이 안전하게 지켜질 성소임을 말해줍니다. 무거운 짐을 내려놓고 고요한 평화를 마주해 보세요.',
-    placeholder: '촛불 앞에서 솔직하게 말씀드립니다',
-    bg: '#f8f5f2',
-    accent: '#7a3030',
-  },
-  theodore: {
-    name: '테오도르 교수',
-    spaceName: '서재',
-    loadingText:
-      '지적인 잉크 향과 오래된 가죽 책 냄새가 가득한 테오도르의 개인 서재로 초대받았습니다. 명료한 이성의 불빛 아래서 당신의 고민을 객관화해 볼 시간입니다. 날카로운 통찰이 당신의 삶을 다시 설계할 이정표가 되어줄 것입니다.',
-    placeholder: '생각을 정리하며 말씀드립니다',
-    bg: '#f5f6f8',
-    accent: '#3a4a5c',
-  },
-  yeonam: {
-    name: '연암 선생',
-    spaceName: '취락헌(聚樂軒)',
-    loadingText:
-      '벗을 반기는 호탕한 웃음소리가 들려오는 취락헌의 문이 열립니다. 세상의 격식은 잠시 마당에 던져두고, 달빛 아래 술잔을 부딪치듯 진솔한 이야기를 나누러 오십시오. 자연의 순리에 몸을 맡긴 채 나누는 대화는 당신을 자유롭게 할 것입니다.',
-    placeholder: '마루에 걸터앉아 이야기합니다',
-    bg: '#f4f7f4',
-    accent: '#2d5a3d',
-  },
+  hyewoon:   { bg: '#f8f6f1', accent: '#7c6a50' },
+  benedicto: { bg: '#f8f5f2', accent: '#7a3030' },
+  theodore:  { bg: '#f5f6f8', accent: '#3a4a5c' },
+  yeonam:    { bg: '#f4f7f4', accent: '#2d5a3d' },
 } as const;
 
 type SpaceKey = keyof typeof MENTOR_SPACES;
@@ -94,12 +63,14 @@ function MessageBlock({
   message,
   targetOpacity,
   mentorName,
+  userLabel,
   isAnimating,
   onAnimationComplete,
 }: {
   message: Message;
   targetOpacity: number;
   mentorName: string;
+  userLabel: string;
   isAnimating: boolean;
   onAnimationComplete?: () => void;
 }) {
@@ -139,7 +110,7 @@ function MessageBlock({
       {message.type === 'user' && (
         <p className="font-serif text-base md:text-lg leading-[2] md:leading-[2.1]"
           style={{ color: 'rgba(44,42,41,0.75)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
-          <span className="font-semibold" style={{ opacity: 0.6 }}>나:</span>
+          <span className="font-semibold" style={{ opacity: 0.6 }}>{userLabel}:</span>
           {' '}
           {message.content}
         </p>
@@ -159,13 +130,15 @@ function LoadingOverlay({
   onDone: () => void;
   ready: boolean;
 }) {
-  const space = MENTOR_SPACES[spaceKey];
+  const { t } = useTranslation();
   const [textDone, setTextDone] = useState(false);
+  const mentorSpace = t(`mentors.${spaceKey}.space`);
+  const loadingText = t(`damso.rooms.${spaceKey}.loading`);
 
   useEffect(() => {
     if (!textDone || !ready) return;
-    const t = setTimeout(onDone, 1000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(onDone, 1000);
+    return () => clearTimeout(timer);
   }, [textDone, ready, onDone]);
 
   return (
@@ -186,7 +159,7 @@ function LoadingOverlay({
       >
         <p className="text-[10px] uppercase tracking-[0.5em] mb-4"
           style={{ color: 'rgba(212,175,55,0.55)' }}>
-          {space.spaceName}
+          {mentorSpace}
         </p>
         <div className="flex items-center justify-center gap-3">
           <div className="w-12 h-px" style={{ background: 'rgba(212,175,55,0.3)' }} />
@@ -204,7 +177,7 @@ function LoadingOverlay({
         className="font-serif text-sm md:text-base leading-[2.2] max-w-md italic"
         style={{ color: 'rgba(244,241,234,0.75)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}
       >
-        {space.loadingText}
+        {loadingText}
       </motion.p>
 
       {/* Fade-in ornament when done */}
@@ -256,9 +229,15 @@ export default function Damso() {
   const { user } = useAuth();
   const { encrypt, decrypt } = useVault();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const spaceKey = (mentorId as SpaceKey) ?? 'hyewoon';
   const space = MENTOR_SPACES[spaceKey] ?? MENTOR_SPACES.hyewoon;
+  const mentorName = t(`mentors.${spaceKey}.name`);
+  const mentorSpace = t(`mentors.${spaceKey}.space`);
+  const mentorParticle = t(`mentors.${spaceKey}.particle`);
+  const placeholder = t(`damso.rooms.${spaceKey}.placeholder`);
+  const userLabel = t('damso.userLabel');
 
   const [showLoading, setShowLoading] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -277,40 +256,31 @@ export default function Damso() {
   const entryContentRef = useRef('');
   const messageOrderRef = useRef(0);
   const shouldCloseRef = useRef(false);
-  // 사용자가 위로 스크롤 중이면 자동 스크롤 하지 않음
   const isNearBottomRef = useRef(true);
 
-  // openingReady: set once AI generates the opening
   const [openingData, setOpeningData] = useState<{ stageDirection: string; mentorGreeting: string } | null>(null);
-  // overlayDone: set once loading overlay fades out
   const [overlayDone, setOverlayDone] = useState(false);
 
-  // 스크롤 위치 감지 — 사용자가 위로 올리면 자동 스크롤 멈춤
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
     isNearBottomRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 120;
   }, []);
 
-  // 새 메시지 도착 시 자동 스크롤
-  // behavior: 'smooth' 제거 — 반복 호출 시 iOS Safari/Chrome에서 scroll이 멈추는 버그 방지
   useEffect(() => {
     if (!isNearBottomRef.current) return;
     const el = scrollRef.current;
     if (!el) return;
-    // rAF으로 DOM 반영 후 스크롤
     const id = requestAnimationFrame(() => {
       el.scrollTop = el.scrollHeight;
     });
     return () => cancelAnimationFrame(id);
   }, [messages]);
 
-  // Fetch entry + create session + generate opening in background
   useEffect(() => {
     if (!user || !entryId || !mentorId) return;
 
     const init = async () => {
-      // 버튼 클릭 시 미리 시작된 promise가 있으면 재사용 (없으면 직접 fetch)
       const prefetched = consumePrefetchedDamso();
 
       const contentPromise = prefetched?.contentPromise ?? (async () => {
@@ -322,7 +292,6 @@ export default function Damso() {
       const openingPromise = prefetched?.openingPromise ??
         contentPromise.then(content => generateDamsoOpening(mentorId as MentorId, content));
 
-      // 세션 생성, 컨텐츠 로드, 오프닝 생성을 모두 병렬로 실행
       const [sessionResult, contentResult, openingResult] = await Promise.allSettled([
         addDoc(collection(db, 'damso_sessions'), {
           uid: user.uid,
@@ -357,10 +326,9 @@ export default function Damso() {
     init().catch(console.error);
   }, [user, entryId, mentorId]);
 
-  // Show opening when BOTH overlay is done AND AI data is ready
   useEffect(() => {
     if (!overlayDone || !openingData || !user) return;
-    if (messages.length > 0) return; // already shown
+    if (messages.length > 0) return;
 
     const { stageDirection, mentorGreeting, suggestedQuestions: sq } = openingData;
     setSuggestedQuestions(sq ?? []);
@@ -409,21 +377,18 @@ export default function Damso() {
     navigate('/study', { state: { activeRoom: mentorId } });
   }, [mentorId, navigate]);
 
-  // isEnding 전환 시 세션 종료 후 자동 이동
   useEffect(() => {
     if (!isEnding) return;
-    const t = setTimeout(handleEndSession, 4500);
-    return () => clearTimeout(t);
+    const timer = setTimeout(handleEndSession, 4500);
+    return () => clearTimeout(timer);
   }, [isEnding, handleEndSession]);
 
-  // Send message
   const handleSend = async () => {
     const raw = inputValue.trim();
     if (!raw || isSending || animatingId || isEnding) return;
     setInputValue('');
     setIsSending(true);
 
-    // 위기 키워드 감지 — 담소는 그대로 계속
     if (hasCrisis(raw)) setShowCrisisBanner(true);
 
     const nextTurn = userTurnCount + 1;
@@ -462,7 +427,6 @@ export default function Damso() {
         { type: 'mentor', content: turn.mentorSpeech },
       ];
 
-      // Save to Firestore
       if (sessionIdRef.current && user) {
         const sid = sessionIdRef.current;
         const uid = user.uid;
@@ -525,9 +489,9 @@ export default function Damso() {
                   style={{ background: 'rgba(26,18,8,0.04)', borderBottom: '1px solid rgba(26,18,8,0.07)' }}
                 >
                   <div className="flex flex-col gap-0.5">
-                    <p className="font-serif text-xs opacity-70">힘드실 때는 언제든지 전화하세요.</p>
+                    <p className="font-serif text-xs opacity-70">{t('damso.crisis.notice')}</p>
                     <a href="tel:1393" className="text-xs font-mono opacity-55 hover:opacity-90 transition-opacity">
-                      자살예방상담전화 1393 · 24시간 무료
+                      {t('damso.crisis.hotline')}
                     </a>
                   </div>
                   <button
@@ -551,13 +515,13 @@ export default function Damso() {
                   className="text-[9px] uppercase tracking-[0.4em] mb-0.5"
                   style={{ color: `${space.accent}99` }}
                 >
-                  {space.spaceName}
+                  {mentorSpace}
                 </p>
                 <h1
                   className="text-sm md:text-base font-bold tracking-wide"
                   style={{ color: 'rgba(44,42,41,0.8)' }}
                 >
-                  {space.name}와의 담소
+                  {t('damso.sessionTitle', { name: mentorName, particle: mentorParticle })}
                 </h1>
               </div>
 
@@ -586,7 +550,7 @@ export default function Damso() {
                 onMouseEnter={e => (e.currentTarget.style.color = space.accent)}
                 onMouseLeave={e => (e.currentTarget.style.color = 'rgba(44,42,41,0.35)')}
               >
-                담소 마치기
+                {t('damso.endConversation')}
               </button>
             </div>
 
@@ -606,7 +570,8 @@ export default function Damso() {
                     key={msg.id}
                     message={msg}
                     targetOpacity={calcOpacity(i, messages.length)}
-                    mentorName={space.name}
+                    mentorName={mentorName}
+                    userLabel={userLabel}
                     isAnimating={animatingId === msg.id}
                     onAnimationComplete={() => {
                       setAnimatingId(null);
@@ -638,11 +603,10 @@ export default function Damso() {
                 {sessionSaveFailed && (
                   <p className="font-serif text-xs italic text-center mb-4"
                     style={{ color: 'rgba(44,42,41,0.35)' }}>
-                    ※ 연결 문제로 이 대화는 기록보관소에 저장되지 않습니다.
+                    ※ {t('damso.saveFailedWarning')}
                   </p>
                 )}
 
-                {/* Spacer so last message isn't behind input */}
                 <div className="h-4" />
               </div>
             </div>
@@ -670,11 +634,11 @@ export default function Damso() {
                     </div>
                     <p className="font-serif text-sm italic mb-2"
                       style={{ color: 'rgba(44,42,41,0.55)' }}>
-                      오늘의 담소가 마무리되었습니다.
+                      {t('damso.sessionEnding')}
                     </p>
                     <p className="font-serif text-xs"
                       style={{ color: 'rgba(44,42,41,0.35)' }}>
-                      나눈 이야기는 기록보관소에 고이 담겨 있습니다.
+                      {t('damso.sessionSaved')}
                     </p>
                   </motion.div>
                 </motion.div>
@@ -747,12 +711,12 @@ export default function Damso() {
                         handleSend();
                       }
                     }}
-                    placeholder={space.placeholder}
+                    placeholder={placeholder}
                     rows={2}
                     disabled={isSending || !!animatingId}
                     className="flex-1 font-serif bg-transparent outline-none resize-none leading-relaxed transition-colors duration-300 py-1 placeholder:text-xs placeholder:tracking-wide"
                     style={{
-                      fontSize: '16px', // iOS 자동 확대 방지
+                      fontSize: '16px',
                       color: 'rgba(44,42,41,0.85)',
                     }}
                   />
@@ -766,7 +730,7 @@ export default function Damso() {
                       color: inputValue.trim() && !isSending && !animatingId ? space.accent : 'rgba(44,42,41,0.25)',
                     }}
                   >
-                    전하다 →
+                    {t('damso.send')} →
                   </button>
                 </div>
               </div>

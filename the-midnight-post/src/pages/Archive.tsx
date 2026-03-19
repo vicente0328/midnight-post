@@ -8,17 +8,18 @@ import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Flower2, Cross, Feather, Brush, Trash2, Bookmark } from 'lucide-react';
 import { ShareCardButton } from '../utils/shareCard';
+import { useTranslation } from 'react-i18next';
 
-// ── 멘토 정보 ─────────────────────────────────────────────────────────────────
+// ── 멘토 아이콘/색상 ──────────────────────────────────────────────────────────
 
-const MENTOR_INFO = {
-  hyewoon:   { name: '혜운 스님',    spaceName: '청명각(淸明閣)', accent: '#7c6a50', icon: Flower2, color: 'from-stone-700 to-stone-900' },
-  benedicto: { name: '베네딕토 신부', spaceName: '고해소',         accent: '#7a3030', icon: Cross,   color: 'from-red-900 to-red-950'   },
-  theodore:  { name: '테오도르 교수', spaceName: '서재',           accent: '#3a4a5c', icon: Feather, color: 'from-slate-800 to-slate-950' },
-  yeonam:    { name: '연암 선생',    spaceName: '취락헌(聚樂軒)', accent: '#2d5a3d', icon: Brush,   color: 'from-emerald-900 to-emerald-950' },
+const MENTOR_META = {
+  hyewoon:   { accent: '#7c6a50', icon: Flower2, color: 'from-stone-700 to-stone-900' },
+  benedicto: { accent: '#7a3030', icon: Cross,   color: 'from-red-900 to-red-950'   },
+  theodore:  { accent: '#3a4a5c', icon: Feather, color: 'from-slate-800 to-slate-950' },
+  yeonam:    { accent: '#2d5a3d', icon: Brush,   color: 'from-emerald-900 to-emerald-950' },
 } as const;
 
-type MentorKey = keyof typeof MENTOR_INFO;
+type MentorKey = keyof typeof MENTOR_META;
 
 // ── 타입 ──────────────────────────────────────────────────────────────────────
 
@@ -69,6 +70,7 @@ export default function Archive() {
   const { user } = useAuth();
   const { decrypt } = useVault();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const highlightEntryId = searchParams.get('entryId');
   const highlightRef = useRef<HTMLDivElement | null>(null);
@@ -210,37 +212,32 @@ export default function Archive() {
       .finally(() => setLoadingSessions(false));
   }, [user]);
 
-  const handleTabChange = (t: Tab) => {
+  const handleTabChange = (nextTab: Tab) => {
     setConfirmDeleteId(null);
-    setTab(t);
-    if (t === 'damso' && !sessionsFetched) fetchSessions();
-    if (t === 'bookmarks' && !bookmarksFetched) fetchBookmarks();
+    setTab(nextTab);
+    if (nextTab === 'damso' && !sessionsFetched) fetchSessions();
+    if (nextTab === 'bookmarks' && !bookmarksFetched) fetchBookmarks();
   };
 
   return (
     <div className="w-full max-w-4xl flex flex-col items-center">
-      <h1 className="text-3xl font-serif mb-4">The Archive</h1>
-      <p className="opacity-60 italic text-sm mb-10">당신의 밤이 기록된 서재입니다.</p>
+      <h1 className="text-3xl font-serif mb-4">{t('archive.title')}</h1>
+      <p className="opacity-60 italic text-sm mb-10">{t('archive.subtitle')}</p>
 
       {/* ── 탭 ── */}
       <div className="flex gap-8 mb-12 w-full border-b border-ink/10">
-        {([
-          { key: 'letters',   label: '편지 기록' },
-          { key: 'damso',     label: '담소 기록' },
-          { key: 'bookmarks', label: '책갈피'    },
-        ] as { key: Tab; label: string }[]).map(({ key: t, label }) => (
+        {(['letters', 'damso', 'bookmarks'] as Tab[]).map((key) => (
           <button
-            key={t}
-            onClick={() => handleTabChange(t)}
+            key={key}
+            onClick={() => handleTabChange(key)}
             className={`pb-3 font-serif text-sm tracking-widest uppercase transition-opacity duration-200 relative ${
-              tab === t ? 'opacity-90' : 'opacity-35 hover:opacity-60'
+              tab === key ? 'opacity-90' : 'opacity-35 hover:opacity-60'
             }`}
           >
-            {label}
-            {/* 탭 인디케이터 — CSS transition으로 layoutId 충돌 없이 */}
+            {t(`archive.tabs.${key}`)}
             <div
               className={`absolute bottom-0 left-0 right-0 h-px bg-ink/50 transition-opacity duration-200 ${
-                tab === t ? 'opacity-100' : 'opacity-0'
+                tab === key ? 'opacity-100' : 'opacity-0'
               }`}
             />
           </button>
@@ -261,10 +258,10 @@ export default function Archive() {
         >
 
           {loadingEntries && (
-            <p className="font-serif italic opacity-30 text-sm text-center py-12 animate-pulse">불러오는 중…</p>
+            <p className="font-serif italic opacity-30 text-sm text-center py-12 animate-pulse">{t('archive.letters.loading')}</p>
           )}
           {!loadingEntries && entries.length === 0 && (
-            <p className="font-serif italic opacity-40 text-center py-12">아직 남겨진 기록이 없습니다.</p>
+            <p className="font-serif italic opacity-40 text-center py-12">{t('archive.letters.empty')}</p>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
             {!loadingEntries && entries.map((entry, index) => {
@@ -297,7 +294,7 @@ export default function Archive() {
                     {entry.content}
                   </p>
                   <p className="mt-4 text-[10px] opacity-25 group-hover:opacity-50 transition-opacity duration-300 tracking-wide self-end">
-                    멘토의 답장 보러가기 →
+                    {t('archive.letters.viewReplies')}
                   </p>
                 </button>
                 {confirmDeleteId === entry.id ? (
@@ -305,15 +302,15 @@ export default function Archive() {
                     className="absolute top-2 right-2 flex items-center gap-2 bg-[#fdfbf7] border border-ink/20 px-2 py-1 shadow-sm z-10"
                     onClick={e => e.stopPropagation()}
                   >
-                    <span className="text-[10px] opacity-60">삭제할까요?</span>
+                    <span className="text-[10px] opacity-60">{t('archive.letters.confirmDelete')}</span>
                     <button
                       onClick={() => deleteEntry(entry.id)}
                       className="text-[10px] text-red-700 hover:text-red-900 transition-colors"
-                    >확인</button>
+                    >{t('archive.letters.delete')}</button>
                     <button
                       onClick={() => setConfirmDeleteId(null)}
                       className="text-[10px] opacity-40 hover:opacity-70 transition-opacity"
-                    >취소</button>
+                    >{t('archive.letters.cancel')}</button>
                   </div>
                 ) : (
                   <button
@@ -340,27 +337,29 @@ export default function Archive() {
           className="w-full flex flex-col items-center"
         >
           {loadingSessions && (
-            <p className="font-serif italic opacity-30 text-sm text-center py-12 animate-pulse">불러오는 중…</p>
+            <p className="font-serif italic opacity-30 text-sm text-center py-12 animate-pulse">{t('archive.damso.loading')}</p>
           )}
           {!loadingSessions && sessionsError && (
             <div className="flex flex-col items-center gap-4 py-12">
-              <p className="font-serif italic opacity-40">기록을 불러오지 못했습니다.</p>
+              <p className="font-serif italic opacity-40">{t('archive.damso.error')}</p>
               <button
                 onClick={fetchSessions}
                 className="font-serif text-xs italic opacity-50 hover:opacity-80 transition-opacity"
               >
-                다시 시도 →
+                {t('archive.damso.retry')}
               </button>
             </div>
           )}
           {!loadingSessions && sessionsFetched && sessions.length === 0 && !sessionsError && (
-            <p className="font-serif italic opacity-40 text-center py-12">아직 나눈 담소가 없습니다.</p>
+            <p className="font-serif italic opacity-40 text-center py-12">{t('archive.damso.empty')}</p>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
             {!loadingSessions && sessions.map((session, index) => {
-              const mentor = MENTOR_INFO[session.mentorId as MentorKey];
-              if (!mentor) return null;
-              const Icon = mentor.icon;
+              const meta = MENTOR_META[session.mentorId as MentorKey];
+              if (!meta) return null;
+              const Icon = meta.icon;
+              const mentorName = t(`mentors.${session.mentorId}.name`);
+              const mentorSpace = t(`mentors.${session.mentorId}.space`);
               const date = session.startedAt?.toDate
                 ? format(session.startedAt.toDate(), 'yyyy.MM.dd')
                 : '—';
@@ -385,40 +384,40 @@ export default function Archive() {
                       <span className="text-xs font-mono opacity-50">{date}</span>
                       {isEnded && (
                         <span className="text-[9px] uppercase tracking-[0.2em] opacity-30">
-                          마무리됨
+                          {t('archive.damso.ended')}
                         </span>
                       )}
                     </div>
 
                     {/* 멘토 아이콘 + 이름 */}
                     <div className="flex items-center gap-4 my-auto">
-                      <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${mentor.color} flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                      <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${meta.color} flex items-center justify-center flex-shrink-0 shadow-sm`}>
                         <Icon size={18} strokeWidth={1.5} className="text-[#D4AF37]" />
                       </div>
                       <div>
                         <p className="font-serif font-bold text-base text-ink/85 group-hover:text-ink transition-colors duration-300">
-                          {mentor.name}
+                          {mentorName}
                         </p>
-                        <p className="text-[10px] italic opacity-40 mt-0.5">{mentor.spaceName}</p>
+                        <p className="text-[10px] italic opacity-40 mt-0.5">{mentorSpace}</p>
                       </div>
                     </div>
 
                     {/* 하단 힌트 */}
                     <p className="text-[10px] opacity-25 group-hover:opacity-50 transition-opacity duration-300 tracking-wide">
-                      열어보기 →
+                      {t('archive.damso.open')}
                     </p>
                   </button>
                   {confirmDeleteId === session.id ? (
                     <div className="absolute top-2 right-2 flex items-center gap-2 bg-[#fdfbf7] border border-ink/20 px-2 py-1 shadow-sm">
-                      <span className="text-[10px] opacity-60">삭제할까요?</span>
+                      <span className="text-[10px] opacity-60">{t('archive.letters.confirmDelete')}</span>
                       <button
                         onClick={() => deleteSession(session.id)}
                         className="text-[10px] text-red-700 hover:text-red-900 transition-colors"
-                      >확인</button>
+                      >{t('archive.letters.delete')}</button>
                       <button
                         onClick={() => setConfirmDeleteId(null)}
                         className="text-[10px] opacity-40 hover:opacity-70 transition-opacity"
-                      >취소</button>
+                      >{t('archive.letters.cancel')}</button>
                     </div>
                   ) : (
                     <button
@@ -444,19 +443,20 @@ export default function Archive() {
           className="w-full flex flex-col items-center"
         >
           {loadingBookmarks && (
-            <p className="font-serif italic opacity-30 text-sm text-center py-12 animate-pulse">불러오는 중…</p>
+            <p className="font-serif italic opacity-30 text-sm text-center py-12 animate-pulse">{t('archive.bookmarks.loading')}</p>
           )}
           {!loadingBookmarks && bookmarksFetched && bookmarks.length === 0 && (
             <div className="flex flex-col items-center gap-3 opacity-40 py-12">
               <Bookmark size={28} strokeWidth={1} />
-              <p className="font-serif italic text-sm">아직 간직한 편지가 없습니다.</p>
+              <p className="font-serif italic text-sm">{t('archive.bookmarks.empty')}</p>
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
             {!loadingBookmarks && bookmarks.map((bm, index) => {
-              const mentor = MENTOR_INFO[bm.mentorId as MentorKey];
-              if (!mentor) return null;
-              const Icon = mentor.icon;
+              const meta = MENTOR_META[bm.mentorId as MentorKey];
+              if (!meta) return null;
+              const Icon = meta.icon;
+              const mentorName = t(`mentors.${bm.mentorId}.name`);
               const date = bm.savedAt?.toDate ? format(bm.savedAt.toDate(), 'yyyy.MM.dd') : '—';
 
               return (
@@ -474,11 +474,11 @@ export default function Archive() {
                     <div className="absolute top-2 left-2 right-2 bottom-2 border border-ink/5 pointer-events-none" />
 
                     <div className="flex items-center gap-3 mb-3">
-                      <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${mentor.color} flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                      <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${meta.color} flex items-center justify-center flex-shrink-0 shadow-sm`}>
                         <Icon size={13} strokeWidth={1.5} className="text-[#D4AF37]" />
                       </div>
                       <div>
-                        <p className="font-serif text-sm font-bold text-ink/80">{mentor.name}</p>
+                        <p className="font-serif text-sm font-bold text-ink/80">{mentorName}</p>
                         <p className="text-[9px] uppercase tracking-widest opacity-40">{date}</p>
                       </div>
                     </div>
@@ -491,9 +491,9 @@ export default function Archive() {
 
                   {confirmDeleteId === bm.id ? (
                     <div className="absolute top-2 right-2 flex items-center gap-2 bg-[#fdfbf7] border border-ink/20 px-2 py-1 shadow-sm z-10">
-                      <span className="text-[10px] opacity-60">제거할까요?</span>
-                      <button onClick={() => deleteBookmark(bm.id)} className="text-[10px] text-red-700 hover:text-red-900 transition-colors">확인</button>
-                      <button onClick={() => setConfirmDeleteId(null)} className="text-[10px] opacity-40 hover:opacity-70 transition-opacity">취소</button>
+                      <span className="text-[10px] opacity-60">{t('archive.bookmarks.confirmDelete')}</span>
+                      <button onClick={() => deleteBookmark(bm.id)} className="text-[10px] text-red-700 hover:text-red-900 transition-colors">{t('archive.letters.delete')}</button>
+                      <button onClick={() => setConfirmDeleteId(null)} className="text-[10px] opacity-40 hover:opacity-70 transition-opacity">{t('archive.letters.cancel')}</button>
                     </div>
                   ) : (
                     <button
@@ -544,9 +544,11 @@ function BookmarkModal({
   bookmark: BookmarkDoc;
   onClose: () => void;
 }) {
-  const mentor = MENTOR_INFO[bookmark.mentorId as MentorKey];
-  if (!mentor) return null;
-  const Icon = mentor.icon;
+  const { t } = useTranslation();
+  const meta = MENTOR_META[bookmark.mentorId as MentorKey];
+  if (!meta) return null;
+  const Icon = meta.icon;
+  const mentorName = t(`mentors.${bookmark.mentorId}.name`);
 
   return (
     <motion.div
@@ -582,11 +584,11 @@ function BookmarkModal({
 
         {/* 멘토 헤더 */}
         <div className="flex flex-col items-center mb-8 md:mb-12">
-          <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br ${mentor.color} p-1 shadow-md mb-4 relative flex items-center justify-center`}>
+          <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br ${meta.color} p-1 shadow-md mb-4 relative flex items-center justify-center`}>
             <div className="absolute inset-1 rounded-full border border-[#D4AF37]/50" />
             <Icon size={18} strokeWidth={1.5} className="text-[#D4AF37]" />
           </div>
-          <h2 className="font-serif text-xl font-bold tracking-widest text-ink/90">{mentor.name}</h2>
+          <h2 className="font-serif text-xl font-bold tracking-widest text-ink/90">{mentorName}</h2>
         </div>
 
         <div className="font-serif text-ink/90">
@@ -629,7 +631,7 @@ function BookmarkModal({
 
           {/* 서명 */}
           <div className="mt-8 md:mt-16 text-right opacity-60 italic">
-            <p className="text-base sm:text-lg font-bold">{mentor.name} 드림</p>
+            <p className="text-base sm:text-lg font-bold">{t('envelopes.from', { name: mentorName })}</p>
           </div>
 
           {/* 공유 카드 */}
@@ -637,7 +639,7 @@ function BookmarkModal({
             <div className="h-px w-full bg-ink/8" />
             <div className="mt-4">
               <ShareCardButton
-                mentorName={mentor.name}
+                mentorName={mentorName}
                 quote={bookmark.quote}
                 source={bookmark.source}
                 translation={bookmark.translation}
@@ -662,17 +664,19 @@ function DamsoReader({
 }) {
   const { user } = useAuth();
   const { decrypt } = useVault();
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<MessageDoc[]>([]);
   const [entryContent, setEntryContent] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const mentor = MENTOR_INFO[session.mentorId as MentorKey];
+  const meta = MENTOR_META[session.mentorId as MentorKey];
+  const mentorName = t(`mentors.${session.mentorId}.name`);
+  const mentorSpace = t(`mentors.${session.mentorId}.space`);
 
   useEffect(() => {
     if (!user) return;
     const load = async () => {
       // uid 기준으로 조회 후 sessionId로 클라이언트 필터링
-      // (Firestore list 규칙이 uid 제약을 요구함)
       const snap = await getDocs(
         query(
           collection(db, 'damso_messages'),
@@ -707,11 +711,11 @@ function DamsoReader({
     load().catch(console.error);
   }, [session, user, decrypt]);
 
-  if (!mentor) return null;
+  if (!meta) return null;
 
-  const Icon = mentor.icon;
+  const Icon = meta.icon;
   const date = session.startedAt?.toDate
-    ? format(session.startedAt.toDate(), 'yyyy년 MM월 dd일')
+    ? format(session.startedAt.toDate(), 'yyyy.MM.dd')
     : '';
 
   return (
@@ -747,14 +751,14 @@ function DamsoReader({
         <div className="px-8 py-10 sm:px-14 sm:py-14">
           {/* 헤더 */}
           <div className="flex flex-col items-center mb-10">
-            <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${mentor.color} flex items-center justify-center shadow-md mb-5 relative`}>
+            <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${meta.color} flex items-center justify-center shadow-md mb-5 relative`}>
               <div className="absolute inset-1 rounded-full border border-[#D4AF37]/40" />
               <Icon size={20} strokeWidth={1.5} className="text-[#D4AF37]" />
             </div>
             <h2 className="font-serif text-xl font-bold tracking-widest text-ink/85 mb-1">
-              {mentor.name}와의 담소
+              {t('archive.damso.sessionWith', { name: mentorName, particle: t(`mentors.${session.mentorId}.particle`) })}
             </h2>
-            <p className="text-[10px] uppercase tracking-[0.3em] opacity-40">{mentor.spaceName}</p>
+            <p className="text-[10px] uppercase tracking-[0.3em] opacity-40">{mentorSpace}</p>
             <p className="text-xs opacity-35 mt-2 font-mono">{date}</p>
           </div>
 
@@ -762,7 +766,7 @@ function DamsoReader({
           {entryContent && (
             <>
               <div className="mb-8 px-4 py-4 border-l-2 border-[#D4AF37]/30">
-                <p className="text-[10px] uppercase tracking-[0.25em] opacity-35 mb-2">그날의 일기</p>
+                <p className="text-[10px] uppercase tracking-[0.25em] opacity-35 mb-2">{t('archive.damso.originalEntry')}</p>
                 <p className="font-serif text-sm italic opacity-65 leading-relaxed">{entryContent}</p>
               </div>
               <div className="flex justify-center items-center gap-2 mb-8 opacity-20">
@@ -776,11 +780,11 @@ function DamsoReader({
           {/* 대화 내용 */}
           {loading ? (
             <p className="font-serif italic opacity-40 text-center py-8 animate-pulse">
-              기록을 불러오는 중…
+              {t('archive.damso.loading')}
             </p>
           ) : messages.length === 0 ? (
             <p className="font-serif italic opacity-40 text-center py-8">
-              저장된 대화가 없습니다.
+              {t('archive.damso.noMessages')}
             </p>
           ) : (
             <div className="space-y-6">
@@ -795,14 +799,14 @@ function DamsoReader({
                   {msg.type === 'mentor' && (
                     <p className="font-serif text-base leading-[1.9]"
                       style={{ color: 'rgba(44,42,41,0.88)' }}>
-                      <span className="font-bold">{mentor.name}:</span>
+                      <span className="font-bold">{mentorName}:</span>
                       {' '}"{msg.content}"
                     </p>
                   )}
                   {msg.type === 'user' && (
                     <p className="font-serif text-base leading-[1.9]"
                       style={{ color: 'rgba(44,42,41,0.72)' }}>
-                      <span className="font-semibold" style={{ opacity: 0.6 }}>나:</span>
+                      <span className="font-semibold" style={{ opacity: 0.6 }}>{t('archive.damso.userLabel')}:</span>
                       {' '}{msg.content}
                     </p>
                   )}

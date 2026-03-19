@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useVault } from './VaultContext';
 import { useAuth } from './AuthContext';
+import { useTranslation } from 'react-i18next';
 
 const LS_KEY = 'vault_announced';
 
 export default function VaultAnnouncement() {
   const { user } = useAuth();
   const { vaultStatus } = useVault();
+  const { t } = useTranslation();
   const [dismissed, setDismissed] = useState(() => {
     return localStorage.getItem(LS_KEY) === '1';
   });
@@ -53,28 +55,13 @@ export default function VaultAnnouncement() {
             className="text-[13px] leading-[1.95] space-y-4"
             style={{ color: 'rgba(44,42,41,0.72)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}
           >
+            <p dangerouslySetInnerHTML={{ __html: t('vault.announcement.body1') }} />
+            <p dangerouslySetInnerHTML={{ __html: t('vault.announcement.body2') }} />
+            <p dangerouslySetInnerHTML={{ __html: t('vault.announcement.body3') }} />
+            <p dangerouslySetInnerHTML={{ __html: t('vault.announcement.body4') }} />
+            <p dangerouslySetInnerHTML={{ __html: t('vault.announcement.body5') }} />
             <p>
-              안녕하세요, <em>'The Midnight Post'</em>입니다.
-            </p>
-            <p>
-              당신의 가장 소중한 생각과 기록을 위한 안전한 공간이 되어드리고자,{' '}
-              <em>'Vault'</em> 기능을 도입하였습니다.
-            </p>
-            <p>
-              이제 당신의 모든 기록은 서버에 저장되기 전, 당신의 기기에서 먼저 암호화됩니다.
-            </p>
-            <p>
-              이는 마치 당신의 일기를 아무도 열 수 없는 견고한 개인 금고에 넣고,
-              그 열쇠는 오직 당신만 갖게 되는 것과 같습니다.
-            </p>
-            <p>
-              이 금고를 열 수 있는 유일한 방법은 당신이 직접 설정하는{' '}
-              <em>'Vault 비밀번호'</em>입니다. 이 비밀번호 덕분에, 저희 관리자를 포함한
-              그 누구도 당신의 기록을 절대 열어볼 수 없습니다. 모든 프라이버시는 완벽히
-              당신의 손에 달려 있습니다.
-            </p>
-            <p>
-              서버에는 암호화된 문장만 저장됩니다.{' '}
+              {t('vault.announcement.body6').split('<locked>')[0]}
               <span
                 className="inline-block px-1 text-[11px] italic"
                 style={{
@@ -84,14 +71,11 @@ export default function VaultAnnouncement() {
                   color: 'rgba(44,42,41,0.5)',
                 }}
               >
-                [잠긴 내용]
+                {t('vault.announcement.lockedLabel')}
               </span>
-              {' '}은 관리자가 데이터를 열어봐도 원본이 보이지 않습니다.
+              {t('vault.announcement.body6').split('</locked>')[1] ?? t('vault.announcement.body6').split('<locked>')[1]?.split('</locked>')[0]}
             </p>
-            <p>
-              <em>'Vault 비밀번호'</em>는 당신의 프라이버시를 위한 가장 강력한 보호
-              장치이므로, 저희 서버에 저장되지 않습니다.
-            </p>
+            <p dangerouslySetInnerHTML={{ __html: t('vault.announcement.body7') }} />
 
             {/* 주의사항 */}
             <div
@@ -99,13 +83,9 @@ export default function VaultAnnouncement() {
               style={{ borderColor: 'rgba(44,42,41,0.1)', color: 'rgba(44,42,41,0.5)' }}
             >
               <p className="uppercase tracking-[0.2em] text-[10px] mb-2" style={{ color: 'rgba(44,42,41,0.35)' }}>
-                주의사항
+                {t('vault.announcement.warningTitle')}
               </p>
-              <p>
-                만약 비밀번호를 잃어버리면 저희도 도와드릴 방법이 없습니다.
-                비밀번호를 분실하면 당신의 소중한 기록은 영원히 잠기게 되니,
-                반드시 잊어버리지 않을 안전한 곳에 보관해주세요.
-              </p>
+              <p>{t('vault.announcement.warning')}</p>
             </div>
           </div>
 
@@ -127,7 +107,7 @@ export default function VaultAnnouncement() {
             onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(44,42,41,0.5)')}
             onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(44,42,41,0.2)')}
           >
-            이해했습니다
+            {t('vault.announcement.confirm')}
           </button>
         </motion.div>
       </motion.div>

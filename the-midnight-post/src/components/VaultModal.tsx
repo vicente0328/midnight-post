@@ -3,10 +3,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Lock, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { useVault } from './VaultContext';
 import { useAuth } from './AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export default function VaultModal() {
   const { user } = useAuth();
   const { vaultStatus, setupVault, unlockVault, skipVault } = useVault();
+  const { t } = useTranslation();
 
   const [passphrase, setPassphrase] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -25,11 +27,11 @@ export default function VaultModal() {
 
     if (isSetup) {
       if (passphrase.length < 4) {
-        setError('비밀번호는 4자 이상이어야 합니다.');
+        setError(t('vault.setup.errors.tooShort'));
         return;
       }
       if (passphrase !== confirm) {
-        setError('비밀번호가 일치하지 않습니다.');
+        setError(t('vault.setup.errors.mismatch'));
         return;
       }
       setLoading(true);
@@ -37,7 +39,7 @@ export default function VaultModal() {
         await setupVault(passphrase);
       } catch (err) {
         console.error('[VaultModal] setupVault error:', err);
-        setError('설정 중 오류가 발생했습니다. 다시 시도해주세요.');
+        setError(t('vault.setup.errors.setupFailed'));
       } finally {
         setLoading(false);
       }
@@ -45,7 +47,7 @@ export default function VaultModal() {
       setLoading(true);
       const ok = await unlockVault(passphrase);
       setLoading(false);
-      if (!ok) setError('비밀번호가 올바르지 않습니다.');
+      if (!ok) setError(t('vault.unlock.wrongPassword'));
     }
   };
 
@@ -73,15 +75,10 @@ export default function VaultModal() {
               <Lock size={18} strokeWidth={1.5} className="opacity-35" />
             </div>
             <h2 className="text-base tracking-widest uppercase mb-3" style={{ letterSpacing: '0.2em' }}>
-              {isSetup ? '일기 보호' : '잠금 해제'}
+              {isSetup ? t('vault.setup.title') : t('vault.unlock.title')}
             </h2>
-            <p className="text-xs leading-relaxed" style={{ color: 'rgba(44,42,41,0.45)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
-              {isSetup ? (
-                <>
-                  2차 비밀번호를 설정하여<br />
-                  일기와 편지를 암호화하고 안전하게 보호합니다
-                </>
-              ) : '계속하려면 보호 비밀번호를 입력해주세요.'}
+            <p className="text-xs leading-relaxed" style={{ color: 'rgba(44,42,41,0.45)', wordBreak: 'keep-all', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}>
+              {isSetup ? t('vault.setup.description') : t('vault.unlock.description')}
             </p>
           </div>
 
@@ -92,7 +89,7 @@ export default function VaultModal() {
                 type={showPass ? 'text' : 'password'}
                 value={passphrase}
                 onChange={e => { setPassphrase(e.target.value); setError(''); }}
-                placeholder={isSetup ? '새 비밀번호 (4자 이상)' : '비밀번호'}
+                placeholder={isSetup ? t('vault.setup.newPassword') : t('vault.unlock.password')}
                 autoFocus
                 className="w-full bg-transparent border-b py-2 pr-8 outline-none transition-colors placeholder:italic"
                 style={{
@@ -121,7 +118,7 @@ export default function VaultModal() {
                 type={showPass ? 'text' : 'password'}
                 value={confirm}
                 onChange={e => { setConfirm(e.target.value); setError(''); }}
-                placeholder="비밀번호 확인"
+                placeholder={t('vault.setup.confirmPassword')}
                 className="w-full bg-transparent border-b py-2 outline-none transition-colors placeholder:italic"
                 style={{
                   borderColor: 'rgba(44,42,41,0.2)',
@@ -137,9 +134,8 @@ export default function VaultModal() {
             {isSetup && (
               <div className="flex items-start gap-2 mt-1">
                 <AlertTriangle size={11} className="mt-0.5 flex-shrink-0" style={{ color: 'rgba(44,42,41,0.35)' }} />
-                <p className="text-[10px] leading-relaxed" style={{ color: 'rgba(44,42,41,0.38)' }}>
-                  비밀번호를 잊으면 일기를 복구할 수 없습니다.
-                  안전한 곳에 보관해주세요.
+                <p className="text-[10px] leading-relaxed" style={{ color: 'rgba(44,42,41,0.38)', whiteSpace: 'pre-line' }}>
+                  {t('vault.setup.warning')}
                 </p>
               </div>
             )}
@@ -164,7 +160,7 @@ export default function VaultModal() {
               onMouseEnter={e => { if (!loading && passphrase) e.currentTarget.style.borderColor = 'rgba(44,42,41,0.5)'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(44,42,41,0.2)'; }}
             >
-              {loading ? '처리 중…' : isSetup ? '설정하기' : '열기'}
+              {loading ? t('vault.processing') : isSetup ? t('vault.setup.submit') : t('vault.unlock.submit')}
             </button>
           </form>
 
@@ -178,7 +174,7 @@ export default function VaultModal() {
                 onMouseEnter={e => (e.currentTarget.style.opacity = '0.6')}
                 onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
               >
-                나중에 설정하기 — 일기가 암호화되지 않습니다
+                {t('vault.setup.skip')}
               </button>
             </div>
           )}

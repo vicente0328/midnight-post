@@ -4,9 +4,12 @@ import { collection, query, where, getCountFromServer } from 'firebase/firestore
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
 import { LogOut, Scroll } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { format } from 'date-fns';
 
 export default function Account() {
   const { user, signOut } = useAuth();
+  const { t } = useTranslation();
   const [stats, setStats] = useState({ letters: 0, bookmarks: 0, damso: 0 });
 
   useEffect(() => {
@@ -30,7 +33,7 @@ export default function Account() {
 
   const initial = (user.email ?? '?')[0].toUpperCase();
   const joinDate = user.metadata.creationTime
-    ? new Date(user.metadata.creationTime).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
+    ? format(new Date(user.metadata.creationTime), 'yyyy.MM.dd')
     : null;
 
   return (
@@ -52,7 +55,7 @@ export default function Account() {
       <p className="font-serif text-base opacity-75 mb-1">{user.email}</p>
       {joinDate && (
         <p className="text-[10px] uppercase tracking-[0.25em] opacity-35 mb-10">
-          {joinDate}부터 함께하고 있습니다
+          {t('account.joinedSince', { date: joinDate })}
         </p>
       )}
 
@@ -66,9 +69,9 @@ export default function Account() {
       {/* 활동 통계 */}
       <div className="grid grid-cols-3 gap-6 w-full mb-12">
         {[
-          { label: '받은 편지',  value: stats.letters   },
-          { label: '간직한 편지', value: stats.bookmarks },
-          { label: '나눈 담소',  value: stats.damso     },
+          { label: t('account.stats.letters'),   value: stats.letters   },
+          { label: t('account.stats.bookmarks'), value: stats.bookmarks },
+          { label: t('account.stats.damso'),     value: stats.damso     },
         ].map(({ label, value }) => (
           <div key={label} className="flex flex-col items-center gap-1">
             <span className="font-serif text-2xl font-bold text-ink/80">{value}</span>
@@ -83,7 +86,7 @@ export default function Account() {
         className="group flex items-center gap-3 font-serif text-sm italic opacity-40 hover:opacity-80 transition-opacity duration-300"
       >
         <LogOut size={14} strokeWidth={1.5} />
-        로그아웃
+        {t('account.logout')}
       </button>
     </div>
   );

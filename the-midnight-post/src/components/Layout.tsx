@@ -7,13 +7,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import BottomNav from './BottomNav';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-
-const MENTOR_NAMES: Record<string, string> = {
-  hyewoon: '혜운 스님',
-  benedicto: '베네딕토 신부',
-  theodore: '테오도르 교수',
-  yeonam: '연암 선생',
-};
+import { useTranslation } from 'react-i18next';
+import { setLanguage, type Language } from '../i18n';
 
 const MENTOR_COLORS: Record<string, string> = {
   hyewoon:   '#7c6a50',
@@ -44,23 +39,11 @@ function loadNotifications(): NotificationItem[] {
   try { return JSON.parse(localStorage.getItem(NOTIF_KEY) ?? '[]'); } catch { return []; }
 }
 function saveNotifications(items: NotificationItem[]) {
-  // 최대 30개만 보관
   localStorage.setItem(NOTIF_KEY, JSON.stringify(items.slice(0, 30)));
 }
 
-function formatRelativeTime(ts: number): string {
-  const diffMs = Date.now() - ts;
-  const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 1) return '방금 전';
-  if (diffMin < 60) return `${diffMin}분 전`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}시간 전`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay === 1) return '어제';
-  return `${diffDay}일 전`;
-}
-
 export default function Layout() {
+  const { t, i18n } = useTranslation();
   const { user, setShowAuthModal, setShowGuideModal, signOut } = useAuth();
   const isAdmin = user?.email === 'admin@tmp.com';
   const location = useLocation();
@@ -75,6 +58,21 @@ export default function Layout() {
   const notifiedRef = useRef<Set<string>>(new Set());
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  const getMentorName = useCallback((mentorId: string) =>
+    t(`mentors.${mentorId}.name`, t('mentors.unknown')), [t]);
+
+  function formatRelativeTime(ts: number): string {
+    const diffMs = Date.now() - ts;
+    const diffMin = Math.floor(diffMs / 60_000);
+    if (diffMin < 1) return t('relativeTime.justNow');
+    if (diffMin < 60) return t('relativeTime.minutesAgo', { n: diffMin });
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return t('relativeTime.hoursAgo', { n: diffHr });
+    const diffDay = Math.floor(diffHr / 24);
+    if (diffDay === 1) return t('relativeTime.yesterday');
+    return t('relativeTime.daysAgo', { n: diffDay });
+  }
 
   const addNotification = useCallback((item: ToastItem) => {
     setNotifications(prev => {
@@ -133,7 +131,6 @@ export default function Layout() {
         });
       });
 
-      // 5초마다 deliverTimes 체크
       interval = setInterval(() => {
         const nowMs = Date.now();
         let deliverTimes: Record<string, number> = {};
@@ -146,7 +143,7 @@ export default function Layout() {
             notifiedRef.current.add(docId);
             newlyArrived.push({ id: docId, mentorId: data.mentorId, entryId: pendingEntryId });
             if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-              new Notification(`${MENTOR_NAMES[data.mentorId] ?? '현자'}의 편지가 도착했습니다`, {
+              new Notification(t('toast.letterArrived', { name: getMentorName(data.mentorId) }), {
                 body: '오늘의 일기에 대한 답장이 왔습니다. 확인해보세요.',
                 icon: '/icon-192x192.png',
               });
@@ -167,12 +164,11 @@ export default function Layout() {
 
     initListener();
     window.addEventListener('pendingEntryUpdated', initListener);
-
     return () => {
       cleanup();
       window.removeEventListener('pendingEntryUpdated', initListener);
     };
-  }, [user]);
+  }, [user, t, getMentorName]);
 
   // 지혜카드 업데이트 감지
   useEffect(() => {
@@ -209,6 +205,9 @@ export default function Layout() {
 
   const dismissToast = (id: string) => setToasts(prev => prev.filter(t => t.id !== id));
 
+  const currentLang = i18n.language as Language;
+  const toggleLang = () => setLanguage(currentLang === 'ko' ? 'en' : 'ko');
+
   return (
     <div className="min-h-screen flex flex-col items-center w-full max-w-4xl mx-auto px-4 py-8 pb-24 sm:pb-8">
       <header className="w-full flex justify-between items-center mb-12 border-b border-ink/10 pb-4 relative">
@@ -220,25 +219,34 @@ export default function Layout() {
         {/* 우측 컨트롤 영역 */}
         <div className="flex items-center gap-2">
 
-          {/* 데스크톱 nav — 모바일에서 숨김 */}
+          {/* 언어 토글 */}
+          <button
+            onClick={toggleLang}
+            className="font-mono text-[11px] tracking-widest uppercase opacity-40 hover:opacity-75 transition-opacity px-1.5 py-0.5 border border-ink/20 hover:border-ink/40"
+            title="언어 / Language"
+          >
+            {currentLang === 'ko' ? 'EN' : '한'}
+          </button>
+
+          {/* 데스크톱 nav */}
           <nav className="hidden sm:flex gap-4 items-center text-sm tracking-widest uppercase mr-2">
             {user ? (
               <>
                 <Link to="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Desk">
                   <PenTool size={16} />
-                  <span>Desk</span>
+                  <span>{t('nav.desk')}</span>
                 </Link>
                 <Link to="/mailbox" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Mailbox">
                   <Inbox size={16} />
-                  <span>Mailbox</span>
+                  <span>{t('nav.mailbox')}</span>
                 </Link>
-                <Link to="/study" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="멘토의 연구실">
+                <Link to="/study" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Library">
                   <BookOpen size={16} />
-                  <span>Library</span>
+                  <span>{t('nav.library')}</span>
                 </Link>
                 <Link to="/archive" className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Archive">
                   <Feather size={16} strokeWidth={1.4} />
-                  <span>Archive</span>
+                  <span>{t('nav.archive')}</span>
                 </Link>
                 <button
                   onClick={() => setShowGuideModal(true)}
@@ -246,17 +254,17 @@ export default function Layout() {
                   title="Guide"
                 >
                   <Feather size={15} strokeWidth={1.4} />
-                  <span>Guide</span>
+                  <span>{t('nav.guide')}</span>
                 </button>
                 {isAdmin && (
                   <Link to="/admin" className="flex items-center gap-1.5 hover:opacity-70 transition-opacity opacity-40" title="Admin">
                     <Settings2 size={15} strokeWidth={1.4} />
-                    <span>Admin</span>
+                    <span>{t('nav.admin')}</span>
                   </Link>
                 )}
                 <button onClick={signOut} className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Logout">
                   <LogOut size={16} />
-                  <span>Logout</span>
+                  <span>{t('nav.logout')}</span>
                 </button>
               </>
             ) : (
@@ -267,23 +275,23 @@ export default function Layout() {
                   title="Guide"
                 >
                   <Feather size={15} strokeWidth={1.4} />
-                  <span>Guide</span>
+                  <span>{t('nav.guide')}</span>
                 </button>
                 <button onClick={() => setShowAuthModal(true)} className="hover:opacity-70 transition-opacity">
-                  Login
+                  {t('nav.login')}
                 </button>
               </>
             )}
           </nav>
 
-          {/* 알림 벨 + 패널 (로그인 시만) */}
+          {/* 알림 벨 + 패널 */}
           {user && (
             <div ref={notifPanelRef} className="relative flex items-center">
               <button
                 onClick={() => { setShowNotifPanel(prev => !prev); if (!showNotifPanel) markAllRead(); }}
                 className="relative flex items-center justify-center transition-opacity hover:opacity-70"
                 style={{ opacity: showNotifPanel ? 0.85 : 0.45, padding: '6px' }}
-                title="알림"
+                title={t('notifications.title')}
               >
                 <Bell size={17} strokeWidth={1.4} />
                 <AnimatePresence>
@@ -309,7 +317,6 @@ export default function Layout() {
                 </AnimatePresence>
               </button>
 
-              {/* 알림 패널 드롭다운 */}
               <AnimatePresence>
                 {showNotifPanel && (
                   <motion.div
@@ -318,28 +325,25 @@ export default function Layout() {
                     exit={{ opacity: 0, y: -6, scale: 0.97 }}
                     transition={{ duration: 0.18, ease: 'easeOut' }}
                     className="absolute top-full right-0 mt-2 z-50 border border-ink/12 shadow-xl"
-                    style={{
-                      backgroundColor: '#fdfbf7',
-                      width: '290px',
-                      maxHeight: '400px',
-                      overflowY: 'auto',
-                    }}
+                    style={{ backgroundColor: '#fdfbf7', width: '290px', maxHeight: '400px', overflowY: 'auto' }}
                   >
                     <div className="px-5 py-3 border-b border-ink/8 flex items-center justify-between">
-                      <p className="font-serif text-[11px] uppercase tracking-widest opacity-40">알림</p>
+                      <p className="font-serif text-[11px] uppercase tracking-widest opacity-40">
+                        {t('notifications.title')}
+                      </p>
                       {notifications.length > 0 && (
                         <button
                           onClick={() => { setNotifications([]); saveNotifications([]); }}
                           className="font-serif text-[10px] italic opacity-30 hover:opacity-60 transition-opacity"
                         >
-                          모두 지우기
+                          {t('notifications.clearAll')}
                         </button>
                       )}
                     </div>
 
                     {notifications.length === 0 ? (
                       <div className="px-5 py-8 text-center">
-                        <p className="font-serif text-sm italic opacity-30">아직 도착한 편지가 없습니다</p>
+                        <p className="font-serif text-sm italic opacity-30">{t('notifications.empty')}</p>
                       </div>
                     ) : (
                       <div className="flex flex-col divide-y divide-ink/6">
@@ -360,9 +364,9 @@ export default function Layout() {
                             <div className="flex-1 min-w-0">
                               <p className="font-serif text-[13px] leading-snug" style={{ color: 'rgba(44,42,41,0.82)' }}>
                                 {n.type === 'knowledge' ? (
-                                  <><span style={{ fontWeight: 600 }}>{MENTOR_NAMES[n.mentorId] ?? '현자'}</span>의 새 지혜카드가 도착했습니다</>
+                                  <><span style={{ fontWeight: 600 }}>{getMentorName(n.mentorId)}</span>{' '}{t('notifications.knowledgeArrived', { name: '' }).trim()}</>
                                 ) : (
-                                  <><span style={{ fontWeight: 600 }}>{MENTOR_NAMES[n.mentorId] ?? '현자'}</span>의 편지가 도착했습니다</>
+                                  <><span style={{ fontWeight: 600 }}>{getMentorName(n.mentorId)}</span>{' '}{t('notifications.letterArrived', { name: '' }).trim()}</>
                                 )}
                               </p>
                               <p className="font-serif text-[11px] opacity-30 mt-0.5">
@@ -396,21 +400,17 @@ export default function Layout() {
                 onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.opacity = showMobileMenu ? '0.85' : '0.45'; }}
                 title="Menu"
               >
-                {showMobileMenu
-                  ? <X size={20} strokeWidth={1.3} />
-                  : <Menu size={20} strokeWidth={1.3} />
-                }
+                {showMobileMenu ? <X size={20} strokeWidth={1.3} /> : <Menu size={20} strokeWidth={1.3} />}
               </button>
             ) : (
               <button
                 onClick={() => setShowAuthModal(true)}
                 className="hover:opacity-70 transition-opacity text-sm tracking-widest uppercase"
               >
-                Login
+                {t('nav.login')}
               </button>
             )}
 
-            {/* 모바일 드롭다운 메뉴 */}
             <AnimatePresence>
               {showMobileMenu && user && (
                 <motion.div
@@ -430,7 +430,7 @@ export default function Layout() {
                       className="flex items-center gap-3 px-5 py-3 text-sm font-serif opacity-55 hover:opacity-90 transition-opacity text-left"
                     >
                       <Feather size={14} strokeWidth={1.4} />
-                      <span>Guide</span>
+                      <span>{t('nav.guide')}</span>
                     </button>
                     <Link
                       to="/account"
@@ -438,7 +438,7 @@ export default function Layout() {
                       className="flex items-center gap-3 px-5 py-3 text-sm font-serif opacity-55 hover:opacity-90 transition-opacity"
                     >
                       <UserRound size={14} strokeWidth={1.4} />
-                      <span>Account</span>
+                      <span>{t('nav.account')}</span>
                     </Link>
                     {isAdmin && (
                       <Link
@@ -447,7 +447,7 @@ export default function Layout() {
                         className="flex items-center gap-3 px-5 py-3 text-sm font-serif opacity-40 hover:opacity-75 transition-opacity"
                       >
                         <Settings2 size={14} strokeWidth={1.4} />
-                        <span>Admin</span>
+                        <span>{t('nav.admin')}</span>
                       </Link>
                     )}
                     <div className="mx-5 my-1 h-px bg-ink/8" />
@@ -456,7 +456,7 @@ export default function Layout() {
                       className="flex items-center gap-3 px-5 py-3 text-sm font-serif opacity-40 hover:opacity-75 transition-opacity text-left"
                     >
                       <LogOut size={14} strokeWidth={1.4} />
-                      <span>Logout</span>
+                      <span>{t('nav.logout')}</span>
                     </button>
                   </div>
                 </motion.div>
@@ -481,7 +481,6 @@ export default function Layout() {
 
       <AuthModal />
 
-      {/* 모바일 하단 탭바 — 로그인된 경우만 */}
       {user && <BottomNav />}
 
       {/* 편지 도착 토스트 */}
@@ -490,7 +489,7 @@ export default function Layout() {
           {toasts.map((toast) => (
             <LetterToast
               key={toast.id}
-              mentorName={MENTOR_NAMES[toast.mentorId] ?? '현자'}
+              mentorName={getMentorName(toast.mentorId)}
               onOpen={() => { dismissToast(toast.id); navigate(`/mailbox?entryId=${toast.entryId}`); }}
               onDismiss={() => dismissToast(toast.id)}
             />
@@ -514,10 +513,11 @@ function LetterToast({
   onOpen: () => void;
   onDismiss: () => void;
 }) {
-  // 8초 후 자동 닫기
+  const { t } = useTranslation();
+
   useEffect(() => {
-    const t = setTimeout(onDismiss, 8000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(onDismiss, 8000);
+    return () => clearTimeout(timer);
   }, [onDismiss]);
 
   return (
@@ -532,14 +532,15 @@ function LetterToast({
       <Mail size={18} className="text-[#D4AF37] shrink-0" strokeWidth={1.5} />
       <div className="flex-1 min-w-0">
         <p className="font-serif text-sm text-ink/90 leading-snug">
-          <span className="font-semibold">{mentorName}</span>의 편지가 도착했습니다
+          <span className="font-semibold">{mentorName}</span>
+          {' '}{t('toast.letterArrived', { name: '' }).trim()}
         </p>
       </div>
       <button
         onClick={onOpen}
         className="font-serif italic text-[11px] text-[#8B7355] hover:text-ink transition-colors shrink-0 border-b border-[#8B7355]/40"
       >
-        열어보기
+        {t('toast.open')}
       </button>
     </motion.div>
   );

@@ -1,0 +1,407 @@
+{
+  "mentors": {
+    "hyewoon":   { "name": "Master Hyewoon",      "title": "A practitioner of emptiness and stillness", "space": "Cheonmyeong Hall",  "tradition": "Seon Buddhism",           "particle": "" },
+    "benedicto": { "name": "Father Benedicto",     "title": "A companion of love and consolation",       "space": "Confessional",       "tradition": "Catholic Spirituality",    "particle": "" },
+    "theodore":  { "name": "Professor Theodore",   "title": "A philosopher of reason and existence",     "space": "Study",              "tradition": "Stoicism · Existentialism","particle": "" },
+    "yeonam":    { "name": "Scholar Yeonam",       "title": "A scholar of natural order and harmony",    "space": "Chwilak Pavilion",   "tradition": "Confucianism · Taoism",    "particle": "" },
+    "unknown":   "Sage"
+  },
+  "nav": {
+    "desk":    "Desk",
+    "mailbox": "Mailbox",
+    "library": "Library",
+    "archive": "Archive",
+    "guide":   "Guide",
+    "account": "Account",
+    "admin":   "Admin",
+    "login":   "Login",
+    "logout":  "Logout"
+  },
+  "notifications": {
+    "title":           "Notifications",
+    "clearAll":        "Clear all",
+    "empty":           "No letters have arrived yet",
+    "letterArrived":   "A letter from {{name}} has arrived",
+    "knowledgeArrived":"New wisdom card from {{name}}"
+  },
+  "toast": {
+    "letterArrived": "A letter from {{name}} has arrived",
+    "open":          "Open"
+  },
+  "relativeTime": {
+    "justNow":    "just now",
+    "minutesAgo": "{{n}}m ago",
+    "hoursAgo":   "{{n}}h ago",
+    "yesterday":  "yesterday",
+    "daysAgo":    "{{n}}d ago"
+  },
+  "auth": {
+    "loginTitle":    "Welcome back",
+    "signupTitle":   "First time here?",
+    "resetTitle":    "Reset password",
+    "loginSubtitle": "Return to your reading room.",
+    "signupSubtitle":"A new night. A new story.",
+    "resetSubtitle": "Enter the email you signed up with.",
+    "loginTab":      "Login",
+    "signupTab":     "Sign Up",
+    "googleLogin":   "Continue with Google",
+    "googleSignup":  "Start with Google",
+    "or":            "or",
+    "emailPlaceholder":    "Email",
+    "passwordPlaceholder": "Password",
+    "submitLogin":   "Login",
+    "submitSignup":  "Sign up",
+    "submitReset":   "Send reset link",
+    "resetSent":     "A reset link has been sent to your email.",
+    "forgotPassword":"Forgot your password?",
+    "backToLogin":   "Back",
+    "errors": {
+      "invalidEmail":      "Invalid email format.",
+      "userNotFound":      "No account found with this email.",
+      "wrongPassword":     "Incorrect password.",
+      "invalidCredential": "Incorrect email or password.",
+      "emailInUse":        "This email is already in use.",
+      "weakPassword":      "Password must be at least 6 characters.",
+      "tooManyRequests":   "Too many attempts. Please try again later.",
+      "default":           "An error occurred. Please try again."
+    }
+  },
+  "home": {
+    "title":       "The Desk",
+    "sendButton":  "Send to Mentors",
+    "sending":     "Writing...",
+    "sentTitle":   "Your letter has been sent.",
+    "sentSubtitle":"While you wait for a reply,\nexplore the mentors' library.",
+    "browseLibrary":"Browse Mentor's Library →",
+    "backToDesk":  "Back to The Desk",
+    "crisis": {
+      "title":        "You seem to be in a great deal of pain.",
+      "subtitle":     "When the weight becomes too heavy to bear alone,\nplease seek professional help.",
+      "hotlineLabel": "24-Hour Crisis Hotline",
+      "hotlineDesc":  "Suicide Prevention · Free · 24 hours",
+      "mentalHealth": "Mental Health Crisis Line 1577-0199",
+      "mentorLetters":"The mentors' letters have been sent to you as well.",
+      "checkLetters": "Check letters →",
+      "back":         "Go back"
+    },
+    "time": {
+      "dawn": {
+        "subtitle": "In the early hours of the morning,\nleave your heart in one line.",
+        "greetings": [
+          "The small hours of the morning —\nwhat woke you?",
+          "In the silence of dawn,\nwhat thoughts are lingering?",
+          "While others sleep,\nyou are here, awake.",
+          "Before the first light seeps in,\nshare what's on your mind.",
+          "Every moment of yours is worthy."
+        ]
+      },
+      "morning": {
+        "subtitle": "How are you beginning\nthis new day?",
+        "greetings": [
+          "Good morning.\nHow do you hope to spend today?",
+          "A new day has begun.\nHow does your heart feel?",
+          "Leave the first feeling\nof the morning in one line.",
+          "How would you like\nto greet this day?",
+          "Slowly,\nat your own pace."
+        ]
+      },
+      "afternoon": {
+        "subtitle": "In the middle of this afternoon,\ntell me your story.",
+        "greetings": [
+          "In the afternoon light,\nwhat thoughts are drifting by?",
+          "Halfway through the day —\ntake a moment to look inward.",
+          "How has your day been\nso far?",
+          "Pause for a moment\nand check in with yourself.",
+          "Gently bring out\nthe words you've held inside."
+        ]
+      },
+      "evening": {
+        "subtitle": "As the day draws to a close,\nleave your heart in one line.",
+        "greetings": [
+          "As the day winds down,\nwhat feelings remain?",
+          "Like an evening glow,\nlook back on today.",
+          "Let's reflect on the day\nyou've worked so hard.",
+          "Evening has come.\nHow was your heart today?",
+          "Any feeling is welcome here."
+        ]
+      },
+      "night": {
+        "subtitle": "In the quiet of the night,\nleave your heart in one line.",
+        "greetings": [
+          "How was your day today?",
+          "I hope your night is peaceful.",
+          "As the night deepens,\nwhat thoughts are you lost in?",
+          "If there's something you couldn't say to anyone,\nleave it here.",
+          "You've made it through another day.",
+          "This night, where your steps have paused.",
+          "Set down the weight of today\nright here."
+        ]
+      }
+    }
+  },
+  "mailbox": {
+    "title":       "Mailbox",
+    "subtitle":    "Where the mentors' letters gather.",
+    "loading":     "Opening your mailbox…",
+    "empty":       "No letters have arrived yet.",
+    "emptyHint":   "Write your first thought at The Desk.",
+    "loginRequired":"Please log in to view your mailbox.",
+    "letter": {
+      "goToArchive": "View my diary",
+      "close":       "Close",
+      "from":        "From {{name}}"
+    }
+  },
+  "envelopes": {
+    "title":       "The Four Envelopes",
+    "subtitle":    "Letters of comfort sent to you by four mentors.",
+    "back":        "Back",
+    "allArrived":  "— All letters have arrived —",
+    "writing":     "Writing a letter to you...",
+    "waitHint":    "A letter written with care is never rushed.\nEach mentor's reply will quietly find its way to you.",
+    "visitLibrary":"Visit the library while you wait →",
+    "startDamso":  "Sit down with {{name}}",
+    "footer":         "With sincere wishes for your peace,",
+    "from":           "From {{name}}",
+    "bookmarkSave":   "Save to my library",
+    "bookmarkRemove": "Remove from library",
+    "waitingPhrases": [
+      "Listening closely to your heart.",
+      "Turning old pages in search of wisdom.",
+      "Taking up the brush by candlelight.",
+      "Carefully choosing words after deep reflection.",
+      "Grinding the ink, composing the mind.",
+      "Quietly contemplating your day."
+    ]
+  },
+  "archive": {
+    "title":    "Archive",
+    "subtitle": "A record of the heart you've left behind.",
+    "tabs": {
+      "letters":   "Letters",
+      "damso":     "Conversations",
+      "bookmarks": "Bookmarks"
+    },
+    "loginRequired": "Please log in to view your archive.",
+    "letters": {
+      "loading":       "Loading your records…",
+      "empty":         "No letters written yet.",
+      "emptyHint":     "Write your first thought at The Desk.",
+      "replies":       "{{n}} {{n, plural, one{reply} other{replies}}}",
+      "confirmDelete": "Delete?",
+      "viewReplies":   "View replies →",
+      "cancel":        "Cancel",
+      "delete":        "Delete"
+    },
+    "damso": {
+      "loading":       "Loading conversations…",
+      "empty":         "No conversations yet.",
+      "emptyHint":     "Open a letter to begin a conversation with a mentor.",
+      "error":         "Could not load conversations.",
+      "turns":         "{{n}} {{n, plural, one{exchange} other{exchanges}}}",
+      "close":         "Close",
+      "noMessages":    "No messages found.",
+      "retry":         "Try again →",
+      "ended":         "Ended",
+      "open":          "Open →",
+      "originalEntry": "That day's entry",
+      "sessionWith":   "Conversation with {{name}}",
+      "userLabel":     "Me"
+    },
+    "bookmarks": {
+      "loading":       "Loading bookmarks…",
+      "empty":         "No bookmarks saved yet.",
+      "emptyHint":     "Bookmark a letter that moves you.",
+      "from":          "From {{name}}",
+      "close":         "Close",
+      "savedAt":       "Saved",
+      "confirmDelete": "Remove?"
+    }
+  },
+  "study": {
+    "title":       "Library",
+    "subtitle":    "A light is on in each room.",
+    "backToLobby": "Back to library",
+    "roomTitle":   "{{name}}'s {{room}}",
+    "sendLetter":  "Write a letter",
+    "startDamso":  "Start a conversation",
+    "connecting":  "Connecting…",
+    "todayWisdom": "Today's wisdom",
+    "sent":        "Your letter has been sent.",
+    "sentHint":    "We'll let you know when a reply arrives.",
+    "sending":     "Sending your letter…",
+    "waitingFor":  "Waiting for {{name}}'s reply",
+    "letterPlaceholder": "Share your heart with {{name}}…",
+    "sendAction":  "Send letter →",
+    "loading":      "Gathering wisdom…",
+    "empty":        "No wisdom cards yet.",
+    "regenerating": "Regenerating…",
+    "regenerate":   "↻ Regenerate wisdom",
+    "emptyHint":   "The mentors' wisdom will arrive shortly.",
+    "card": {
+      "source":      "Source",
+      "translation": "Translation",
+      "context":     "The Mentor's Words"
+    },
+    "wisdom": {
+      "title":  "Wisdom Card",
+      "close":  "Close"
+    },
+    "rooms": {
+      "hyewoon":   { "ambience": "The quiet scent of a meditation hall.\nLight filters through paper, settling on the floor." },
+      "benedicto": { "ambience": "A small candle flickers, warming the room.\nThe faint smell of wood drifts quietly." },
+      "theodore":  { "ambience": "Shelves full of books. The smell of ink\nand old paper, where thought takes root." },
+      "yeonam":    { "ambience": "The scent of ink and bamboo shadows.\nBeyond the window, mountains hold their breath." }
+    }
+  },
+  "damso": {
+    "back":               "Leave",
+    "inputPlaceholder":   "Speak your mind",
+    "send":               "Send",
+    "sending":            "...",
+    "endConversation":    "End conversation",
+    "sessionTitle":       "Conversation with {{name}}",
+    "sessionSaved":       "Your conversation has been saved to the archive.",
+    "saveFailedWarning":  "This conversation could not be saved due to a connection issue.",
+    "userLabel":          "Me",
+    "sessionEnding":      "Today's conversation has come to a close.",
+    "crisis": {
+      "notice":    "Please reach out for help when things feel too heavy.",
+      "hotline":   "Crisis Line 1393 · Free · 24 hours",
+      "continue":  "Continue talking"
+    },
+    "loading":     "Please wait a moment…",
+    "turnLimit":   "Today's conversation has come to a close.",
+    "rooms": {
+      "hyewoon":   {
+        "loading":     "You make your way to Cheonmyeong Hall, where Master Hyewoon sits in stillness. The faint scent of cedar touches the air, and the sound of wind through bamboo washes the dust from your mind. Warm your hands on the tea he has set out, and take a quiet breath.",
+        "placeholder": "Setting down the cup, you speak"
+      },
+      "benedicto": {
+        "loading":     "You approach the confessional where Father Benedicto waits. A small candle trembles, its glow wrapping gently around your shadow — a sanctuary where every sincere word is held safe. Set down the weight you carry and look gently upon the stillness within.",
+        "placeholder": "In the candlelight, you speak honestly"
+      },
+      "theodore":  {
+        "loading":     "You are welcomed into Theodore's private study, thick with the scent of ink and old leather. Beneath the clear light of reason, it is time to step back and look at what troubles you with fresh eyes. Sharp insight will become the landmark that helps you design your life anew.",
+        "placeholder": "Gathering your thoughts, you speak"
+      },
+      "yeonam":    {
+        "loading":     "The gate of Chwilak Pavilion opens to the sound of Scholar Yeonam's warm laughter. Leave the formalities of the world in the courtyard for now, and come to share honest words, as if clinking cups beneath the moonlight. A conversation surrendered to the flow of nature will set you free.",
+        "placeholder": "Settling on the porch, you speak"
+      }
+    }
+  },
+  "onboarding": {
+    "welcome": {
+      "title":    "Welcome to\nThe Midnight Post.",
+      "body":     "Write your weary heart in a single line,\nand four sages will reply with letters of comfort."
+    },
+    "mentors": {
+      "title": "Four mentors are\nwaiting for you.",
+      "hyewoon":   { "desc": "A practitioner of emptiness and stillness. He teaches how to let go of attachment and dwell in this very moment." },
+      "benedicto": { "desc": "A companion of love and consolation. He affirms human fragility and embraces the dignity of every being." },
+      "theodore":  { "desc": "A philosopher of reason and existence. He illuminates the path toward inner freedom." },
+      "yeonam":    { "desc": "A scholar of natural order and harmony. He draws life's wisdom from the flow of nature." }
+    },
+    "howItWorks": {
+      "title":    "A hundred characters\nis all it takes.",
+      "body":     "No perfect sentence needed.\nJust bring your heart as it is.",
+      "letter":   { "title": "Letter",       "desc": "Write your heart in 100 characters\nand send it to the mentors." },
+      "reply":    { "title": "Reply",        "desc": "Four sages each write\na letter of comfort from their tradition." },
+      "damso":    { "title": "Conversation", "desc": "Visit a mentor's room\nand sit down for a personal talk." }
+    },
+    "sampleLetters": {
+      "title":      "This is what\narrives.",
+      "sampleDiary":"Today was just too hard.",
+      "sampleLabel":"Sample entry",
+      "hyewoon": {
+        "quote": "一切有爲法，如夢幻泡影",
+        "source": "Diamond Sutra",
+        "translation": "All conditioned things are like dreams, illusions, bubbles, and shadows.",
+        "snippet": "Fellow traveller, I know how heavy today has been. The very fact that you have carried that weight and walked this far is more than enough. Just as a river finds its way around the rocks, a troubled heart always discovers another path. This darkness is not forever. Tonight, simply rest."
+      },
+      "benedicto": {
+        "quote": "Omnia tempus habent",
+        "source": "Ecclesiastes 3:1",
+        "translation": "There is a time for everything.",
+        "snippet": "Dear friend, today must have been so hard. Thank you for opening your heart like this. The heaviness you feel is not a sign of weakness — it is proof that you are living with sincerity. The Lord does not turn away from those who stumble. He is closest at the lowest point. Tonight, it is all right to rest in that embrace for a while."
+      }
+    },
+    "features": {
+      "title":     "Wisdom keeps\naccumulating.",
+      "knowledge": {
+        "title": "Wisdom Cards",
+        "desc":  "Every morning and evening, the mentors' curated passages from classical texts are refreshed. Find them in the Library tab."
+      },
+      "bookmark": {
+        "title": "Bookmarks",
+        "desc":  "Save any letter or wisdom passage that resonates with you, and revisit it anytime in Archive."
+      }
+    },
+    "cta": [
+      "Meet the mentors",
+      "How does it work?",
+      "Show me a letter",
+      "What else is there?",
+      "I'm ready to write"
+    ],
+    "skipForNow": "I'll read this later",
+    "close":      "Close"
+  },
+  "vault": {
+    "setup": {
+      "title":       "Protect your diary",
+      "description": "Set a secondary password\nto encrypt and secure your diary and letters.",
+      "newPassword":      "New password (4+ characters)",
+      "confirmPassword":  "Confirm password",
+      "warning":          "If you forget your password, your records cannot be recovered.\nStore it somewhere safe.",
+      "submit":           "Set up",
+      "skip":             "Set up later — your diary will not be encrypted",
+      "errors": {
+        "tooShort":   "Password must be at least 4 characters.",
+        "mismatch":   "Passwords do not match.",
+        "setupFailed":"An error occurred during setup. Please try again."
+      }
+    },
+    "unlock": {
+      "title":       "Unlock",
+      "description": "Enter your protection password to continue.",
+      "password":    "Password",
+      "submit":      "Open",
+      "wrongPassword":"Incorrect password."
+    },
+    "processing": "Processing…",
+    "announcement": {
+      "body1": "Hello, this is <em>The Midnight Post</em>.",
+      "body2": "To provide a safe space for your most precious thoughts and records, we have introduced the <em>Vault</em> feature.",
+      "body3": "From now on, all your records are encrypted on your device before being sent to our servers.",
+      "body4": "Think of it as placing your diary in a personal safe that no one else can open — and only you hold the key.",
+      "body5": "The only way to open this vault is the <em>Vault password</em> you set yourself. Because of this, no one — including our administrators — can ever access your records. Your privacy is entirely in your hands.",
+      "body6": "Only encrypted text is stored on the server. <locked> means the original content is invisible even if someone opens the database.",
+      "body7": "Your <em>Vault password</em> is the strongest protection for your privacy, and it is never stored on our servers.",
+      "warningTitle": "Important notice",
+      "warning": "If you lose your password, we have no way to help you recover your records. A lost password means your records are permanently locked, so please keep it somewhere you will never forget.",
+      "lockedLabel": "[locked content]",
+      "confirm": "I understand"
+    }
+  },
+  "account": {
+    "joinedSince":  "With us since {{date}}",
+    "stats": {
+      "letters":   "Letters",
+      "bookmarks": "Bookmarks",
+      "damso":     "Conversations"
+    },
+    "logout":      "Logout",
+    "language":    "언어 / Language"
+  },
+  "footer": "© {{year}} The Midnight Post. All rights reserved.",
+  "common": {
+    "close":  "Close",
+    "back":   "Back",
+    "save":   "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "loading":"Loading…"
+  }
+}

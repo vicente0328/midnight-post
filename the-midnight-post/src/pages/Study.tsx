@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Feather, Flower2, Cross, Brush, X, ChevronLeft, Bookmark, BookmarkCheck, PenLine, MessageCircle } from 'lucide-react';
 import { collection, addDoc, getDocs, query, where, orderBy, limit, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
@@ -8,68 +8,45 @@ import { useAuth } from '../components/AuthContext';
 import { getTodayKnowledge, forceRegenerateKnowledge, KnowledgeEntry } from '../services/knowledge';
 import { generateSingleMentorReply } from '../services/ai';
 import { ShareCardButton } from '../utils/shareCard';
+import { useTranslation } from 'react-i18next';
 
-// ── 멘토 공간 정보 ────────────────────────────────────────────────────────────
+// ── 멘토 아이콘/색상 ─────────────────────────────────────────────────────────
 
 const ROOMS = {
   hyewoon: {
-    name: '혜운 스님',
-    roomName: '청명각(淸明閣)',
-    desc: '비움과 머무름의 수행자',
     icon: Flower2,
     color: 'from-stone-700 to-stone-900',
     accent: '#7c6a50',
     accentRgb: '124,106,80',
-    ambience: '고요한 선원의 향내가 번진다.\n빛이 창호지를 투과해 바닥에 내려앉는다.',
-    particle: '과',
   },
   benedicto: {
-    name: '베네딕토 신부',
-    roomName: '고해소',
-    desc: '사랑과 위로의 동반자',
     icon: Cross,
     color: 'from-red-900 to-red-950',
     accent: '#7a3030',
     accentRgb: '122,48,48',
-    ambience: '촛불이 흔들리며 작은 방을 밝힌다.\n나무 향이 조용히 감돈다.',
-    particle: '와',
   },
   theodore: {
-    name: '테오도르 교수',
-    roomName: '서재',
-    desc: '이성과 실존의 철학자',
     icon: Feather,
     color: 'from-slate-800 to-slate-950',
     accent: '#3a4a5c',
     accentRgb: '58,74,92',
-    ambience: '책들이 빼곡한 서가. 잉크 냄새와\n오래된 종이 사이로 사유가 깃든다.',
-    particle: '와',
   },
   yeonam: {
-    name: '연암 선생',
-    roomName: '취락헌(聚樂軒)',
-    desc: '순리와 조화의 선비',
     icon: Brush,
     color: 'from-emerald-900 to-emerald-950',
     accent: '#2d5a3d',
     accentRgb: '45,90,61',
-    ambience: '먹빛 향기와 대나무 그림자.\n창 너머 산이 숨을 고른다.',
-    particle: '과',
   },
 } as const;
 
 // 공간별 고유 분위기 텍스처 오버레이
 const ATMOSPHERES: Record<string, string> = {
-  // 창호지 수평선 패턴
   hyewoon: 'repeating-linear-gradient(0deg, rgba(212,175,55,0.06) 0px, transparent 1px, transparent 20px, rgba(212,175,55,0.06) 21px)',
-  // 촛불 글로우
   benedicto: 'radial-gradient(ellipse at 50% 80%, rgba(212,175,55,0.18), transparent 60%)',
-  // 서재 격자선
   theodore: [
     'repeating-linear-gradient(90deg, rgba(212,175,55,0.04) 0px, transparent 1px, transparent 36px, rgba(212,175,55,0.04) 37px)',
     'repeating-linear-gradient(0deg, rgba(212,175,55,0.04) 0px, transparent 1px, transparent 36px, rgba(212,175,55,0.04) 37px)',
   ].join(', '),
-  // 먹물 번짐
   yeonam: 'radial-gradient(ellipse at 12% 95%, rgba(45,90,61,0.55), transparent 58%), radial-gradient(ellipse at 88% 8%, rgba(212,175,55,0.07), transparent 45%)',
 };
 
@@ -110,6 +87,7 @@ const ADMIN_EMAIL = 'admin@tmp.com';
 
 function Lobby({ onEnter }: { onEnter: (id: MentorKey) => void }) {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const isAdmin = user?.email === ADMIN_EMAIL;
   const [regenerating, setRegenerating] = useState(false);
 
@@ -129,9 +107,9 @@ function Lobby({ onEnter }: { onEnter: (id: MentorKey) => void }) {
     <div className="w-full flex flex-col items-center">
       {/* 헤더 */}
       <div className="text-center mb-12">
-        <h1 className="text-3xl font-serif mb-4">Mentor's Library</h1>
+        <h1 className="text-3xl font-serif mb-4">{t('study.title')}</h1>
         <p className="opacity-60 italic text-sm break-keep max-w-xs mx-auto leading-relaxed" style={{ textWrap: 'balance' } as React.CSSProperties}>
-          각자의 방에 불이 켜져 있습니다.
+          {t('study.subtitle')}
         </p>
         {isAdmin && (
           <button
@@ -139,7 +117,7 @@ function Lobby({ onEnter }: { onEnter: (id: MentorKey) => void }) {
             disabled={regenerating}
             className="mt-4 text-[10px] uppercase tracking-[0.2em] opacity-30 hover:opacity-70 transition-opacity disabled:opacity-20"
           >
-            {regenerating ? '재생성 중...' : '↻ 지혜 재생성'}
+            {regenerating ? t('study.regenerating') : t('study.regenerate')}
           </button>
         )}
       </div>
@@ -165,8 +143,12 @@ function DoorCard({
   index: number;
   onEnter: (id: MentorKey) => void;
 }) {
+  const { t } = useTranslation();
   const room = ROOMS[id];
   const Icon = room.icon;
+  const mentorName = t(`mentors.${id}.name`);
+  const mentorSpace = t(`mentors.${id}.space`);
+  const ambience = t(`study.rooms.${id}.ambience`);
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -267,12 +249,12 @@ function DoorCard({
           className="font-serif text-sm sm:text-[15px] font-bold mb-0.5 text-center transition-colors duration-300"
           style={{ color: hovered ? 'rgba(26,18,8,0.90)' : 'rgba(26,18,8,0.72)' }}
         >
-          {room.name}
+          {mentorName}
         </p>
 
         {/* 공간 이름 */}
         <p className="font-serif text-[10px] italic mb-3 text-center" style={{ color: 'rgba(26,18,8,0.32)' }}>
-          {room.roomName}
+          {mentorSpace}
         </p>
 
         {/* 호버 시 늘어나는 금색 선 */}
@@ -284,7 +266,7 @@ function DoorCard({
           }}
         />
 
-        {/* 분위기 텍스트 — 항상 미묘하게 보이고, 호버 시 더 선명해짐 */}
+        {/* 분위기 텍스트 */}
         <p
           className="mt-3 font-serif italic text-[9px] sm:text-[9.5px] leading-[1.75] text-center whitespace-pre-line break-keep px-1"
           style={{
@@ -292,7 +274,7 @@ function DoorCard({
             transition: 'color 0.6s ease',
           }}
         >
-          {room.ambience}
+          {ambience}
         </p>
       </div>
     </motion.button>
@@ -305,7 +287,12 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
   const room = ROOMS[mentorId];
   const Icon = room.icon;
   const { user } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
+  const mentorName = t(`mentors.${mentorId}.name`);
+  const mentorSpace = t(`mentors.${mentorId}.space`);
+  const mentorTitle = t(`mentors.${mentorId}.title`);
+  const ambience = t(`study.rooms.${mentorId}.ambience`);
   const [entries, setEntries] = useState<KnowledgeEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEntry, setSelectedEntry] = useState<KnowledgeEntry | null>(null);
@@ -338,7 +325,7 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
       const updateHours = [8, 12, 17, 22];
       const nextHour = updateHours.find(u => u > h) ?? (updateHours[0] + 24);
       const minsLeft = (nextHour - h) * 60 - nowKST.getUTCMinutes();
-      const msUntilNext = minsLeft * 60 * 1000 - nowKST.getUTCSeconds() * 1000 + 30 * 1000; // 30초 여유
+      const msUntilNext = minsLeft * 60 * 1000 - nowKST.getUTCSeconds() * 1000 + 30 * 1000;
 
       timer = setTimeout(fetchAndSchedule, msUntilNext);
     };
@@ -381,7 +368,7 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
         className="self-start flex items-center gap-2 mb-6 opacity-35 hover:opacity-75 transition-opacity duration-300 text-sm font-serif italic"
       >
         <ChevronLeft size={16} strokeWidth={1.5} />
-        연구실 목록으로
+        {t('study.backToLobby')}
       </button>
 
       {/* ── 공간 진입 배너 ── */}
@@ -423,12 +410,12 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
 
           {/* 직함 */}
           <p className="text-[9px] uppercase tracking-[0.35em] mb-2" style={{ color: 'rgba(212,175,55,0.45)' }}>
-            {room.desc}
+            {mentorTitle}
           </p>
 
           {/* 공간 제목 */}
           <h2 className="font-serif text-xl sm:text-2xl font-bold mb-4 tracking-wide" style={{ color: 'rgba(245,237,213,0.88)' }}>
-            {room.name}의 {room.roomName}
+            {t('study.roomTitle', { name: mentorName, room: mentorSpace })}
           </h2>
 
           {/* 얇은 구분선 */}
@@ -443,7 +430,7 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
             className="font-serif italic text-[11px] sm:text-sm text-center whitespace-pre-line leading-[1.85] max-w-xs"
             style={{ color: 'rgba(245,237,213,0.46)' }}
           >
-            {room.ambience}
+            {ambience}
           </p>
         </div>
       </div>
@@ -456,7 +443,7 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
           style={{ touchAction: 'manipulation' }}
         >
           <PenLine size={11} strokeWidth={1.4} />
-          편지 보내기
+          {t('study.sendLetter')}
         </button>
         <div className="w-px h-3 bg-ink/15" />
         <button
@@ -466,7 +453,7 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
           style={{ touchAction: 'manipulation' }}
         >
           <MessageCircle size={11} strokeWidth={1.4} />
-          {damsoLoading ? '연결 중…' : '담소 나누기'}
+          {damsoLoading ? t('study.connecting') : t('study.startDamso')}
         </button>
       </div>
 
@@ -475,7 +462,6 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
         {showLetterModal && (
           <LetterWritingModal
             mentorId={mentorId}
-            room={room}
             onClose={() => setShowLetterModal(false)}
             onSent={() => setShowLetterModal(false)}
           />
@@ -484,12 +470,12 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
 
       {/* 오늘의 지혜 레이블 */}
       <p className="text-[9px] uppercase tracking-[0.35em] opacity-28 text-center font-serif mb-7">
-        오늘의 지혜 — {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+        {t('study.todayWisdom')} — {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
       </p>
 
       {!loading && entries.length === 0 && (
         <p className="font-serif italic opacity-40 text-center py-8">
-          오늘의 지혜가 아직 준비되지 않았습니다. 잠시 후 다시 방문해주세요.
+          {t('study.emptyHint')}
         </p>
       )}
 
@@ -504,7 +490,7 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
                 key={index}
                 entry={entry}
                 index={index}
-                room={room}
+                mentorId={mentorId}
                 onSelect={() => setSelectedEntry(entry)}
               />
             ))}
@@ -515,7 +501,6 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
         {selectedEntry && (
           <WisdomModal
             entry={selectedEntry}
-            room={room}
             mentorId={mentorId}
             onClose={() => setSelectedEntry(null)}
           />
@@ -530,14 +515,15 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
 function KnowledgeCard({
   entry,
   index,
-  room,
+  mentorId,
   onSelect,
 }: {
   entry: KnowledgeEntry;
   index: number;
-  room: typeof ROOMS[MentorKey];
+  mentorId: MentorKey;
   onSelect: () => void;
 }) {
+  const room = ROOMS[mentorId];
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -563,7 +549,7 @@ function KnowledgeCard({
       <div className="absolute bottom-2 left-2 w-3 h-3 border-b border-l border-[#D4AF37]/20 group-hover:border-[#D4AF37]/45 transition-colors duration-500 pointer-events-none" />
       <div className="absolute bottom-2 right-2 w-3 h-3 border-b border-r border-[#D4AF37]/20 group-hover:border-[#D4AF37]/45 transition-colors duration-500 pointer-events-none" />
 
-      {/* 상단 액센트 선 — 멘토 색상 → 금색 그라디언트 */}
+      {/* 상단 액센트 선 */}
       <div
         className="mb-5 h-px transition-all duration-500"
         style={{
@@ -584,7 +570,7 @@ function KnowledgeCard({
         {entry.quote.split('\n')[0]}
       </p>
 
-      {/* 한국어 번역 */}
+      {/* 번역 */}
       <p
         className="text-[11px] leading-[1.75] mb-4 flex-1 line-clamp-2 transition-colors duration-500 break-keep"
         style={{
@@ -616,17 +602,19 @@ function KnowledgeCard({
 
 function WisdomModal({
   entry,
-  room,
   mentorId,
   onClose,
 }: {
   entry: KnowledgeEntry;
-  room: typeof ROOMS[MentorKey];
   mentorId: MentorKey;
   onClose: () => void;
 }) {
+  const room = ROOMS[mentorId];
   const Icon = room.icon;
   const { user } = useAuth();
+  const { t } = useTranslation();
+  const mentorName = t(`mentors.${mentorId}.name`);
+  const mentorSpace = t(`mentors.${mentorId}.space`);
   const [bookmarkId, setBookmarkId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -718,8 +706,8 @@ function WisdomModal({
             <Icon size={14} strokeWidth={1.5} className="text-[#D4AF37]" />
           </div>
           <div>
-            <p className="font-serif text-sm font-bold opacity-80">{room.name}</p>
-            <p className="text-[9px] uppercase tracking-widest opacity-40">{room.roomName}</p>
+            <p className="font-serif text-sm font-bold opacity-80">{mentorName}</p>
+            <p className="text-[9px] uppercase tracking-widest opacity-40">{mentorSpace}</p>
           </div>
         </div>
 
@@ -754,7 +742,7 @@ function WisdomModal({
 
         {/* 멘토의 말 */}
         <div className="mb-8">
-          <p className="text-[9px] uppercase tracking-[0.3em] opacity-35 mb-3">멘토의 말</p>
+          <p className="text-[9px] uppercase tracking-[0.3em] opacity-35 mb-3">{t('study.card.context')}</p>
           <p className="font-serif text-sm sm:text-base leading-[1.95] text-ink/80 break-keep italic" style={{ wordBreak: 'keep-all' }}>
             {entry.context}
           </p>
@@ -765,7 +753,7 @@ function WisdomModal({
           <div className="h-px w-full bg-ink/8" />
           <div className="mt-3">
             <ShareCardButton
-              mentorName={room.name}
+              mentorName={mentorName}
               quote={entry.quote}
               source={entry.source}
               translation={entry.translation}
@@ -781,20 +769,22 @@ function WisdomModal({
 
 function LetterWritingModal({
   mentorId,
-  room,
   onClose,
   onSent,
 }: {
   mentorId: MentorKey;
-  room: typeof ROOMS[MentorKey];
   onClose: () => void;
   onSent: () => void;
 }) {
   const { user, setShowAuthModal } = useAuth();
+  const { t } = useTranslation();
+  const room = ROOMS[mentorId];
+  const Icon = room.icon;
+  const mentorName = t(`mentors.${mentorId}.name`);
+  const mentorTitle = t(`mentors.${mentorId}.title`);
   const [content, setContent] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isSent, setIsSent] = useState(false);
-  const Icon = room.icon;
   const MAX = 100;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -903,8 +893,8 @@ function LetterWritingModal({
             <Icon size={17} strokeWidth={1.3} className="text-[#D4AF37]" />
           </div>
           <p className="font-serif text-[10px] uppercase tracking-[0.3em] opacity-35 mb-1">To</p>
-          <p className="font-serif text-lg font-bold text-ink/85">{room.name}</p>
-          <p className="text-[10px] opacity-35 italic mt-0.5">{room.desc}</p>
+          <p className="font-serif text-lg font-bold text-ink/85">{mentorName}</p>
+          <p className="text-[10px] opacity-35 italic mt-0.5">{mentorTitle}</p>
         </div>
 
         {isSent ? (
@@ -914,9 +904,9 @@ function LetterWritingModal({
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             className="flex flex-col items-center gap-4 py-8 text-center"
           >
-            <p className="font-serif italic text-sm opacity-70">편지를 발송했습니다.</p>
+            <p className="font-serif italic text-sm opacity-70">{t('study.sent')}</p>
             <p className="text-[11px] opacity-35 font-serif leading-relaxed break-keep" style={{ wordBreak: 'keep-all' }}>
-              답장이 오면 알려드릴게요.
+              {t('study.sentHint')}
             </p>
           </motion.div>
         ) : isSending ? (
@@ -926,10 +916,10 @@ function LetterWritingModal({
               transition={{ duration: 2, repeat: Infinity }}
               className="font-serif italic text-sm opacity-50"
             >
-              편지를 전하고 있습니다…
+              {t('study.sending')}
             </motion.div>
             <p className="text-[10px] opacity-25 font-serif text-center">
-              {room.name}의 답장을 기다려주세요
+              {t('study.waitingFor', { name: mentorName })}
             </p>
           </div>
         ) : (
@@ -938,7 +928,7 @@ function LetterWritingModal({
               <textarea
                 value={content}
                 onChange={e => setContent(e.target.value.slice(0, MAX))}
-                placeholder={`${room.name}께 오늘의 마음을 전해보세요…`}
+                placeholder={t('study.letterPlaceholder', { name: mentorName })}
                 rows={5}
                 className="w-full bg-transparent resize-none outline-none font-serif text-base leading-[1.9] text-ink/85 placeholder:text-ink/25 placeholder:italic border-b border-ink/15 pb-2 focus:border-ink/30 transition-colors duration-300"
                 autoFocus
@@ -954,7 +944,7 @@ function LetterWritingModal({
                 disabled={!content.trim()}
                 className="font-serif italic text-sm opacity-55 hover:opacity-90 transition-opacity duration-300 disabled:opacity-20 border-b border-ink/20 pb-px"
               >
-                편지 보내기 →
+                {t('study.sendAction')}
               </button>
             </div>
           </form>

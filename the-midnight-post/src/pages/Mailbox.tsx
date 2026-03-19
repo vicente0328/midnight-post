@@ -7,14 +7,15 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Flower2, Cross, Feather, Brush, Mail, ArrowRight, Bookmark, BookmarkCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
-// ── 멘토 정보 ────────────────────────────────────────────────────────────────
+// ── 멘토 정보 (아이콘·색상만 보관) ──────────────────────────────────────────
 
 const MENTOR_INFO = {
-  hyewoon:   { name: '혜운 스님',    spaceName: '청명각(淸明閣)', icon: Flower2, color: 'from-stone-700 to-stone-900', accentRgb: '124,106,80' },
-  benedicto: { name: '베네딕토 신부', spaceName: '고해소',         icon: Cross,   color: 'from-red-900 to-red-950',        accentRgb: '122,48,48'  },
-  theodore:  { name: '테오도르 교수', spaceName: '서재',           icon: Feather, color: 'from-slate-800 to-slate-950',     accentRgb: '58,74,92'   },
-  yeonam:    { name: '연암 선생',    spaceName: '취락헌(聚樂軒)', icon: Brush,   color: 'from-emerald-900 to-emerald-950', accentRgb: '45,90,61'   },
+  hyewoon:   { icon: Flower2, color: 'from-stone-700 to-stone-900', accentRgb: '124,106,80' },
+  benedicto: { icon: Cross,   color: 'from-red-900 to-red-950',     accentRgb: '122,48,48'  },
+  theodore:  { icon: Feather, color: 'from-slate-800 to-slate-950', accentRgb: '58,74,92'   },
+  yeonam:    { icon: Brush,   color: 'from-emerald-900 to-emerald-950', accentRgb: '45,90,61' },
 } as const;
 
 type MentorKey = keyof typeof MENTOR_INFO;
@@ -34,6 +35,7 @@ interface ReplyDoc {
 // ── Mailbox ──────────────────────────────────────────────────────────────────
 
 export default function Mailbox() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { decrypt } = useVault();
   const navigate = useNavigate();
@@ -44,7 +46,6 @@ export default function Mailbox() {
   const [loading, setLoading] = useState(true);
   const [selectedReply, setSelectedReply] = useState<ReplyDoc | null>(null);
 
-  // 하이라이트 대상 ref (첫 번째 매칭 아이템)
   const highlightRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -71,7 +72,6 @@ export default function Mailbox() {
       .finally(() => setLoading(false));
   }, [user, decrypt]);
 
-  // 하이라이트 대상으로 스크롤
   useEffect(() => {
     if (!loading && highlightEntryId && highlightRef.current) {
       setTimeout(() => {
@@ -83,21 +83,20 @@ export default function Mailbox() {
   if (!user) {
     return (
       <div className="w-full flex flex-col items-center py-20">
-        <p className="font-serif italic opacity-40">로그인 후 편지함을 확인할 수 있습니다.</p>
+        <p className="font-serif italic opacity-40">{t('mailbox.loginRequired')}</p>
       </div>
     );
   }
 
-  // 하이라이트 대상 entryId의 첫 번째 reply index 찾기
   let highlightFirstSeen = false;
 
   return (
     <div className="w-full max-w-2xl flex flex-col items-center">
       {/* ── 헤더 ── */}
       <div className="text-center mb-12">
-        <h1 className="text-3xl font-serif mb-4">Mailbox</h1>
+        <h1 className="text-3xl font-serif mb-4">{t('mailbox.title')}</h1>
         <p className="opacity-60 italic text-sm break-keep" style={{ wordBreak: 'keep-all' }}>
-          현자들의 편지가 모이는 곳입니다.
+          {t('mailbox.subtitle')}
         </p>
       </div>
 
@@ -111,7 +110,7 @@ export default function Mailbox() {
       {/* ── 로딩 ── */}
       {loading && (
         <p className="font-serif italic opacity-30 text-sm animate-pulse py-12">
-          편지함을 열고 있습니다…
+          {t('mailbox.loading')}
         </p>
       )}
 
@@ -124,8 +123,8 @@ export default function Mailbox() {
           className="flex flex-col items-center gap-5 opacity-35 py-16 text-center"
         >
           <Mail size={34} strokeWidth={0.9} />
-          <p className="font-serif italic text-base">아직 도착한 편지가 없습니다.</p>
-          <p className="text-xs tracking-wide">The Desk에서 첫 번째 마음을 남겨보세요.</p>
+          <p className="font-serif italic text-base">{t('mailbox.empty')}</p>
+          <p className="text-xs tracking-wide">{t('mailbox.emptyHint')}</p>
         </motion.div>
       )}
 
@@ -135,9 +134,9 @@ export default function Mailbox() {
           const mentor = MENTOR_INFO[reply.mentorId as MentorKey];
           if (!mentor) return null;
           const Icon = mentor.icon;
+          const mentorName = t(`mentors.${reply.mentorId}.name`);
           const isHighlighted = reply.entryId === highlightEntryId;
 
-          // 해당 entryId의 첫 번째 항목에만 ref 부착
           let attachRef = false;
           if (isHighlighted && !highlightFirstSeen) {
             attachRef = true;
@@ -148,11 +147,9 @@ export default function Mailbox() {
             ? format(reply.createdAt.toDate(), 'yyyy.MM.dd')
             : '—';
 
-          // 인용구 미리보기 (이메일 제목처럼)
           const quoteLine = reply.quote.split('\n')[0];
           const preview = quoteLine.length > 55 ? quoteLine.slice(0, 55) + '…' : quoteLine;
 
-          // 번역 서브텍스트
           const translationPreview = reply.translation
             ? (reply.translation.length > 48 ? reply.translation.slice(0, 48) + '…' : reply.translation)
             : null;
@@ -178,10 +175,8 @@ export default function Mailbox() {
                   WebkitTapHighlightColor: 'transparent',
                 }}
               >
-                {/* 내부 테두리 장식 */}
                 <div className="absolute top-1.5 left-1.5 right-1.5 bottom-1.5 border border-ink/4 pointer-events-none" />
 
-                {/* 멘토 엠블럼 */}
                 <div
                   className={`w-10 h-10 rounded-full bg-gradient-to-br ${mentor.color} flex items-center justify-center flex-shrink-0 shadow-sm relative mt-0.5`}
                 >
@@ -189,20 +184,16 @@ export default function Mailbox() {
                   <Icon size={14} strokeWidth={1.5} className="text-[#D4AF37]" />
                 </div>
 
-                {/* 편지 내용 */}
                 <div className="flex-1 min-w-0">
-                  {/* 발신인 + 날짜 */}
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <p className="font-serif text-sm font-bold text-ink/85 group-hover:text-ink transition-colors duration-300 leading-tight">
-                      {mentor.name}
+                      {mentorName}
                     </p>
                     <span className="text-[10px] font-mono opacity-35 flex-shrink-0 mt-0.5">{date}</span>
                   </div>
-                  {/* 인용구 미리보기 (이메일 제목처럼) */}
                   <p className="font-serif text-sm italic opacity-65 leading-relaxed line-clamp-1">
                     &ldquo;{preview}&rdquo;
                   </p>
-                  {/* 번역 서브텍스트 */}
                   {translationPreview && (
                     <p className="text-[11px] opacity-35 mt-0.5 line-clamp-1 leading-relaxed">
                       {translationPreview}
@@ -210,7 +201,6 @@ export default function Mailbox() {
                   )}
                 </div>
 
-                {/* 열기 화살표 */}
                 <div className="flex-shrink-0 opacity-18 group-hover:opacity-45 transition-opacity duration-300 self-center ml-1">
                   <ArrowRight size={13} strokeWidth={1.5} />
                 </div>
@@ -249,8 +239,11 @@ function LetterModal({
   onClose: () => void;
   onGoToArchive: () => void;
 }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const mentor = MENTOR_INFO[reply.mentorId as MentorKey];
+  const mentorName = t(`mentors.${reply.mentorId}.name`);
+  const mentorSpace = t(`mentors.${reply.mentorId}.space`);
   const [bookmarkId, setBookmarkId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -259,7 +252,6 @@ function LetterModal({
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  // 북마크 여부 확인
   useEffect(() => {
     if (!user || !mentor) return;
     getDocs(query(
@@ -301,7 +293,7 @@ function LetterModal({
 
   const Icon = mentor.icon;
   const date = reply.createdAt?.toDate
-    ? format(reply.createdAt.toDate(), 'yyyy년 MM월 dd일')
+    ? format(reply.createdAt.toDate(), 'yyyy.MM.dd')
     : '';
 
   return (
@@ -365,9 +357,9 @@ function LetterModal({
               <Icon size={20} strokeWidth={1.5} className="text-[#D4AF37]" />
             </div>
             <h2 className="font-serif text-xl font-bold tracking-widest text-ink/90 mb-0.5">
-              {mentor.name}
+              {mentorName}
             </h2>
-            <p className="text-[9px] uppercase tracking-[0.3em] opacity-35">{mentor.spaceName}</p>
+            <p className="text-[9px] uppercase tracking-[0.3em] opacity-35">{mentorSpace}</p>
           </div>
 
           {/* 인용구 */}
@@ -410,7 +402,7 @@ function LetterModal({
 
           {/* 서명 */}
           <div className="mt-10 text-right opacity-55 italic font-serif">
-            <p className="text-base sm:text-lg font-bold">{mentor.name} 드림</p>
+            <p className="text-base sm:text-lg font-bold">{t('mailbox.letter.from', { name: mentorName })}</p>
           </div>
 
           {/* 나의 편지 보러가기 */}
@@ -419,14 +411,14 @@ function LetterModal({
               onClick={onGoToArchive}
               className="font-serif text-xs italic opacity-38 hover:opacity-65 transition-opacity duration-300 flex items-center gap-1.5 tracking-wide"
             >
-              나의 편지 보러가기
+              {t('mailbox.letter.goToArchive')}
               <ArrowRight size={11} strokeWidth={1.5} />
             </button>
             <button
               onClick={onClose}
               className="font-serif text-xs italic opacity-25 hover:opacity-55 transition-opacity duration-300 tracking-wide flex items-center gap-1"
             >
-              닫기
+              {t('mailbox.letter.close')}
               <X size={11} strokeWidth={1.5} />
             </button>
           </div>
