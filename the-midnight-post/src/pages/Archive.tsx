@@ -464,17 +464,6 @@ export default function Archive() {
         </motion.div>
       )}
 
-      <AnimatePresence>
-        {showUpgradeModal && (
-          <UpgradeModal
-            reason="history"
-            used={0}
-            onUpgrade={upgrade}
-            onClose={() => setShowUpgradeModal(false)}
-          />
-        )}
-      </AnimatePresence>
-
       {tab === 'bookmarks' && (
         <motion.div
           key="bookmarks"
@@ -553,6 +542,18 @@ export default function Archive() {
       )}
       </AnimatePresence>
       </div>
+
+      {/* ── 업그레이드 모달 ── */}
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <UpgradeModal
+            reason="history"
+            used={0}
+            onUpgrade={upgrade}
+            onClose={() => setShowUpgradeModal(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ── 담소 리더 모달 ── */}
       <AnimatePresence>
