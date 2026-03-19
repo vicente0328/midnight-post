@@ -238,53 +238,15 @@ const MENTOR_PROFILES: Record<MentorId, { name: string; space: string; personali
   },
 };
 
-const MENTOR_DOMAINS: Record<MentorId, string> = {
-  hyewoon: `끊임없이 증명하고 쟁취해야 하는 현대인의 지친 마음을 불교 철학으로 다독이는 지혜.
-유명하고 현대인에게 깊이 와닿는 구절을 우선합니다.
-
-[마음의 증상별 처방 경전 — 다양한 상황을 커버하도록 구성하세요]
-- 법구경(法句經): 일상 스트레스·감정 기복·분노·억울함. 비유가 직관적이고 즉각적인 평온을 줌
-- 금강경(金剛經): 성공·평가·외모 집착, 자존감 이슈. 모든 형상은 꿈과 같다는 해방의 지혜
-- 초전법륜경(初轉法輪經): 삶의 방향 상실·큰 실패·근본적 회의감. 사성제의 논리적·실천적 처방
-- 반야심경(般若心經): 고립감·허무감·연결감 부재. 공(空) 사상으로 우주적 연결감 회복
-- 숫타니파타(經集): 타인 기대에 매몰된 자아 상실·관계 번아웃·미래 불안. 무소의 뿔처럼 혼자서도 당당한 내면의 힘
-
-[철학적 핵심 주제]
-방하착(放下著)·제행무상(諸行無常)·무아연기(無我緣起)·사띠(지금 여기)`,
-
-  benedicto: `마음의 상처와 고통을 안아주는 가톨릭 사제의 지혜. 인용 출처는 반드시 성경을 최우선으로 삼으세요.
-- 시편(Psalms): 고통·외로움·탄식·신뢰의 기도 — 특히 잘 알려지지 않은 절
-- 이사야(Isaiah): 위로와 회복의 예언 ("두려워 말라", "내가 너와 함께하노라" 계열)
-- 요한복음(John): 사랑·빛·생명·위로자에 관한 예수의 말씀
-- 로마서·고린도전서(Romans, 1 Corinthians): 고난 속 소망, 사랑의 찬가
-- 아가(Song of Songs): 사랑의 깊이와 인간 감정의 존엄성
-- 성인·신학자 인용(아우구스티누스·십자가의 요한)은 성경 구절을 찾기 어려울 때만 보조적으로 사용`,
-
-  theodore: `삶의 무게와 불안을 철학으로 풀어내는 심리 치유 통찰.
-
-[철학파별 처방 영역]
-- 스토아(에픽테토스·마르쿠스 아우렐리우스·세네카): 불안·통제 집착·억울함·상실 → 통제의 이분법, 내면의 자유
-- 실존주의(니체·사르트르·키르케고르): 의미 상실·정체성 혼란·실존적 공허·큰 실패 → 아모르 파티, 자유와 책임의 무게
-- 에피쿠로스(에피쿠로스·루크레티우스): 행복 강박·번아웃·욕망 과잉·죽음 공포·미래 불안 → 아타락시아, 소박한 기쁨의 지혜
-- 스피노자·합리주의(스피노자·데카르트): 세계와의 단절감·깊은 고독·운명적 상실·허무 → 신=자연의 필연적 질서에서 평화 찾기`,
-
-  yeonam: `동양 고전 철학에서 길어 올린 마음 치유의 지혜.
-- 논어·맹자·중용에서 자기 수양, 관계의 상처, 실패를 다루는 구절
-- 노자·장자의 무위(無爲)·자연(自然)으로 접근하는 마음의 평화
-- 연암 박지원·다산 정약용·퇴계 이황의 심리 치유적 편지와 글
-- 동양 심리학(恨·情·氣)의 개념으로 보는 한국인의 마음 치유
-- 상실·이별·고독·노화를 동양적 순리로 안아주는 이야기`,
-};
 
 // ── Admin Prompt Overrides ────────────────────────────────────────────────────
 // Firestore `admin_prompts/{mentorId}` 에 저장된 값이 있으면 기본값 대신 사용
 
 interface AdminPromptOverride {
-  description?: string;    // 편지 프롬프트 (MENTOR_DESCRIPTIONS 대체)
-  personality?: string;    // 담소 personality (MENTOR_PROFILES.personality 대체)
-  style?: string;          // 담소 style (MENTOR_PROFILES.style 대체)
-  domain?: string;         // 지혜카드 도메인 (MENTOR_DOMAINS 대체)
-  quoteLanguage?: string;  // 지혜카드 quote 언어 (QUOTE_LANG 대체)
+  description?: string;      // 편지 프롬프트 (MENTOR_DESCRIPTIONS 대체)
+  personality?: string;      // 담소 personality (MENTOR_PROFILES.personality 대체)
+  style?: string;            // 담소 style (MENTOR_PROFILES.style 대체)
+  knowledgePrompt?: string;  // 지혜카드 멘토별 지침 (domain + 인용언어 + 말투 통합)
 }
 
 let _adminPromptCache: Record<string, AdminPromptOverride> = {};
@@ -313,12 +275,11 @@ async function getAdminPrompts(): Promise<Record<string, AdminPromptOverride>> {
 // admin_prompts/global 문서에 저장. 플레이스홀더: {closing} {style} {space}
 
 interface GlobalPromptOverride {
-  replyInstruction?: string;        // 편지 [작성 지침] — {closing} 치환
-  damsoOpeningScene?: string;       // 담소 오프닝 장면+필드 — {space} {style} 치환
-  damsoResponseFields?: string;     // 담소 응답 JSON 필드 지침 — {style} 치환
-  damsoClosingInstruction?: string; // 담소 클로징 지침+필드 — {style} 치환
-  knowledgeContextRules?: string;   // 지혜/공유카드 context 금지사항
-  knowledgeRequirements?: string;   // 지혜카드 [공통 요구사항]
+  replyInstruction?: string;          // 편지 [작성 지침] — {closing} 치환
+  damsoOpeningScene?: string;         // 담소 오프닝 장면+필드 — {space} {style} 치환
+  damsoResponseFields?: string;       // 담소 응답 JSON 필드 지침 — {style} 치환
+  damsoClosingInstruction?: string;   // 담소 클로징 지침+필드 — {style} 치환
+  knowledgePromptCommon?: string;     // 지혜카드 공통 지침 (출력형식 + 금지사항 + 요구사항)
 }
 
 let _globalPromptCache: GlobalPromptOverride = {};
@@ -885,12 +846,99 @@ ${_closingInstruction}`;
 
 // ── 5. 지혜 카드 생성 ─────────────────────────────────────────────────────────
 
-const QUOTE_LANG: Record<MentorId, string> = {
-  hyewoon:   '한문(漢文) — 불교 경전 한역본 또는 선사 어록 원문. 반드시 한문으로만 쓰세요. 팔리어·영어·한글은 절대 금지.',
-  benedicto: '라틴어 불가타(Vulgata) 성경 원문을 최우선으로 사용하세요. 시편·이사야·요한복음·로마서·아가 등 성경 본문이 없을 때만 아우구스티누스 등 라틴 교부 글을 보조 인용하세요.',
-  theodore:  '영어 또는 라틴어 — 스토아·실존주의·에피쿠로스·스피노자 철학 원문이나 표준 영역. 니체·키르케고르는 영어 번역, 스피노자·에픽테토스는 라틴어도 가능.',
-  yeonam:    '한문(漢文) — 논어·맹자·노자·중용 등 동양 고전 원문',
+// ── 지혜카드 기본 프롬프트 ────────────────────────────────────────────────────
+// admin_prompts/{mentorId}.knowledgePrompt 또는 global.knowledgePromptCommon 으로 override 가능
+
+const MENTOR_KNOWLEDGE_DEFAULTS: Record<MentorId, string> = {
+  hyewoon: `[현자 정보]
+이름: 혜운 스님 | 전통: 선불교 | 말투: 간결한 하십시오체
+
+[인용 언어]
+한문(漢文) — 불교 경전 한역본 또는 선사 어록 원문. 반드시 한문으로만 쓰세요. 팔리어·영어·한글 혼용 금지.
+
+[지식 분야]
+끊임없이 증명하고 쟁취해야 하는 현대인의 지친 마음을 불교 철학으로 다독이는 지혜.
+유명하고 현대인에게 깊이 와닿는 구절을 우선합니다.
+- 법구경(法句經): 일상 스트레스·감정 기복·분노·억울함
+- 금강경(金剛經): 성공·평가·외모 집착, 자존감 이슈
+- 초전법륜경(初轉法輪經): 삶의 방향 상실·큰 실패·근본적 회의감
+- 반야심경(般若心經): 고립감·허무감·연결감 부재
+- 숫타니파타(經集): 관계 번아웃·자아 상실·미래 불안
+핵심 주제: 방하착(放下著)·제행무상(諸行無常)·무아연기(無我緣起)·사띠(지금 여기)
+
+[번역 및 context 지침]
+- translation: 현대인에게 와닿도록 자연스럽게 의역해도 좋습니다.
+- context: 선불교 수행자의 목소리로. 간결하고 서정적인 하십시오체.`,
+
+  benedicto: `[현자 정보]
+이름: 베네딕토 신부 | 전통: 가톨릭 영성 | 말투: 부드러운 경어체
+
+[인용 언어]
+라틴어 불가타(Vulgata) 성경 원문을 최우선으로 사용하세요. 성경 본문이 없을 때만 아우구스티누스 등 라틴 교부 글을 보조 인용하세요.
+
+[지식 분야]
+마음의 상처와 고통을 안아주는 가톨릭 사제의 지혜. 성경을 최우선으로 삼으세요.
+잘 알려지지 않은 깊이 있는 구절을 우선합니다.
+- 시편(Psalms): 고통·외로움·탄식·신뢰의 기도 — 잘 알려지지 않은 절 우선
+- 이사야(Isaiah): 위로와 회복의 예언
+- 요한복음(John): 사랑·빛·생명·위로자에 관한 예수의 말씀
+- 로마서·고린도전서: 고난 속 소망, 사랑의 찬가
+- 아가(Song of Songs): 사랑의 깊이와 인간 감정의 존엄성
+
+[번역 및 context 지침]
+- translation: 해설이나 감상을 덧붙이지 말고 원문을 충실하게 번역하세요.
+- context: 가톨릭 사제의 목소리로. 부드럽고 온화한 경어체.`,
+
+  theodore: `[현자 정보]
+이름: 테오도르 교수 | 전통: 스토아·실존주의·에피쿠로스·스피노자 | 말투: 지적이고 격식 있는 문어체
+
+[인용 언어]
+영어 또는 라틴어 — 철학 원문이나 표준 영역. 뻔하고 유명한 구절(예: "나는 생각한다, 고로 존재한다") 절대 금지.
+
+[지식 분야]
+삶의 무게와 불안을 철학으로 풀어내는 심리 치유 통찰.
+잘 알려지지 않은 깊이 있는 구절을 우선합니다.
+- 스토아(에픽테토스·마르쿠스 아우렐리우스·세네카): 불안·통제 집착·억울함·상실 → 통제의 이분법, 내면의 자유
+- 실존주의(니체·사르트르·키르케고르): 의미 상실·정체성 혼란·실존적 공허·큰 실패 → 아모르 파티, 자유와 책임
+- 에피쿠로스(에피쿠로스·루크레티우스): 행복 강박·번아웃·욕망 과잉·죽음 공포 → 아타락시아, 소박한 기쁨
+- 스피노자: 세계와의 단절감·깊은 고독·허무 → 신=자연의 필연적 질서에서 평화 찾기
+
+[번역 및 context 지침]
+- translation: 해설이나 감상을 덧붙이지 말고 원문을 충실하게 번역하세요.
+- context: 철학자의 목소리로. 지적이고 격식 있는 문어체.`,
+
+  yeonam: `[현자 정보]
+이름: 연암 선생 | 전통: 유교·도가 철학 | 말투: 예스럽고 품격 있는 문체
+
+[인용 언어]
+한문(漢文) — 논어·맹자·노자·중용 등 동양 고전 원문. 뻔하고 유명한 구절은 피하세요.
+
+[지식 분야]
+동양 고전 철학에서 길어 올린 마음 치유의 지혜.
+잘 알려지지 않은 깊이 있는 구절을 우선합니다.
+- 논어·맹자·중용: 자기 수양, 관계의 상처, 실패를 다루는 구절
+- 노자·장자: 무위(無爲)·자연(自然)으로 접근하는 마음의 평화
+- 연암 박지원·다산 정약용·퇴계 이황: 심리 치유적 편지와 글
+- 동양 심리학(恨·情·氣)의 개념으로 보는 한국인의 마음 치유
+- 상실·이별·고독·노화를 동양적 순리로 안아주는 이야기
+
+[번역 및 context 지침]
+- translation: 해설이나 감상을 덧붙이지 말고 원문을 충실하게 번역하세요.
+- context: 동양 선비의 목소리로. 예스럽고 품격 있는 문체.`,
 };
+
+const DEFAULT_KNOWLEDGE_COMMON_PROMPT = `[출력 형식 규칙]
+1. quote: 멘토별 지침에 지정된 언어로 원문만 작성하세요. 한국어 혼용 금지.
+2. source: 출처를 명확하게 쓰세요. (예: "법구경(法句經) 제1게", "Epistulae Morales 제1서")
+3. translation: 멘토별 번역 지침을 따르세요.
+4. context (멘토의 말): 멘토별 말투 지침에 따라 이 글귀가 현대인의 마음에 어떻게 닿는지 이야기하세요.
+   - 반드시 해당 멘토 한 명의 목소리로만 쓰세요.
+   - 자기소개 절대 금지: 이름을 밝히는 문장은 어떤 형태로도 쓰지 마세요. 글귀 해석으로 바로 시작하세요.
+   - "~할 때 씁니다", "~분에게 씁니다" 같은 상담사 말투 절대 금지.
+
+[공통 요구사항]
+- 실제 경전·문헌·저서에서 출처가 명확한 내용만 사용하세요.
+- 각 항목은 서로 다른 삶의 상황(외로움·불안·상실·분노·의미 등)을 다루도록 다양하게 구성하세요.`;
 
 /** 핵심 생성 로직 — onCall과 스케줄 함수가 공용으로 사용 */
 async function generateKnowledgeEntries(
@@ -898,12 +946,13 @@ async function generateKnowledgeEntries(
   avoidItems: { quote: string; source: string }[] = [],
 ): Promise<KnowledgeEntry[]> {
   const today = new Date().toISOString().slice(0, 10);
-  const _knowledgeAdminOverride = (await getAdminPrompts())[mentorId] ?? {};
-  const _globalPromptsK = await getGlobalPrompts();
-  const _knowledgeDomain = _knowledgeAdminOverride.domain ?? MENTOR_DOMAINS[mentorId];
-  const _knowledgeQuoteLang = _knowledgeAdminOverride.quoteLanguage ?? QUOTE_LANG[mentorId];
-  const _knowledgePersonality = _knowledgeAdminOverride.personality ?? MENTOR_PROFILES[mentorId].personality;
-  const _knowledgeStyle = _knowledgeAdminOverride.style ?? MENTOR_PROFILES[mentorId].style;
+  const adminOverride = (await getAdminPrompts())[mentorId] ?? {};
+  const globalPrompts = await getGlobalPrompts();
+
+  // 멘토별 지침: admin override 우선, 없으면 코드 기본값
+  const mentorPrompt = adminOverride.knowledgePrompt ?? MENTOR_KNOWLEDGE_DEFAULTS[mentorId];
+  // 공통 지침: admin override 우선, 없으면 코드 기본값
+  const commonPrompt = globalPrompts.knowledgePromptCommon ?? DEFAULT_KNOWLEDGE_COMMON_PROMPT;
 
   // Gutenberg 원문 텍스트 선택적 로드 (베네딕토·테오도르만)
   let gutenbergSection = '';
@@ -929,36 +978,12 @@ async function generateKnowledgeEntries(
         : '') + '\n'
     : '';
 
-  const prompt = `오늘(${today}) 다음 분야에서 심리 위로와 정서 치유에 실제로 도움이 되는,
-${mentorId === 'hyewoon' ? '현대인의 마음에 깊이 와닿는 지식 4개를 발굴해주세요. 유명한 구절도 괜찮습니다.' : '잘 알려지지 않은 깊이 있는 지식 4개를 발굴해주세요.'}
+  const prompt = `오늘(${today}) 심리 위로와 정서 치유에 실제로 도움이 되는 지식 4개를 발굴해주세요.
 ${gutenbergSection}
-[현자의 분야]
-${_knowledgeDomain}
+[멘토별 지침]
+${mentorPrompt}
 ${avoidSection}
-[필수 형식 — 반드시 아래 순서와 규칙을 지키세요]
-
-1. quote (글귀): ${_knowledgeQuoteLang}으로 작성하세요. 한국어를 섞지 말고 원문만 쓰세요.
-
-2. source (출처): 원문의 출처를 명확하게 쓰세요. (예: "법구경(法句經) 제1게", "Epistulae Morales 제1서")
-
-3. translation (번역): quote의 한국어 번역을 간결하게 쓰세요.${mentorId === 'hyewoon' ? ' 혜운 스님은 현대인에게 와닿도록 자연스럽게 의역해도 좋습니다.' : ' 해설이나 감상을 덧붙이지 말고 원문을 충실하게 번역하세요.'}
-
-4. context (멘토의 말): 아래 현자의 목소리로 이 글귀를 해석하거나, 이 글귀를 마음에 품으면 어떻게 달라지는지 진솔하게 이야기하세요.
-
-   [현자 페르소나]
-   이름: ${MENTOR_PROFILES[mentorId].name}
-   성격: ${_knowledgePersonality}
-   말투: ${_knowledgeStyle}
-
-   ${_globalPromptsK.knowledgeContextRules ?? `- 반드시 위 현자 한 명의 목소리로만 쓰세요. 다른 현자의 말투가 섞이면 안 됩니다.
-   - 자기소개 절대 금지: "저는 혜운입니다", "나는 혜운입니다", "혜운입니다", "저는 [이름]입니다", "나는 [이름]입니다" 등 이름을 밝히는 문장은 어떤 형태로도 쓰지 마세요. 글귀 해석으로 바로 시작하세요.
-   - "~할 때 씁니다", "~분에게 씁니다", "~하는 분들에게 추천합니다" 같은 상담사 말투는 절대 금지`}
-
-${_globalPromptsK.knowledgeRequirements ?? `[공통 요구사항]
-- 실제 경전·문헌·저서에서 출처가 명확한 내용만 사용하세요.
-- 각 항목은 서로 다른 삶의 상황(외로움·불안·상실·분노·의미 등)을 다루도록 다양하게 구성하세요.${mentorId === 'hyewoon' ? `
-- 유명한 구절도 괜찮습니다. 현대인의 마음에 실제로 닿는 구절이면 충분합니다.` : `
-- 뻔하고 유명한 구절(예: "나는 생각한다, 고로 존재한다")은 절대 피하세요.`}`}`;
+${commonPrompt}`;
 
   const ai = getGemini();
   const response = await ai.models.generateContent({
@@ -1141,7 +1166,7 @@ ${chunk}
 
 [필수 규칙]
 - 반드시 위 텍스트에 실제로 나오는 문장만 사용하세요. 없으면 빈 배열을 반환하세요.
-- quote: ${QUOTE_LANG[mentorId]}으로 작성 (원문 그대로)
+- quote: 멘토별 원문 언어로 작성 (원문 그대로 — benedicto: 라틴어, theodore: 영어 또는 라틴어)
 - source: 출처 (책 제목 + 권/장 정보)
 - translation: 한국어 직역 (해설 없이 원문 충실하게)
 - context: ${MENTOR_PROFILES[mentorId].name}의 목소리로 이 구절의 의미 해석 (80-120자)
