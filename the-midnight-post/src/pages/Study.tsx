@@ -565,7 +565,8 @@ function KnowledgeCard({
           color: hovered ? 'rgba(26,18,8,0.88)' : 'rgba(26,18,8,0.68)',
           wordBreak: 'keep-all',
           overflowWrap: 'break-word',
-        }}
+          textWrap: 'balance',
+        } as React.CSSProperties}
       >
         {entry.quote.split('\n')[0]}
       </p>
@@ -576,7 +577,9 @@ function KnowledgeCard({
         style={{
           color: hovered ? 'rgba(26,18,8,0.60)' : 'rgba(26,18,8,0.42)',
           wordBreak: 'keep-all',
-        }}
+          overflowWrap: 'break-word',
+          textWrap: 'balance',
+        } as React.CSSProperties}
       >
         {entry.translation}
       </p>
@@ -590,7 +593,7 @@ function KnowledgeCard({
       {/* 출처 */}
       <p
         className="text-[9px] tracking-wider opacity-38 font-serif break-keep leading-relaxed"
-        style={{ wordBreak: 'keep-all' }}
+        style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', textWrap: 'balance' } as React.CSSProperties}
       >
         {entry.source}
       </p>
@@ -730,7 +733,7 @@ function WisdomModal({
         {/* 출처 */}
         <div className="flex items-start gap-3 opacity-50 mb-8">
           <div className="h-px w-8 bg-ink/40 flex-shrink-0 mt-2" />
-          <span className="text-xs tracking-wide leading-relaxed break-keep" style={{ wordBreak: 'keep-all' }}>{entry.source}</span>
+          <span className="text-xs tracking-wide leading-relaxed break-keep" style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', textWrap: 'balance' } as React.CSSProperties}>{entry.source}</span>
         </div>
 
         {/* 구분선 */}
