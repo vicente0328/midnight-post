@@ -9,6 +9,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Flower2, Cross, Feather, Brush, Trash2, Bookmark } from 'lucide-react';
 import { ShareCardButton } from '../utils/shareCard';
 import { useTranslation } from 'react-i18next';
+import { usePlan, FREE_HISTORY_LIMIT } from '../hooks/usePlan';
+import UpgradeModal from '../components/UpgradeModal';
 
 // ── 멘토 아이콘/색상 ──────────────────────────────────────────────────────────
 
@@ -75,6 +77,8 @@ export default function Archive() {
   const highlightEntryId = searchParams.get('entryId');
   const highlightRef = useRef<HTMLDivElement | null>(null);
   const [tab, setTab] = useState<Tab>('letters');
+  const { isAdmin, isStandard, upgrade } = usePlan();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // 편지 탭
   const [entries, setEntries] = useState<EntryDoc[]>([]);
@@ -264,7 +268,7 @@ export default function Archive() {
             <p className="font-serif italic opacity-40 text-center py-12">{t('archive.letters.empty')}</p>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
-            {!loadingEntries && entries.map((entry, index) => {
+            {!loadingEntries && (isAdmin || isStandard ? entries : entries.slice(0, FREE_HISTORY_LIMIT)).map((entry, index) => {
               const isHighlighted = entry.id === highlightEntryId;
               return (
               <motion.div
@@ -324,6 +328,19 @@ export default function Archive() {
             );
             })}
           </div>
+          {!loadingEntries && !isAdmin && !isStandard && entries.length > FREE_HISTORY_LIMIT && (
+            <div className="mt-6 flex flex-col items-center gap-2 w-full">
+              <p className="font-serif text-[12px] italic opacity-35 text-center">
+                최신 {FREE_HISTORY_LIMIT}개까지 표시됩니다.
+              </p>
+              <button
+                onClick={() => setShowUpgradeModal(true)}
+                className="font-serif text-[12px] italic opacity-45 hover:opacity-75 transition-opacity border-b border-ink/20 pb-px"
+              >
+                Standard로 업그레이드
+              </button>
+            </div>
+          )}
         </motion.div>
       )}
 
@@ -354,7 +371,7 @@ export default function Archive() {
             <p className="font-serif italic opacity-40 text-center py-12">{t('archive.damso.empty')}</p>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
-            {!loadingSessions && sessions.map((session, index) => {
+            {!loadingSessions && (isAdmin || isStandard ? sessions : sessions.slice(0, FREE_HISTORY_LIMIT)).map((session, index) => {
               const meta = MENTOR_META[session.mentorId as MentorKey];
               if (!meta) return null;
               const Icon = meta.icon;
@@ -431,8 +448,33 @@ export default function Archive() {
               );
             })}
           </div>
+          {!loadingSessions && !isAdmin && !isStandard && sessions.length > FREE_HISTORY_LIMIT && (
+            <div className="mt-6 flex flex-col items-center gap-2 w-full">
+              <p className="font-serif text-[12px] italic opacity-35 text-center">
+                최신 {FREE_HISTORY_LIMIT}개까지 표시됩니다.
+              </p>
+              <button
+                onClick={() => setShowUpgradeModal(true)}
+                className="font-serif text-[12px] italic opacity-45 hover:opacity-75 transition-opacity border-b border-ink/20 pb-px"
+              >
+                Standard로 업그레이드
+              </button>
+            </div>
+          )}
         </motion.div>
       )}
+
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <UpgradeModal
+            reason="history"
+            used={0}
+            onUpgrade={upgrade}
+            onClose={() => setShowUpgradeModal(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {tab === 'bookmarks' && (
         <motion.div
           key="bookmarks"

@@ -9,6 +9,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Flower2, Cross, Feather, Brush, Mail, ArrowRight, Bookmark, BookmarkCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useFeedback } from '../hooks/useFeedback';
+import { usePlan, FREE_HISTORY_LIMIT } from '../hooks/usePlan';
+import UpgradeModal from '../components/UpgradeModal';
 
 // ── 멘토 정보 (아이콘·색상만 보관) ──────────────────────────────────────────
 
@@ -46,6 +48,8 @@ export default function Mailbox() {
   const [replies, setReplies] = useState<ReplyDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedReply, setSelectedReply] = useState<ReplyDoc | null>(null);
+  const { isAdmin, isStandard, upgrade } = usePlan();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const highlightRef = useRef<HTMLDivElement | null>(null);
 
@@ -131,7 +135,7 @@ export default function Mailbox() {
 
       {/* ── 편지 목록 ── */}
       <div className="w-full flex flex-col gap-2.5">
-        {!loading && replies.map((reply, index) => {
+        {!loading && (isAdmin || isStandard ? replies : replies.slice(0, FREE_HISTORY_LIMIT)).map((reply, index) => {
           const mentor = MENTOR_INFO[reply.mentorId as MentorKey];
           if (!mentor) return null;
           const Icon = mentor.icon;
@@ -210,6 +214,32 @@ export default function Mailbox() {
           );
         })}
       </div>
+
+      {/* 무료 플랜 기록 한도 안내 */}
+      {!loading && !isAdmin && !isStandard && replies.length > FREE_HISTORY_LIMIT && (
+        <div className="mt-6 flex flex-col items-center gap-2">
+          <p className="font-serif text-[12px] italic opacity-35 text-center">
+            최신 {FREE_HISTORY_LIMIT}통까지 표시됩니다. 나머지 {replies.length - FREE_HISTORY_LIMIT}통을 보려면 업그레이드하세요.
+          </p>
+          <button
+            onClick={() => setShowUpgradeModal(true)}
+            className="font-serif text-[12px] italic opacity-45 hover:opacity-75 transition-opacity border-b border-ink/20 pb-px"
+          >
+            Standard로 업그레이드
+          </button>
+        </div>
+      )}
+
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <UpgradeModal
+            reason="history"
+            used={replies.length}
+            onUpgrade={upgrade}
+            onClose={() => setShowUpgradeModal(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ── 편지 상세 모달 ── */}
       <AnimatePresence>

@@ -7,6 +7,8 @@ import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Feather, Flower2, Cross, Brush, Bookmark, Trash2 } from 'lucide-react';
 import { ShareCardButton } from '../utils/shareCard';
+import { usePlan, FREE_BOOKMARK_LIMIT } from '../hooks/usePlan';
+import UpgradeModal from '../components/UpgradeModal';
 
 // ── 멘토 정보 ─────────────────────────────────────────────────────────────────
 
@@ -60,6 +62,8 @@ export default function Library() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Bookmark | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const { isAdmin, isStandard, upgrade } = usePlan();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
@@ -112,7 +116,7 @@ export default function Library() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
-        {bookmarks.map((bm, index) => {
+        {(isAdmin || isStandard ? bookmarks : bookmarks.slice(0, FREE_BOOKMARK_LIMIT)).map((bm, index) => {
           const mentor = MENTORS[bm.mentorId as MentorKey];
           if (!mentor) return null;
           const Icon = mentor.icon;
@@ -179,6 +183,32 @@ export default function Library() {
           );
         })}
       </div>
+
+      {/* 무료 플랜 한도 안내 */}
+      {!isAdmin && !isStandard && bookmarks.length > FREE_BOOKMARK_LIMIT && (
+        <div className="mt-8 flex flex-col items-center gap-3">
+          <p className="font-serif text-[12px] italic opacity-35 text-center">
+            최신 {FREE_BOOKMARK_LIMIT}개까지 표시됩니다. 나머지 {bookmarks.length - FREE_BOOKMARK_LIMIT}개를 보려면 업그레이드하세요.
+          </p>
+          <button
+            onClick={() => setShowUpgradeModal(true)}
+            className="font-serif text-[12px] italic opacity-45 hover:opacity-75 transition-opacity border-b border-ink/20 pb-px"
+          >
+            Standard로 업그레이드
+          </button>
+        </div>
+      )}
+
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <UpgradeModal
+            reason="bookmark"
+            used={bookmarks.length}
+            onUpgrade={upgrade}
+            onClose={() => setShowUpgradeModal(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* 편지 전체보기 모달 */}
       <AnimatePresence>

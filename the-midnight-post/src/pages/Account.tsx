@@ -1,16 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { collection, query, where, getCountFromServer } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../components/AuthContext';
 import { LogOut, Scroll } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
+import { usePlan, FREE_LETTER_LIMIT, STANDARD_LETTER_LIMIT, FREE_DAMSO_LIMIT, STANDARD_DAMSO_LIMIT, FREE_BOOKMARK_LIMIT, FREE_HISTORY_LIMIT } from '../hooks/usePlan';
+import UpgradeModal from '../components/UpgradeModal';
 
 export default function Account() {
   const { user, signOut } = useAuth();
   const { t } = useTranslation();
   const [stats, setStats] = useState({ letters: 0, bookmarks: 0, damso: 0 });
+  const { plan, planLoaded, isAdmin, isStandard, upgrade } = usePlan();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -80,6 +85,50 @@ export default function Account() {
         ))}
       </div>
 
+      {/* 플랜 섹션 */}
+      {planLoaded && (
+        <div className="w-full border border-ink/10 p-6 mb-8 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <p className="font-mono text-[9px] uppercase tracking-widest opacity-30">Plan</p>
+            {isAdmin ? (
+              <span className="font-serif text-xs italic opacity-50">Admin</span>
+            ) : (
+              <span className={`font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border
+                ${isStandard ? 'border-[#D4AF37]/40 text-[#D4AF37]/70' : 'border-ink/20 opacity-40'}`}>
+                {isStandard ? 'Standard' : 'Free'}
+              </span>
+            )}
+          </div>
+
+          {/* 한도 표시 */}
+          {!isAdmin && (
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: '편지', free: `일 ${FREE_LETTER_LIMIT}통`, std: `일 ${STANDARD_LETTER_LIMIT}통` },
+                { label: '담소', free: `월 ${FREE_DAMSO_LIMIT}회`, std: `월 ${STANDARD_DAMSO_LIMIT}회` },
+                { label: '북마크', free: `최신 ${FREE_BOOKMARK_LIMIT}개`, std: '무제한' },
+                { label: '기록', free: `최신 ${FREE_HISTORY_LIMIT}개`, std: '무제한' },
+              ].map(({ label, free, std }) => (
+                <div key={label} className="flex flex-col gap-0.5">
+                  <span className="font-mono text-[9px] uppercase tracking-widest opacity-25">{label}</span>
+                  <span className="font-serif text-xs italic opacity-60">{isStandard ? std : free}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 업그레이드 버튼 */}
+          {!isStandard && !isAdmin && (
+            <button
+              onClick={() => setShowUpgradeModal(true)}
+              className="w-full py-2.5 border border-[#D4AF37]/30 font-serif text-sm italic tracking-wide text-[#D4AF37]/70 hover:bg-[#D4AF37]/5 transition-all duration-300"
+            >
+              Standard로 업그레이드
+            </button>
+          )}
+        </div>
+      )}
+
       {/* 로그아웃 */}
       <button
         onClick={signOut}
@@ -88,6 +137,21 @@ export default function Account() {
         <LogOut size={14} strokeWidth={1.5} />
         {t('account.logout')}
       </button>
+
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <UpgradeModal
+            reason="letter"
+            used={0}
+            onUpgrade={async () => {
+              setUpgrading(true);
+              await upgrade();
+              setUpgrading(false);
+            }}
+            onClose={() => setShowUpgradeModal(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

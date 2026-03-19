@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../components/AuthContext';
 import { useVault } from '../components/VaultContext';
 import { useSound } from '../components/SoundContext';
@@ -8,6 +8,8 @@ import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { rankMentors } from '../services/ai';
 import { useTranslation } from 'react-i18next';
+import { usePlan, FREE_LETTER_LIMIT, STANDARD_LETTER_LIMIT } from '../hooks/usePlan';
+import UpgradeModal from '../components/UpgradeModal';
 
 // ── 위기 키워드 (클라이언트 사이드) ──────────────────────────────────────────
 
@@ -42,6 +44,16 @@ export default function Home() {
   const { setTyping } = useSound();
   const navigate = useNavigate();
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { isAdmin, isStandard, planLoaded, upgrade, checkLetterLimit } = usePlan();
+  const [monthlyUsed, setMonthlyUsed] = useState(0);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState<{ used: number } >({ used: 0 });
+
+  // 오늘 편지 사용량 조회 (free & standard 모두)
+  useEffect(() => {
+    if (!user || !planLoaded || isAdmin) return;
+    checkLetterLimit().then(({ used }) => setMonthlyUsed(used));
+  }, [user, planLoaded, isAdmin]);
 
   useEffect(() => {
     const period = getTimePeriod(new Date().getHours());
@@ -68,6 +80,16 @@ export default function Home() {
     if (!user) {
       setShowAuthModal(true);
       return;
+    }
+
+    // 플랜 한도 확인 (admin 제외)
+    if (!isAdmin) {
+      const { allowed, used } = await checkLetterLimit();
+      if (!allowed) {
+        setUpgradeReason({ used });
+        setShowUpgradeModal(true);
+        return;
+      }
     }
 
     const isCrisis = hasCrisis(trimmed);
@@ -263,7 +285,25 @@ export default function Home() {
         >
           {isSubmitting ? t('home.sending') : t('home.sendButton')}
         </button>
+
+        {/* 일일 편지 사용량 표시 (admin 제외) */}
+        {planLoaded && !isAdmin && user && (
+          <p className="mt-4 font-serif text-[11px] italic opacity-30 tracking-wide">
+            오늘 편지 {monthlyUsed} / {isStandard ? STANDARD_LETTER_LIMIT : FREE_LETTER_LIMIT}통 사용
+          </p>
+        )}
       </form>
+
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <UpgradeModal
+            reason="letter"
+            used={upgradeReason.used}
+            onUpgrade={upgrade}
+            onClose={() => setShowUpgradeModal(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

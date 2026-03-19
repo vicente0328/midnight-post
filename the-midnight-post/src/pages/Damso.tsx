@@ -14,6 +14,8 @@ import {
   type DamsoConversationEntry,
   type MentorId,
 } from '../services/damso';
+import { usePlan } from '../hooks/usePlan';
+import UpgradeModal from '../components/UpgradeModal';
 
 // ── 위기 키워드 ───────────────────────────────────────────────────────────────
 const CRISIS_PATTERNS = [
@@ -260,6 +262,9 @@ export default function Damso() {
 
   const [openingData, setOpeningData] = useState<{ stageDirection: string; mentorGreeting: string } | null>(null);
   const [overlayDone, setOverlayDone] = useState(false);
+  const { isAdmin, isStandard, upgrade, checkDamsoLimit } = usePlan();
+  const [damsoLimitBlock, setDamsoLimitBlock] = useState<{ used: number } | null>(null);
+  const [initKey, setInitKey] = useState(0);
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -279,8 +284,19 @@ export default function Damso() {
 
   useEffect(() => {
     if (!user || !entryId || !mentorId) return;
+    // initKey가 변경되면 재시작 (업그레이드 후)
 
     const init = async () => {
+      // 플랜 한도 확인 (admin 제외)
+      if (!isAdmin) {
+        const { allowed, used } = await checkDamsoLimit();
+        if (!allowed) {
+          setDamsoLimitBlock({ used });
+          setShowLoading(false);
+          return;
+        }
+      }
+
       const prefetched = consumePrefetchedDamso();
 
       const contentPromise = prefetched?.contentPromise ?? (async () => {
@@ -324,7 +340,8 @@ export default function Damso() {
     };
 
     init().catch(console.error);
-  }, [user, entryId, mentorId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, entryId, mentorId, initKey]);
 
   useEffect(() => {
     if (!overlayDone || !openingData || !user) return;
@@ -460,6 +477,23 @@ export default function Damso() {
       className="fixed inset-0 flex flex-col overflow-hidden"
       style={{ backgroundColor: space.bg, fontFamily: '"Nanum Myeongjo", serif' }}
     >
+      {/* 담소 한도 초과 모달 */}
+      <AnimatePresence>
+        {damsoLimitBlock && (
+          <UpgradeModal
+            reason="damso"
+            used={damsoLimitBlock.used}
+            onUpgrade={async () => {
+              await upgrade();
+              setDamsoLimitBlock(null);
+              setShowLoading(true);
+              setInitKey(k => k + 1);
+            }}
+            onClose={() => navigate(-1)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Loading overlay */}
       <AnimatePresence>
         {showLoading && (

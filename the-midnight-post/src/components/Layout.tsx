@@ -9,6 +9,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useTranslation } from 'react-i18next';
 import { setLanguage, type Language } from '../i18n';
+import { usePlan } from '../hooks/usePlan';
 
 const MENTOR_COLORS: Record<string, string> = {
   hyewoon:   '#7c6a50',
@@ -46,6 +47,7 @@ export default function Layout() {
   const { t, i18n } = useTranslation();
   const { user, setShowAuthModal, setShowGuideModal, signOut } = useAuth();
   const isAdmin = user?.email === 'admin@tmp.com';
+  const { isStandard, planLoaded } = usePlan();
   const location = useLocation();
   const navigate = useNavigate();
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -227,6 +229,17 @@ export default function Layout() {
           >
             {currentLang === 'ko' ? 'EN' : '한'}
           </button>
+
+          {/* 플랜 배지 — 무료 유저만 표시 */}
+          {user && planLoaded && !isStandard && !isAdmin && (
+            <Link
+              to="/account"
+              className="font-mono text-[10px] tracking-widest uppercase px-1.5 py-0.5 border border-ink/15 opacity-35 hover:opacity-60 transition-opacity"
+              title="업그레이드"
+            >
+              FREE
+            </Link>
+          )}
 
           {/* 데스크톱 nav */}
           <nav className="hidden sm:flex gap-4 items-center text-sm tracking-widest uppercase mr-2">
