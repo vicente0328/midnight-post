@@ -286,12 +286,11 @@ export default function Home() {
           {isSubmitting ? t('home.sending') : t('home.sendButton')}
         </button>
 
-        {/* 일일 편지 사용량 표시 (admin 제외) */}
-        {planLoaded && !isAdmin && user && (
-          <p className="mt-4 font-serif text-[11px] italic opacity-30 tracking-wide">
-            오늘 편지 {monthlyUsed} / {isStandard ? STANDARD_LETTER_LIMIT : FREE_LETTER_LIMIT}통 사용
-          </p>
-        )}
+        {/* 일일 편지 사용량 표시 (admin 제외) — 항상 공간 확보해 layout shift 방지 */}
+        <p className={`mt-4 font-serif text-[11px] italic tracking-wide transition-opacity duration-300
+          ${planLoaded && !isAdmin && user ? 'opacity-30' : 'opacity-0 pointer-events-none'}`}>
+          오늘 편지 {monthlyUsed} / {isStandard ? STANDARD_LETTER_LIMIT : FREE_LETTER_LIMIT}통 사용
+        </p>
       </form>
 
       <AnimatePresence>
