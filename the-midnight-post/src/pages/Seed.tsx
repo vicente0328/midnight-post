@@ -9,6 +9,7 @@ import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../firebase';
 import { saveKnowledgeEntries, forceRegenerateKnowledge, KnowledgeEntry } from '../services/knowledge';
 import { useAuth } from '../components/AuthContext';
+import AdminPromptEditor from '../components/AdminPromptEditor';
 
 type MentorId = 'hyewoon' | 'benedicto' | 'theodore' | 'yeonam';
 
@@ -451,6 +452,11 @@ export default function Seed() {
             {gutenbergLog.map((l, i) => <p key={i} className="opacity-70">{l}</p>)}
           </div>
         )}
+      </div>
+
+      {/* 프롬프트 편집기 */}
+      <div className="w-full border-t border-ink/10 pt-8">
+        <AdminPromptEditor />
       </div>
     </div>
   );

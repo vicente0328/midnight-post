@@ -312,11 +312,39 @@ function RoomView({ mentorId, onBack }: { mentorId: MentorKey; onBack: () => voi
   const [damsoLoading, setDamsoLoading] = useState(false);
   const [showLetterModal, setShowLetterModal] = useState(false);
 
+  const currentQuoteRef = useRef<string>('');
+
   useEffect(() => {
-    getTodayKnowledge(mentorId)
-      .then(setEntries)
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    let timer: ReturnType<typeof setTimeout>;
+    let isFirst = true;
+
+    const fetchAndSchedule = () => {
+      getTodayKnowledge(mentorId)
+        .then(newEntries => {
+          setEntries(newEntries);
+          const newQuote = newEntries[0]?.quote ?? '';
+          if (!isFirst && newQuote && newQuote !== currentQuoteRef.current) {
+            window.dispatchEvent(new CustomEvent('knowledgeUpdated', { detail: { mentorId } }));
+          }
+          if (newQuote) currentQuoteRef.current = newQuote;
+          isFirst = false;
+        })
+        .catch(console.error)
+        .finally(() => setLoading(false));
+
+      // 다음 업데이트 시각(08, 12, 17, 22시 KST)까지 남은 ms 계산
+      const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+      const h = nowKST.getUTCHours();
+      const updateHours = [8, 12, 17, 22];
+      const nextHour = updateHours.find(u => u > h) ?? (updateHours[0] + 24);
+      const minsLeft = (nextHour - h) * 60 - nowKST.getUTCMinutes();
+      const msUntilNext = minsLeft * 60 * 1000 - nowKST.getUTCSeconds() * 1000 + 30 * 1000; // 30초 여유
+
+      timer = setTimeout(fetchAndSchedule, msUntilNext);
+    };
+
+    fetchAndSchedule();
+    return () => clearTimeout(timer);
   }, [mentorId]);
 
   const handleDamso = async () => {
@@ -707,7 +735,7 @@ function WisdomModal({
         </div>
 
         {/* 번역 */}
-        <p className="font-serif text-base sm:text-lg text-ink/70 leading-relaxed mb-5 italic break-keep" style={{ wordBreak: 'keep-all' }}>
+        <p className="font-serif text-base sm:text-lg text-ink/70 leading-relaxed mb-5 italic break-keep break-words" style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', textWrap: 'balance' } as React.CSSProperties}>
           {entry.translation}
         </p>
 

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import AuthModal from './AuthModal';
-import { LogOut, BookOpen, PenTool, Feather, Mail, Menu, X, UserRound, Inbox, Bell } from 'lucide-react';
+import { LogOut, BookOpen, PenTool, Feather, Mail, Menu, X, UserRound, Inbox, Bell, Settings2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import BottomNav from './BottomNav';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -26,6 +26,7 @@ interface ToastItem {
   id: string;
   mentorId: string;
   entryId: string;
+  type?: 'letter' | 'knowledge';
 }
 
 interface NotificationItem {
@@ -34,6 +35,7 @@ interface NotificationItem {
   entryId: string;
   arrivedAt: number;
   read: boolean;
+  type?: 'letter' | 'knowledge';
 }
 
 const NOTIF_KEY = 'mp_notifications';
@@ -60,6 +62,7 @@ function formatRelativeTime(ts: number): string {
 
 export default function Layout() {
   const { user, setShowAuthModal, setShowGuideModal, signOut } = useAuth();
+  const isAdmin = user?.email === 'admin@tmp.com';
   const location = useLocation();
   const navigate = useNavigate();
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -171,6 +174,21 @@ export default function Layout() {
     };
   }, [user]);
 
+  // 지혜카드 업데이트 감지
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { mentorId } = (e as CustomEvent).detail ?? {};
+      if (!mentorId) return;
+      const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000);
+      const h = String(nowKST.getUTCHours()).padStart(2, '0');
+      const date = nowKST.toISOString().slice(0, 10);
+      const id = `knowledge_${mentorId}_${date}_h${h}`;
+      addNotification({ id, mentorId, entryId: '', type: 'knowledge' });
+    };
+    window.addEventListener('knowledgeUpdated', handler);
+    return () => window.removeEventListener('knowledgeUpdated', handler);
+  }, [addNotification]);
+
   useEffect(() => {
     if (!showMobileMenu && !showNotifPanel) return;
     const handler = (e: MouseEvent | TouchEvent) => {
@@ -230,6 +248,12 @@ export default function Layout() {
                   <Feather size={15} strokeWidth={1.4} />
                   <span>Guide</span>
                 </button>
+                {isAdmin && (
+                  <Link to="/admin" className="flex items-center gap-1.5 hover:opacity-70 transition-opacity opacity-40" title="Admin">
+                    <Settings2 size={15} strokeWidth={1.4} />
+                    <span>Admin</span>
+                  </Link>
+                )}
                 <button onClick={signOut} className="flex items-center gap-2 hover:opacity-70 transition-opacity" title="Logout">
                   <LogOut size={16} />
                   <span>Logout</span>
@@ -323,7 +347,11 @@ export default function Layout() {
                           <div
                             key={n.id}
                             className="flex items-start gap-3 px-4 py-3.5 hover:bg-ink/[0.025] transition-colors cursor-pointer"
-                            onClick={() => { setShowNotifPanel(false); navigate(`/mailbox?entryId=${n.entryId}`); }}
+                            onClick={() => {
+                              setShowNotifPanel(false);
+                              if (n.type === 'knowledge') navigate('/study');
+                              else navigate(`/mailbox?entryId=${n.entryId}`);
+                            }}
                           >
                             <div
                               className="w-1.5 h-1.5 rotate-45 shrink-0 mt-[7px]"
@@ -331,7 +359,11 @@ export default function Layout() {
                             />
                             <div className="flex-1 min-w-0">
                               <p className="font-serif text-[13px] leading-snug" style={{ color: 'rgba(44,42,41,0.82)' }}>
-                                <span style={{ fontWeight: 600 }}>{MENTOR_NAMES[n.mentorId] ?? '현자'}</span>의 편지가 도착했습니다
+                                {n.type === 'knowledge' ? (
+                                  <><span style={{ fontWeight: 600 }}>{MENTOR_NAMES[n.mentorId] ?? '현자'}</span>의 새 지혜카드가 도착했습니다</>
+                                ) : (
+                                  <><span style={{ fontWeight: 600 }}>{MENTOR_NAMES[n.mentorId] ?? '현자'}</span>의 편지가 도착했습니다</>
+                                )}
                               </p>
                               <p className="font-serif text-[11px] opacity-30 mt-0.5">
                                 {formatRelativeTime(n.arrivedAt)}
@@ -408,6 +440,16 @@ export default function Layout() {
                       <UserRound size={14} strokeWidth={1.4} />
                       <span>Account</span>
                     </Link>
+                    {isAdmin && (
+                      <Link
+                        to="/admin"
+                        onClick={() => setShowMobileMenu(false)}
+                        className="flex items-center gap-3 px-5 py-3 text-sm font-serif opacity-40 hover:opacity-75 transition-opacity"
+                      >
+                        <Settings2 size={14} strokeWidth={1.4} />
+                        <span>Admin</span>
+                      </Link>
+                    )}
                     <div className="mx-5 my-1 h-px bg-ink/8" />
                     <button
                       onClick={() => { setShowMobileMenu(false); signOut(); }}

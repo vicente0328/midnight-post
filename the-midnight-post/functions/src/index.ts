@@ -276,6 +276,39 @@ const MENTOR_DOMAINS: Record<MentorId, string> = {
 - 상실·이별·고독·노화를 동양적 순리로 안아주는 이야기`,
 };
 
+// ── Admin Prompt Overrides ────────────────────────────────────────────────────
+// Firestore `admin_prompts/{mentorId}` 에 저장된 값이 있으면 기본값 대신 사용
+
+interface AdminPromptOverride {
+  description?: string;    // 편지 프롬프트 (MENTOR_DESCRIPTIONS 대체)
+  personality?: string;    // 담소 personality (MENTOR_PROFILES.personality 대체)
+  style?: string;          // 담소 style (MENTOR_PROFILES.style 대체)
+  domain?: string;         // 지혜카드 도메인 (MENTOR_DOMAINS 대체)
+  quoteLanguage?: string;  // 지혜카드 quote 언어 (QUOTE_LANG 대체)
+}
+
+let _adminPromptCache: Record<string, AdminPromptOverride> = {};
+let _adminPromptCacheTs = 0;
+const ADMIN_PROMPT_CACHE_TTL = 5 * 60 * 1000; // 5분
+
+async function getAdminPrompts(): Promise<Record<string, AdminPromptOverride>> {
+  if (Date.now() - _adminPromptCacheTs < ADMIN_PROMPT_CACHE_TTL) {
+    return _adminPromptCache;
+  }
+  const db = getDb();
+  const mentors: MentorId[] = ['hyewoon', 'benedicto', 'theodore', 'yeonam'];
+  const result: Record<string, AdminPromptOverride> = {};
+  await Promise.all(mentors.map(async (id) => {
+    try {
+      const snap = await db.collection('admin_prompts').doc(id).get();
+      if (snap.exists) result[id] = snap.data() as AdminPromptOverride;
+    } catch { /* skip */ }
+  }));
+  _adminPromptCache = result;
+  _adminPromptCacheTs = Date.now();
+  return result;
+}
+
 // ── Project Gutenberg 도서 목록 ─────────────────────────────────────────────
 // 혜운(불교 한문)·연암(유교/도가 한문)은 Gutenberg 영역본이 아닌 원문 한문을 써야 하므로 제외.
 // 베네딕토(라틴/영어)·테오도르(영어/라틴)만 Gutenberg 활용.
@@ -329,6 +362,8 @@ async function generateMentorReplyCore(
 ): Promise<MentorReply> {
   const { timeLabel, closing } = getTimeContext(writtenHour ?? new Date().getHours());
   const knowledgeContext = buildKnowledgeContext(knowledgeEntries);
+  const adminOverride = (await getAdminPrompts())[mentorId] ?? {};
+  const mentorDescription = adminOverride.description ?? MENTOR_DESCRIPTIONS[mentorId];
 
   const recentContext = recentEntries.length > 0
     ? `\n\n[최근에 쓴 일기들 — 이 맥락을 자연스럽게 반영해 주세요. 직접 언급하지 말고, 편지의 깊이와 공감에 녹여주세요]\n` +
@@ -343,7 +378,7 @@ ${timeLabel}에 쓴 한 줄의 일기입니다: "${content}"${recentContext}
 당신은 아래 설명된 현자입니다. 이 일기를 읽고, 당신의 철학과 삶의 결로 빚어낸 따뜻한 위로의 편지를 써주세요.
 
 멘토 정보:
-${MENTOR_DESCRIPTIONS[mentorId]}
+${mentorDescription}
 ${knowledgeContext}
 [작성 지침]
 1. 명언 (quote, source, translation): 위 지식 데이터베이스에 있는 자료를 우선적으로 활용하세요. 데이터베이스에 적합한 것이 없을 때만 새로 찾으세요. 유명하고 뻔한 구절은 피하세요.
@@ -605,7 +640,9 @@ export const generateDamsoOpening = onCall({ timeoutSeconds: 180, memory: '512Mi
   const { mentorId, entryContent } = request.data as { mentorId: MentorId; entryContent: string };
   if (!mentorId) throw new HttpsError('invalid-argument', 'mentorId가 필요합니다.');
 
-  const mentor = MENTOR_PROFILES[mentorId];
+  const _baseProfile0 = MENTOR_PROFILES[mentorId];
+  const _adminOverride0 = (await getAdminPrompts())[mentorId] ?? {};
+  const mentor = { ..._baseProfile0, personality: _adminOverride0.personality ?? _baseProfile0.personality, style: _adminOverride0.style ?? _baseProfile0.style };
   const knowledgeEntries = await getRecentKnowledgeForDamso(mentorId);
   const knowledgeContext = buildDamsoKnowledgeContext(knowledgeEntries);
 
@@ -671,7 +708,9 @@ export const generateDamsoResponse = onCall({ timeoutSeconds: 180, memory: '512M
     userInput: string;
   };
 
-  const mentor = MENTOR_PROFILES[mentorId];
+  const _baseProfile1 = MENTOR_PROFILES[mentorId];
+  const _adminOverride1 = (await getAdminPrompts())[mentorId] ?? {};
+  const mentor = { ..._baseProfile1, personality: _adminOverride1.personality ?? _baseProfile1.personality, style: _adminOverride1.style ?? _baseProfile1.style };
   const historyContext = buildHistoryContext(conversationHistory);
   const knowledgeEntries = await getRecentKnowledgeForDamso(mentorId);
   const knowledgeContext = buildDamsoKnowledgeContext(knowledgeEntries);
@@ -744,7 +783,9 @@ export const generateDamsoClosing = onCall({ timeoutSeconds: 180, memory: '512Mi
     userInput: string;
   };
 
-  const mentor = MENTOR_PROFILES[mentorId];
+  const _baseProfile2 = MENTOR_PROFILES[mentorId];
+  const _adminOverride2 = (await getAdminPrompts())[mentorId] ?? {};
+  const mentor = { ..._baseProfile2, personality: _adminOverride2.personality ?? _baseProfile2.personality, style: _adminOverride2.style ?? _baseProfile2.style };
   const historyContext = buildHistoryContext(conversationHistory);
   const knowledgeEntries = await getRecentKnowledgeForDamso(mentorId);
   const knowledgeContext = buildDamsoKnowledgeContext(knowledgeEntries);
@@ -821,6 +862,11 @@ async function generateKnowledgeEntries(
   avoidItems: { quote: string; source: string }[] = [],
 ): Promise<KnowledgeEntry[]> {
   const today = new Date().toISOString().slice(0, 10);
+  const _knowledgeAdminOverride = (await getAdminPrompts())[mentorId] ?? {};
+  const _knowledgeDomain = _knowledgeAdminOverride.domain ?? MENTOR_DOMAINS[mentorId];
+  const _knowledgeQuoteLang = _knowledgeAdminOverride.quoteLanguage ?? QUOTE_LANG[mentorId];
+  const _knowledgePersonality = _knowledgeAdminOverride.personality ?? MENTOR_PROFILES[mentorId].personality;
+  const _knowledgeStyle = _knowledgeAdminOverride.style ?? MENTOR_PROFILES[mentorId].style;
 
   // Gutenberg 원문 텍스트 선택적 로드 (베네딕토·테오도르만)
   let gutenbergSection = '';
@@ -850,11 +896,11 @@ async function generateKnowledgeEntries(
 ${mentorId === 'hyewoon' ? '현대인의 마음에 깊이 와닿는 지식 4개를 발굴해주세요. 유명한 구절도 괜찮습니다.' : '잘 알려지지 않은 깊이 있는 지식 4개를 발굴해주세요.'}
 ${gutenbergSection}
 [현자의 분야]
-${MENTOR_DOMAINS[mentorId]}
+${_knowledgeDomain}
 ${avoidSection}
 [필수 형식 — 반드시 아래 순서와 규칙을 지키세요]
 
-1. quote (글귀): ${QUOTE_LANG[mentorId]}으로 작성하세요. 한국어를 섞지 말고 원문만 쓰세요.
+1. quote (글귀): ${_knowledgeQuoteLang}으로 작성하세요. 한국어를 섞지 말고 원문만 쓰세요.
 
 2. source (출처): 원문의 출처를 명확하게 쓰세요. (예: "법구경(法句經) 제1게", "Epistulae Morales 제1서")
 
@@ -864,11 +910,11 @@ ${avoidSection}
 
    [현자 페르소나]
    이름: ${MENTOR_PROFILES[mentorId].name}
-   성격: ${MENTOR_PROFILES[mentorId].personality}
-   말투: ${MENTOR_PROFILES[mentorId].style}
+   성격: ${_knowledgePersonality}
+   말투: ${_knowledgeStyle}
 
    - 반드시 위 현자 한 명의 목소리로만 쓰세요. 다른 현자의 말투가 섞이면 안 됩니다.
-   - "저는 [이름]입니다", "나는 [이름]입니다" 같은 자기소개로 시작하지 마세요. 글귀 해석으로 바로 시작하세요.
+   - 자기소개 절대 금지: "저는 혜운입니다", "나는 혜운입니다", "혜운입니다", "저는 [이름]입니다", "나는 [이름]입니다" 등 이름을 밝히는 문장은 어떤 형태로도 쓰지 마세요. 글귀 해석으로 바로 시작하세요.
    - "~할 때 씁니다", "~분에게 씁니다", "~하는 분들에게 추천합니다" 같은 상담사 말투는 절대 금지
 
 [공통 요구사항]

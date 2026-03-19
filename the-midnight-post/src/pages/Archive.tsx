@@ -603,7 +603,7 @@ function BookmarkModal({
                 <div className="h-px w-10 bg-ink/40" />
               </div>
             )}
-            <p className="text-sm sm:text-base leading-relaxed text-ink/70">
+            <p className="text-sm sm:text-base leading-relaxed text-ink/70 break-keep break-words" style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', textWrap: 'balance' } as React.CSSProperties}>
               {bookmark.translation}
             </p>
           </div>

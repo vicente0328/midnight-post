@@ -16,6 +16,7 @@ import Study from './pages/Study';
 import Account from './pages/Account';
 import Damso from './pages/Damso';
 import Seed from './pages/Seed';
+import Admin from './pages/Admin';
 import OnboardingModal from './components/OnboardingModal';
 import { triggerDailyKnowledgeGeneration } from './services/knowledge';
 
@@ -39,6 +40,7 @@ function AppRoutes() {
           <Route path="study" element={<Study />} />
           <Route path="account" element={<Account />} />
           <Route path="seed" element={<Seed />} />
+          <Route path="admin" element={<Admin />} />
         </Route>
         {/* 담소: 전체화면 소설 인터페이스 — Layout 밖에 배치 */}
         <Route path="damso/:entryId/:mentorId" element={<Damso />} />
