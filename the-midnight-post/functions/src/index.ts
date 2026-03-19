@@ -309,6 +309,32 @@ async function getAdminPrompts(): Promise<Record<string, AdminPromptOverride>> {
   return result;
 }
 
+// ── Global Prompt Overrides ───────────────────────────────────────────────────
+// admin_prompts/global 문서에 저장. 플레이스홀더: {closing} {style} {space}
+
+interface GlobalPromptOverride {
+  replyInstruction?: string;        // 편지 [작성 지침] — {closing} 치환
+  damsoOpeningScene?: string;       // 담소 오프닝 장면+필드 — {space} {style} 치환
+  damsoResponseFields?: string;     // 담소 응답 JSON 필드 지침 — {style} 치환
+  damsoClosingInstruction?: string; // 담소 클로징 지침+필드 — {style} 치환
+  knowledgeContextRules?: string;   // 지혜/공유카드 context 금지사항
+  knowledgeRequirements?: string;   // 지혜카드 [공통 요구사항]
+}
+
+let _globalPromptCache: GlobalPromptOverride = {};
+let _globalPromptCacheTs = 0;
+
+async function getGlobalPrompts(): Promise<GlobalPromptOverride> {
+  if (Date.now() - _globalPromptCacheTs < ADMIN_PROMPT_CACHE_TTL) return _globalPromptCache;
+  const db = getDb();
+  try {
+    const snap = await db.collection('admin_prompts').doc('global').get();
+    _globalPromptCache = snap.exists ? (snap.data() as GlobalPromptOverride) : {};
+  } catch { _globalPromptCache = {}; }
+  _globalPromptCacheTs = Date.now();
+  return _globalPromptCache;
+}
+
 // ── Project Gutenberg 도서 목록 ─────────────────────────────────────────────
 // 혜운(불교 한문)·연암(유교/도가 한문)은 Gutenberg 영역본이 아닌 원문 한문을 써야 하므로 제외.
 // 베네딕토(라틴/영어)·테오도르(영어/라틴)만 Gutenberg 활용.
@@ -364,6 +390,20 @@ async function generateMentorReplyCore(
   const knowledgeContext = buildKnowledgeContext(knowledgeEntries);
   const adminOverride = (await getAdminPrompts())[mentorId] ?? {};
   const mentorDescription = adminOverride.description ?? MENTOR_DESCRIPTIONS[mentorId];
+  const _globalPrompts0 = await getGlobalPrompts();
+  const _replyInstruction = (_globalPrompts0.replyInstruction ?? `[작성 지침]
+1. 명언 (quote, source, translation): 위 지식 데이터베이스에 있는 자료를 우선적으로 활용하세요. 데이터베이스에 적합한 것이 없을 때만 새로 찾으세요. 유명하고 뻔한 구절은 피하세요.
+
+2. 편지 본문 (advice): 아래 세 흐름을 자연스럽게 이어주세요.
+   - 도입: 명언과 연결된 짧고 아름다운 일화나 비유 하나. 옛이야기를 듣는 듯 따뜻하게.
+   - 연결: 그 이야기의 의미를 일기와 다정하게 이어주세요. 설명하지 말고, 깊이 공감하듯 말해주세요. 일기를 쓴 이가 느끼는 감정을 먼저 충분히 인정하고, 그 마음이 얼마나 소중한지 담아주세요.
+   - 마무리: 한 줄의 여운. 가르치려 하지 말고, 곁에 앉아 있는 사람처럼 — 마치 기도나 축복을 건네듯 — 따뜻하게 마무리하세요. {closing}.
+
+3. 분량과 형식:
+   - 3문단, 400~550자 내외로 간결하고 서정적으로.
+   - 어려운 한자어나 철학 용어는 쉬운 말로 풀어쓰세요.
+   - 문단 사이에 반드시 빈 줄(\\n\\n)을 넣어주세요.
+   - 멘토 특유의 말투를 처음부터 끝까지 유지하세요.`).replace('{closing}', closing);
 
   const recentContext = recentEntries.length > 0
     ? `\n\n[최근에 쓴 일기들 — 이 맥락을 자연스럽게 반영해 주세요. 직접 언급하지 말고, 편지의 깊이와 공감에 녹여주세요]\n` +
@@ -380,19 +420,7 @@ ${timeLabel}에 쓴 한 줄의 일기입니다: "${content}"${recentContext}
 멘토 정보:
 ${mentorDescription}
 ${knowledgeContext}
-[작성 지침]
-1. 명언 (quote, source, translation): 위 지식 데이터베이스에 있는 자료를 우선적으로 활용하세요. 데이터베이스에 적합한 것이 없을 때만 새로 찾으세요. 유명하고 뻔한 구절은 피하세요.
-
-2. 편지 본문 (advice): 아래 세 흐름을 자연스럽게 이어주세요.
-   - 도입: 명언과 연결된 짧고 아름다운 일화나 비유 하나. 옛이야기를 듣는 듯 따뜻하게.
-   - 연결: 그 이야기의 의미를 일기와 다정하게 이어주세요. 설명하지 말고, 깊이 공감하듯 말해주세요. 일기를 쓴 이가 느끼는 감정을 먼저 충분히 인정하고, 그 마음이 얼마나 소중한지 담아주세요.
-   - 마무리: 한 줄의 여운. 가르치려 하지 말고, 곁에 앉아 있는 사람처럼 — 마치 기도나 축복을 건네듯 — 따뜻하게 마무리하세요. ${closing}.
-
-3. 분량과 형식:
-   - 3문단, 400~550자 내외로 간결하고 서정적으로.
-   - 어려운 한자어나 철학 용어는 쉬운 말로 풀어쓰세요.
-   - 문단 사이에 반드시 빈 줄(\\n\\n)을 넣어주세요.
-   - 멘토 특유의 말투를 처음부터 끝까지 유지하세요.
+${_replyInstruction}
 
 답장은 다음 필드를 포함하는 JSON 객체여야 합니다:
 - mentorId: "${mentorId}"
@@ -645,19 +673,23 @@ export const generateDamsoOpening = onCall({ timeoutSeconds: 180, memory: '512Mi
   const mentor = { ..._baseProfile0, personality: _adminOverride0.personality ?? _baseProfile0.personality, style: _adminOverride0.style ?? _baseProfile0.style };
   const knowledgeEntries = await getRecentKnowledgeForDamso(mentorId);
   const knowledgeContext = buildDamsoKnowledgeContext(knowledgeEntries);
+  const _globalPrompts1 = await getGlobalPrompts();
+  const _openingScene = (_globalPrompts1.damsoOpeningScene ?? `사용자가 당신의 {space}을 찾아왔습니다. 소설의 첫 장면처럼 묘사하고 첫 인사를 건네주세요.
+
+JSON 필드:
+- stageDirection: 공간의 분위기와 당신의 첫 동작을 묘사하는 2-3문장의 지문. 현재형, 서정적으로. (예: "방 안에는 은은한 차 향기가 가득하다. 스님은 조용히 찻잔을 건네며 부드러운 미소를 지으셨다.")
+- mentorGreeting: 사용자를 맞이하는 첫 인사말. {style} 일기 내용을 직접 언급하지 않고 마음을 자연스럽게 여는 말. 위 구절들 중 하나를 멘토 특유의 말투로 자연스럽게 인용하여 오늘의 대화 분위기를 열어주세요. 100-140자 내외.
+- suggestedQuestions: 사용자가 첫 말문을 트기 좋은 질문 또는 말 3개. 아래 두 유형을 섞어서 구성하세요. ① 방금 인용한 구절이나 지혜의 의미·배경을 더 깊이 묻는 질문 (예: "방금 말씀하신 구절이 어느 맥락에서 나온 건가요?"). ② 심리상담에서 내담자가 상담가에게 자연스럽게 꺼낼 법한 말 (예: "저는 왜 이렇게 쉽게 지치는 걸까요?", "이런 감정이 계속 반복되는데 어떻게 하면 좋을까요?"). 각 20-35자 내외.
+
+JSON만 응답하세요.`)
+    .replace('{space}', mentor.space)
+    .replace('{style}', mentor.style);
 
   const prompt = `당신은 ${mentor.name}입니다. 성격: ${mentor.personality}
 
 사용자가 어젯밤 이런 일기를 썼습니다: "${entryContent || '말로 표현하기 어려운 감정'}"${knowledgeContext}
 
-사용자가 당신의 ${mentor.space}을 찾아왔습니다. 소설의 첫 장면처럼 묘사하고 첫 인사를 건네주세요.
-
-JSON 필드:
-- stageDirection: 공간의 분위기와 당신의 첫 동작을 묘사하는 2-3문장의 지문. 현재형, 서정적으로. (예: "방 안에는 은은한 차 향기가 가득하다. 스님은 조용히 찻잔을 건네며 부드러운 미소를 지으셨다.")
-- mentorGreeting: 사용자를 맞이하는 첫 인사말. ${mentor.style} 일기 내용을 직접 언급하지 않고 마음을 자연스럽게 여는 말. 위 구절들 중 하나를 멘토 특유의 말투로 자연스럽게 인용하여 오늘의 대화 분위기를 열어주세요. 100-140자 내외.
-- suggestedQuestions: 사용자가 첫 말문을 트기 좋은 질문 또는 말 3개. 아래 두 유형을 섞어서 구성하세요. ① 방금 인용한 구절이나 지혜의 의미·배경을 더 깊이 묻는 질문 (예: "방금 말씀하신 구절이 어느 맥락에서 나온 건가요?"). ② 심리상담에서 내담자가 상담가에게 자연스럽게 꺼낼 법한 말 (예: "저는 왜 이렇게 쉽게 지치는 걸까요?", "이런 감정이 계속 반복되는데 어떻게 하면 좋을까요?"). 각 20-35자 내외.
-
-JSON만 응답하세요.`;
+${_openingScene}`;
 
   const ai = getGemini();
 
@@ -714,6 +746,18 @@ export const generateDamsoResponse = onCall({ timeoutSeconds: 180, memory: '512M
   const historyContext = buildHistoryContext(conversationHistory);
   const knowledgeEntries = await getRecentKnowledgeForDamso(mentorId);
   const knowledgeContext = buildDamsoKnowledgeContext(knowledgeEntries);
+  const _globalPrompts2 = await getGlobalPrompts();
+  const _responseFields = (_globalPrompts2.damsoResponseFields ?? `JSON 필드:
+1. transformedInput: 사용자가 입력한 문장을 최대한 그대로 유지하되, 오타나 맞춤법만 최소한으로 교정. 문체·어투·표현은 바꾸지 말 것. 예) "내일이 무서워" → "내일이 무서워"처럼 원문을 존중.
+
+2. stageDirection: 당신의 반응 행동을 묘사하는 1-2문장의 지문. 현재형, 서정적으로. (예: "스님은 잠시 눈을 감고 대나무 숲 소리에 귀를 기울이셨다. 그리고는 천천히 입을 열어 말씀하셨다.")
+
+3. mentorSpeech: 당신의 대사. {style} 사용자의 감정과 상황에 먼저 충분히 공감하고, 그 마음을 있는 그대로 따뜻하게 품어주세요. 대화 맥락을 이어받아 깊이 있게 응답. 위 구절들 중 하나를 반드시 자연스럽게 인용하되, "어느 경전에 이런 말이 있지요…", "옛 현자가 이리 말했습니다…" 처럼 멘토 특유의 말투로 녹여 쓰세요 — 사용자가 그 구절의 뜻을 마음에 새길 수 있도록. 구절 인용 후 그것이 사용자의 상황과 어떻게 연결되는지 한 문장으로 이어주세요. 150-220자 내외. 50% 확률로 마지막에 질문 하나를 덧붙이되, 절반은 삶·존재·가치에 관한 철학적 질문, 절반은 사용자의 일상과 생각을 자연스럽게 묻는 가벼운 질문으로 하세요.
+   ※ 반드시 지켜야 할 일관성 규칙: 위 [지금까지의 대화]에서 이미 인용된 구절은 절대 다시 인용하지 마세요. 이전 답변에서 한 말과 모순되거나 앞서 취한 입장을 번복하지 마세요.
+
+4. suggestedQuestions: 사용자가 대화를 이어가기 좋은 질문 또는 말 3개. 아래 두 유형을 섞어서 구성하세요. ① 방금 인용한 구절이나 멘토의 답변 내용을 더 깊이 파고드는 질문 (예: "방금 말씀하신 구절의 출처가 궁금합니다", "그 가르침을 실제 삶에서 어떻게 적용할 수 있을까요?"). ② 심리상담에서 내담자가 상담가에게 자연스럽게 꺼낼 법한 말 (예: "저는 왜 이런 상황에서 항상 같은 패턴이 반복될까요?", "이 감정을 어떻게 받아들이면 좋을지 모르겠어요"). 각 20-35자 내외.
+
+JSON만 응답하세요.`).replace('{style}', mentor.style);
 
   const prompt = `당신은 ${mentor.name}입니다. 성격: ${mentor.personality}
 
@@ -721,17 +765,7 @@ export const generateDamsoResponse = onCall({ timeoutSeconds: 180, memory: '512M
 
 사용자가 방금 말했습니다: "${userInput}"
 
-JSON 필드:
-1. transformedInput: 사용자가 입력한 문장을 최대한 그대로 유지하되, 오타나 맞춤법만 최소한으로 교정. 문체·어투·표현은 바꾸지 말 것. 예) "내일이 무서워" → "내일이 무서워"처럼 원문을 존중.
-
-2. stageDirection: 당신의 반응 행동을 묘사하는 1-2문장의 지문. 현재형, 서정적으로. (예: "스님은 잠시 눈을 감고 대나무 숲 소리에 귀를 기울이셨다. 그리고는 천천히 입을 열어 말씀하셨다.")
-
-3. mentorSpeech: 당신의 대사. ${mentor.style} 사용자의 감정과 상황에 먼저 충분히 공감하고, 그 마음을 있는 그대로 따뜻하게 품어주세요. 대화 맥락을 이어받아 깊이 있게 응답. 위 구절들 중 하나를 반드시 자연스럽게 인용하되, "어느 경전에 이런 말이 있지요…", "옛 현자가 이리 말했습니다…" 처럼 멘토 특유의 말투로 녹여 쓰세요 — 사용자가 그 구절의 뜻을 마음에 새길 수 있도록. 구절 인용 후 그것이 사용자의 상황과 어떻게 연결되는지 한 문장으로 이어주세요. 150-220자 내외. 50% 확률로 마지막에 질문 하나를 덧붙이되, 절반은 삶·존재·가치에 관한 철학적 질문, 절반은 사용자의 일상과 생각을 자연스럽게 묻는 가벼운 질문으로 하세요.
-   ※ 반드시 지켜야 할 일관성 규칙: 위 [지금까지의 대화]에서 이미 인용된 구절은 절대 다시 인용하지 마세요. 이전 답변에서 한 말과 모순되거나 앞서 취한 입장을 번복하지 마세요.
-
-4. suggestedQuestions: 사용자가 대화를 이어가기 좋은 질문 또는 말 3개. 아래 두 유형을 섞어서 구성하세요. ① 방금 인용한 구절이나 멘토의 답변 내용을 더 깊이 파고드는 질문 (예: "방금 말씀하신 구절의 출처가 궁금합니다", "그 가르침을 실제 삶에서 어떻게 적용할 수 있을까요?"). ② 심리상담에서 내담자가 상담가에게 자연스럽게 꺼낼 법한 말 (예: "저는 왜 이런 상황에서 항상 같은 패턴이 반복될까요?", "이 감정을 어떻게 받아들이면 좋을지 모르겠어요"). 각 20-35자 내외.
-
-JSON만 응답하세요.`;
+${_responseFields}`;
 
   const ai = getGemini();
 
@@ -789,6 +823,19 @@ export const generateDamsoClosing = onCall({ timeoutSeconds: 180, memory: '512Mi
   const historyContext = buildHistoryContext(conversationHistory);
   const knowledgeEntries = await getRecentKnowledgeForDamso(mentorId);
   const knowledgeContext = buildDamsoKnowledgeContext(knowledgeEntries);
+  const _globalPrompts3 = await getGlobalPrompts();
+  const _closingInstruction = (_globalPrompts3.damsoClosingInstruction ?? `이제 담소를 자연스럽게 마무리할 시간입니다. 사용자의 말에 응답하되, 이것이 오늘의 마지막 말임을 느끼게 해주십시오. 억지로 끊는 것이 아니라, 차 한 잔이 다 비워진 것처럼, 달빛이 기울기 시작한 것처럼 자연스럽게 작별을 고해주세요.
+
+JSON 필드:
+1. transformedInput: 사용자가 입력한 문장을 최대한 그대로 유지하되, 오타나 맞춤법만 최소한으로 교정. 문체·어투는 바꾸지 말 것.
+
+2. stageDirection: 마무리 분위기를 담은 지문 1-2문장. 현재형, 서정적으로. (예: "스님은 찻잔을 조심스레 내려놓으시며 창밖 먼 산을 한참 바라보셨다.")
+
+3. mentorSpeech: {style} 사용자의 마지막 말에 따뜻하게 응답하고, 자연스럽게 작별을 고하는 말. 위 구절들 중 마무리에 어울리는 하나를 인용하되, 위 [지금까지의 대화]에서 이미 인용된 구절은 반드시 피하고 새로운 구절을 선택하세요. 오늘 나눈 대화의 핵심을 한 줄로 갈무리하고, 이전 답변들과 일관된 시각을 유지하면서 진심 어린 축복 혹은 기원의 말을 담아 마무리. 140-200자 내외.
+
+4. suggestedQuestions: [] (마무리 단계이므로 빈 배열)
+
+JSON만 응답하세요.`).replace('{style}', mentor.style);
 
   const prompt = `당신은 ${mentor.name}입니다. 성격: ${mentor.personality}
 
@@ -796,18 +843,7 @@ export const generateDamsoClosing = onCall({ timeoutSeconds: 180, memory: '512Mi
 
 사용자가 방금 말했습니다: "${userInput}"
 
-이제 담소를 자연스럽게 마무리할 시간입니다. 사용자의 말에 응답하되, 이것이 오늘의 마지막 말임을 느끼게 해주십시오. 억지로 끊는 것이 아니라, 차 한 잔이 다 비워진 것처럼, 달빛이 기울기 시작한 것처럼 자연스럽게 작별을 고해주세요.
-
-JSON 필드:
-1. transformedInput: 사용자가 입력한 문장을 최대한 그대로 유지하되, 오타나 맞춤법만 최소한으로 교정. 문체·어투는 바꾸지 말 것.
-
-2. stageDirection: 마무리 분위기를 담은 지문 1-2문장. 현재형, 서정적으로. (예: "스님은 찻잔을 조심스레 내려놓으시며 창밖 먼 산을 한참 바라보셨다.")
-
-3. mentorSpeech: ${mentor.style} 사용자의 마지막 말에 따뜻하게 응답하고, 자연스럽게 작별을 고하는 말. 위 구절들 중 마무리에 어울리는 하나를 인용하되, 위 [지금까지의 대화]에서 이미 인용된 구절은 반드시 피하고 새로운 구절을 선택하세요. 오늘 나눈 대화의 핵심을 한 줄로 갈무리하고, 이전 답변들과 일관된 시각을 유지하면서 진심 어린 축복 혹은 기원의 말을 담아 마무리. 140-200자 내외.
-
-4. suggestedQuestions: [] (마무리 단계이므로 빈 배열)
-
-JSON만 응답하세요.`;
+${_closingInstruction}`;
 
   const ai = getGemini();
 
@@ -863,6 +899,7 @@ async function generateKnowledgeEntries(
 ): Promise<KnowledgeEntry[]> {
   const today = new Date().toISOString().slice(0, 10);
   const _knowledgeAdminOverride = (await getAdminPrompts())[mentorId] ?? {};
+  const _globalPromptsK = await getGlobalPrompts();
   const _knowledgeDomain = _knowledgeAdminOverride.domain ?? MENTOR_DOMAINS[mentorId];
   const _knowledgeQuoteLang = _knowledgeAdminOverride.quoteLanguage ?? QUOTE_LANG[mentorId];
   const _knowledgePersonality = _knowledgeAdminOverride.personality ?? MENTOR_PROFILES[mentorId].personality;
@@ -913,15 +950,15 @@ ${avoidSection}
    성격: ${_knowledgePersonality}
    말투: ${_knowledgeStyle}
 
-   - 반드시 위 현자 한 명의 목소리로만 쓰세요. 다른 현자의 말투가 섞이면 안 됩니다.
+   ${_globalPromptsK.knowledgeContextRules ?? `- 반드시 위 현자 한 명의 목소리로만 쓰세요. 다른 현자의 말투가 섞이면 안 됩니다.
    - 자기소개 절대 금지: "저는 혜운입니다", "나는 혜운입니다", "혜운입니다", "저는 [이름]입니다", "나는 [이름]입니다" 등 이름을 밝히는 문장은 어떤 형태로도 쓰지 마세요. 글귀 해석으로 바로 시작하세요.
-   - "~할 때 씁니다", "~분에게 씁니다", "~하는 분들에게 추천합니다" 같은 상담사 말투는 절대 금지
+   - "~할 때 씁니다", "~분에게 씁니다", "~하는 분들에게 추천합니다" 같은 상담사 말투는 절대 금지`}
 
-[공통 요구사항]
+${_globalPromptsK.knowledgeRequirements ?? `[공통 요구사항]
 - 실제 경전·문헌·저서에서 출처가 명확한 내용만 사용하세요.
 - 각 항목은 서로 다른 삶의 상황(외로움·불안·상실·분노·의미 등)을 다루도록 다양하게 구성하세요.${mentorId === 'hyewoon' ? `
 - 유명한 구절도 괜찮습니다. 현대인의 마음에 실제로 닿는 구절이면 충분합니다.` : `
-- 뻔하고 유명한 구절(예: "나는 생각한다, 고로 존재한다")은 절대 피하세요.`}`;
+- 뻔하고 유명한 구절(예: "나는 생각한다, 고로 존재한다")은 절대 피하세요.`}`}`;
 
   const ai = getGemini();
   const response = await ai.models.generateContent({

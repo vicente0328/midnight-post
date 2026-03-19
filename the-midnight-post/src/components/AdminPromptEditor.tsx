@@ -3,10 +3,11 @@
  * Firestore `admin_prompts/{mentorId}` 에 저장하면 백엔드에서 5분 캐시 후 반영
  */
 import React, { useEffect, useState } from 'react';
-import { doc, getDoc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
 type MentorId = 'hyewoon' | 'benedicto' | 'theodore' | 'yeonam';
+type TabId = MentorId | 'global';
 
 interface AdminPromptOverride {
   description?: string;
@@ -14,6 +15,15 @@ interface AdminPromptOverride {
   style?: string;
   domain?: string;
   quoteLanguage?: string;
+}
+
+interface GlobalPromptOverride {
+  replyInstruction?: string;
+  damsoOpeningScene?: string;
+  damsoResponseFields?: string;
+  damsoClosingInstruction?: string;
+  knowledgeContextRules?: string;
+  knowledgeRequirements?: string;
 }
 
 const MENTOR_NAMES: Record<MentorId, string> = {
@@ -104,169 +114,304 @@ const SECTIONS: { key: keyof AdminPromptOverride; label: string; hint: string; r
   { key: 'quoteLanguage', label: '지혜카드 — 인용 언어 지침', hint: '지혜 카드 quote 원문 언어 규칙입니다', rows: 3 },
 ];
 
+const GLOBAL_DEFAULTS: GlobalPromptOverride = {
+  replyInstruction: `[작성 지침]
+1. 명언 (quote, source, translation): 위 지식 데이터베이스에 있는 자료를 우선적으로 활용하세요. 데이터베이스에 적합한 것이 없을 때만 새로 찾으세요. 유명하고 뻔한 구절은 피하세요.
+
+2. 편지 본문 (advice): 아래 세 흐름을 자연스럽게 이어주세요.
+   - 도입: 명언과 연결된 짧고 아름다운 일화나 비유 하나. 옛이야기를 듣는 듯 따뜻하게.
+   - 연결: 그 이야기의 의미를 일기와 다정하게 이어주세요. 설명하지 말고, 깊이 공감하듯 말해주세요. 일기를 쓴 이가 느끼는 감정을 먼저 충분히 인정하고, 그 마음이 얼마나 소중한지 담아주세요.
+   - 마무리: 한 줄의 여운. 가르치려 하지 말고, 곁에 앉아 있는 사람처럼 — 마치 기도나 축복을 건네듯 — 따뜻하게 마무리하세요. {closing}.
+
+3. 분량과 형식:
+   - 3문단, 400~550자 내외로 간결하고 서정적으로.
+   - 어려운 한자어나 철학 용어는 쉬운 말로 풀어쓰세요.
+   - 문단 사이에 반드시 빈 줄(\\n\\n)을 넣어주세요.
+   - 멘토 특유의 말투를 처음부터 끝까지 유지하세요.`,
+  damsoOpeningScene: `사용자가 당신의 {space}을 찾아왔습니다. 소설의 첫 장면처럼 묘사하고 첫 인사를 건네주세요.
+
+JSON 필드:
+- stageDirection: 공간의 분위기와 당신의 첫 동작을 묘사하는 2-3문장의 지문. 현재형, 서정적으로. (예: "방 안에는 은은한 차 향기가 가득하다. 스님은 조용히 찻잔을 건네며 부드러운 미소를 지으셨다.")
+- mentorGreeting: 사용자를 맞이하는 첫 인사말. {style} 일기 내용을 직접 언급하지 않고 마음을 자연스럽게 여는 말. 위 구절들 중 하나를 멘토 특유의 말투로 자연스럽게 인용하여 오늘의 대화 분위기를 열어주세요. 100-140자 내외.
+- suggestedQuestions: 사용자가 첫 말문을 트기 좋은 질문 또는 말 3개. 아래 두 유형을 섞어서 구성하세요. ① 방금 인용한 구절이나 지혜의 의미·배경을 더 깊이 묻는 질문 (예: "방금 말씀하신 구절이 어느 맥락에서 나온 건가요?"). ② 심리상담에서 내담자가 상담가에게 자연스럽게 꺼낼 법한 말 (예: "저는 왜 이렇게 쉽게 지치는 걸까요?", "이런 감정이 계속 반복되는데 어떻게 하면 좋을까요?"). 각 20-35자 내외.
+
+JSON만 응답하세요.`,
+  damsoResponseFields: `JSON 필드:
+1. transformedInput: 사용자가 입력한 문장을 최대한 그대로 유지하되, 오타나 맞춤법만 최소한으로 교정. 문체·어투·표현은 바꾸지 말 것.
+
+2. stageDirection: 당신의 반응 행동을 묘사하는 1-2문장의 지문. 현재형, 서정적으로.
+
+3. mentorSpeech: 당신의 대사. {style} 사용자의 감정과 상황에 먼저 충분히 공감하고, 그 마음을 있는 그대로 따뜻하게 품어주세요. 위 구절들 중 하나를 반드시 자연스럽게 인용하되, 멘토 특유의 말투로 녹여 쓰세요. 150-220자 내외.
+   ※ 이미 인용된 구절은 절대 다시 인용하지 마세요. 이전 답변과 모순되거나 입장을 번복하지 마세요.
+
+4. suggestedQuestions: 사용자가 대화를 이어가기 좋은 질문 또는 말 3개. ① 인용 구절이나 멘토 답변을 더 깊이 파고드는 질문. ② 내담자가 자연스럽게 꺼낼 법한 말. 각 20-35자 내외.
+
+JSON만 응답하세요.`,
+  damsoClosingInstruction: `이제 담소를 자연스럽게 마무리할 시간입니다. 사용자의 말에 응답하되, 이것이 오늘의 마지막 말임을 느끼게 해주십시오. 차 한 잔이 다 비워진 것처럼 자연스럽게 작별을 고해주세요.
+
+JSON 필드:
+1. transformedInput: 사용자가 입력한 문장을 최대한 그대로 유지하되, 오타나 맞춤법만 최소한으로 교정.
+
+2. stageDirection: 마무리 분위기를 담은 지문 1-2문장. 현재형, 서정적으로.
+
+3. mentorSpeech: {style} 사용자의 마지막 말에 따뜻하게 응답하고, 자연스럽게 작별을 고하는 말. 이미 인용된 구절은 피하고 새 구절을 선택하세요. 오늘 대화의 핵심을 한 줄로 갈무리하고 진심 어린 축복의 말로 마무리. 140-200자 내외.
+
+4. suggestedQuestions: [] (마무리 단계이므로 빈 배열)
+
+JSON만 응답하세요.`,
+  knowledgeContextRules: `- 반드시 위 현자 한 명의 목소리로만 쓰세요. 다른 현자의 말투가 섞이면 안 됩니다.
+   - 자기소개 절대 금지: "저는 혜운입니다", "나는 혜운입니다", "혜운입니다", "저는 [이름]입니다", "나는 [이름]입니다" 등 이름을 밝히는 문장은 어떤 형태로도 쓰지 마세요. 글귀 해석으로 바로 시작하세요.
+   - "~할 때 씁니다", "~분에게 씁니다", "~하는 분들에게 추천합니다" 같은 상담사 말투는 절대 금지`,
+  knowledgeRequirements: `[공통 요구사항]
+- 실제 경전·문헌·저서에서 출처가 명확한 내용만 사용하세요.
+- 각 항목은 서로 다른 삶의 상황(외로움·불안·상실·분노·의미 등)을 다루도록 다양하게 구성하세요.`,
+};
+
+const GLOBAL_SECTIONS: { key: keyof GlobalPromptOverride; label: string; hint: string; rows: number }[] = [
+  { key: 'replyInstruction', label: '편지 — 작성 지침', hint: '{closing} 플레이스홀더: 시간대별 맺음말 자동 치환', rows: 14 },
+  { key: 'damsoOpeningScene', label: '담소 오프닝 — 장면 지침', hint: '{space}: 멘토 공간명, {style}: 멘토 말투 자동 치환', rows: 10 },
+  { key: 'damsoResponseFields', label: '담소 응답 — JSON 필드 지침', hint: '{style}: 멘토 말투 자동 치환', rows: 10 },
+  { key: 'damsoClosingInstruction', label: '담소 클로징 — 마무리 지침', hint: '{style}: 멘토 말투 자동 치환', rows: 12 },
+  { key: 'knowledgeContextRules', label: '지혜카드 — context 규칙 (자기소개 금지 등)', hint: '지혜 카드 context 생성 시 현자 페르소나 제약 지침', rows: 5 },
+  { key: 'knowledgeRequirements', label: '지혜카드 — 공통 요구사항', hint: '지혜 카드 전체 공통 요구사항 (출처 명확성, 다양성 등)', rows: 5 },
+];
+
 export default function AdminPromptEditor() {
-  const [activeMentor, setActiveMentor] = useState<MentorId>('hyewoon');
+  const [activeTab, setActiveTab] = useState<TabId>('hyewoon');
   const [overrides, setOverrides] = useState<Partial<Record<MentorId, AdminPromptOverride>>>({});
   const [edits, setEdits] = useState<Partial<Record<MentorId, AdminPromptOverride>>>({});
+  const [globalOverride, setGlobalOverride] = useState<GlobalPromptOverride>({});
+  const [globalEdits, setGlobalEdits] = useState<GlobalPromptOverride>({});
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<string | null>(null); // '{mentorId}_{field}'
+  const [saving, setSaving] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Partial<Record<string, number>>>({});
 
-  // Firestore에서 현재 override 로드
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const result: Partial<Record<MentorId, AdminPromptOverride>> = {};
       const mentors: MentorId[] = ['hyewoon', 'benedicto', 'theodore', 'yeonam'];
-      await Promise.all(mentors.map(async (id) => {
-        const snap = await getDoc(doc(db, 'admin_prompts', id));
-        if (snap.exists()) result[id] = snap.data() as AdminPromptOverride;
-      }));
+      const [mentorResults, globalSnap] = await Promise.all([
+        Promise.all(mentors.map(async (id) => {
+          const snap = await getDoc(doc(db, 'admin_prompts', id));
+          return snap.exists() ? { id, data: snap.data() as AdminPromptOverride } : null;
+        })),
+        getDoc(doc(db, 'admin_prompts', 'global')),
+      ]);
+      const result: Partial<Record<MentorId, AdminPromptOverride>> = {};
+      mentorResults.forEach(r => { if (r) result[r.id] = r.data; });
+      const global = globalSnap.exists() ? globalSnap.data() as GlobalPromptOverride : {};
       setOverrides(result);
       setEdits(result);
+      setGlobalOverride(global);
+      setGlobalEdits(global);
       setLoading(false);
     };
     load();
   }, []);
 
-  const getValue = (mentorId: MentorId, field: keyof AdminPromptOverride): string =>
+  // ── Mentor tab helpers ─────────────────────────────────────────────────────
+  const getMentorValue = (mentorId: MentorId, field: keyof AdminPromptOverride): string =>
     edits[mentorId]?.[field] ?? DEFAULTS[mentorId][field] ?? '';
 
-  const handleChange = (mentorId: MentorId, field: keyof AdminPromptOverride, value: string) => {
-    setEdits(prev => ({
-      ...prev,
-      [mentorId]: { ...prev[mentorId], [field]: value },
-    }));
+  const handleMentorChange = (mentorId: MentorId, field: keyof AdminPromptOverride, value: string) => {
+    setEdits(prev => ({ ...prev, [mentorId]: { ...prev[mentorId], [field]: value } }));
   };
 
-  const handleSave = async (mentorId: MentorId, field: keyof AdminPromptOverride) => {
+  const handleMentorSave = async (mentorId: MentorId, field: keyof AdminPromptOverride) => {
     const key = `${mentorId}_${field}`;
     setSaving(key);
     try {
       const value = edits[mentorId]?.[field];
-      const ref = doc(db, 'admin_prompts', mentorId);
-      await setDoc(ref, { [field]: value, updatedAt: serverTimestamp() }, { merge: true });
-      setOverrides(prev => ({
-        ...prev,
-        [mentorId]: { ...prev[mentorId], [field]: value },
-      }));
+      await setDoc(doc(db, 'admin_prompts', mentorId), { [field]: value, updatedAt: serverTimestamp() }, { merge: true });
+      setOverrides(prev => ({ ...prev, [mentorId]: { ...prev[mentorId], [field]: value } }));
       setSavedAt(prev => ({ ...prev, [key]: Date.now() }));
-    } finally {
-      setSaving(null);
-    }
+    } finally { setSaving(null); }
   };
 
-  const handleReset = async (mentorId: MentorId, field: keyof AdminPromptOverride) => {
+  const handleMentorReset = async (mentorId: MentorId, field: keyof AdminPromptOverride) => {
     const key = `${mentorId}_${field}`;
     setSaving(key);
     try {
-      const ref = doc(db, 'admin_prompts', mentorId);
-      // 해당 필드만 삭제 (merge setDoc으로는 삭제 불가 — deleteField 사용)
       const { deleteField } = await import('firebase/firestore');
-      await setDoc(ref, { [field]: deleteField() }, { merge: true });
-      setOverrides(prev => {
-        const copy = { ...prev[mentorId] };
-        delete copy[field];
-        return { ...prev, [mentorId]: copy };
-      });
-      setEdits(prev => {
-        const copy = { ...prev[mentorId] };
-        delete copy[field];
-        return { ...prev, [mentorId]: copy };
-      });
+      await setDoc(doc(db, 'admin_prompts', mentorId), { [field]: deleteField() }, { merge: true });
+      setOverrides(prev => { const c = { ...prev[mentorId] }; delete c[field]; return { ...prev, [mentorId]: c }; });
+      setEdits(prev => { const c = { ...prev[mentorId] }; delete c[field]; return { ...prev, [mentorId]: c }; });
       setSavedAt(prev => ({ ...prev, [key]: Date.now() }));
-    } finally {
-      setSaving(null);
-    }
+    } finally { setSaving(null); }
   };
 
-  const isModified = (mentorId: MentorId, field: keyof AdminPromptOverride): boolean =>
+  const isMentorModified = (mentorId: MentorId, field: keyof AdminPromptOverride) =>
     overrides[mentorId]?.[field] !== undefined;
 
-  const isDirty = (mentorId: MentorId, field: keyof AdminPromptOverride): boolean =>
+  const isMentorDirty = (mentorId: MentorId, field: keyof AdminPromptOverride) =>
     edits[mentorId]?.[field] !== overrides[mentorId]?.[field] &&
     !(edits[mentorId]?.[field] === undefined && overrides[mentorId]?.[field] === undefined);
+
+  // ── Global tab helpers ─────────────────────────────────────────────────────
+  const getGlobalValue = (field: keyof GlobalPromptOverride): string =>
+    globalEdits[field] ?? GLOBAL_DEFAULTS[field] ?? '';
+
+  const handleGlobalChange = (field: keyof GlobalPromptOverride, value: string) => {
+    setGlobalEdits(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleGlobalSave = async (field: keyof GlobalPromptOverride) => {
+    const key = `global_${field}`;
+    setSaving(key);
+    try {
+      const value = globalEdits[field];
+      await setDoc(doc(db, 'admin_prompts', 'global'), { [field]: value, updatedAt: serverTimestamp() }, { merge: true });
+      setGlobalOverride(prev => ({ ...prev, [field]: value }));
+      setSavedAt(prev => ({ ...prev, [key]: Date.now() }));
+    } finally { setSaving(null); }
+  };
+
+  const handleGlobalReset = async (field: keyof GlobalPromptOverride) => {
+    const key = `global_${field}`;
+    setSaving(key);
+    try {
+      const { deleteField } = await import('firebase/firestore');
+      await setDoc(doc(db, 'admin_prompts', 'global'), { [field]: deleteField() }, { merge: true });
+      setGlobalOverride(prev => { const c = { ...prev }; delete c[field]; return c; });
+      setGlobalEdits(prev => { const c = { ...prev }; delete c[field]; return c; });
+      setSavedAt(prev => ({ ...prev, [key]: Date.now() }));
+    } finally { setSaving(null); }
+  };
+
+  const isGlobalModified = (field: keyof GlobalPromptOverride) => globalOverride[field] !== undefined;
+  const isGlobalDirty = (field: keyof GlobalPromptOverride) =>
+    globalEdits[field] !== globalOverride[field] &&
+    !(globalEdits[field] === undefined && globalOverride[field] === undefined);
 
   if (loading) return (
     <p className="font-mono text-xs opacity-40 animate-pulse text-center py-4">프롬프트 로드 중...</p>
   );
 
+  const isGlobalTab = activeTab === 'global';
+
   return (
     <div className="w-full flex flex-col gap-6">
       <div className="text-center">
-        <h2 className="font-serif text-lg">멘토 프롬프트 편집</h2>
+        <h2 className="font-serif text-lg">프롬프트 편집</h2>
         <p className="font-mono text-xs opacity-40 mt-1">백엔드 반영까지 최대 5분 소요 (캐시)</p>
       </div>
 
-      {/* 멘토 탭 */}
-      <div className="flex border-b border-ink/15">
+      {/* 탭 */}
+      <div className="flex border-b border-ink/15 overflow-x-auto">
         {(Object.keys(MENTOR_NAMES) as MentorId[]).map(id => (
           <button
             key={id}
-            onClick={() => setActiveMentor(id)}
-            className={`flex-1 py-2 font-serif text-xs transition-all ${
-              activeMentor === id
-                ? 'border-b-2 border-ink font-bold'
-                : 'opacity-40 hover:opacity-70'
+            onClick={() => setActiveTab(id)}
+            className={`flex-shrink-0 px-3 py-2 font-serif text-xs transition-all ${
+              activeTab === id ? 'border-b-2 border-ink font-bold' : 'opacity-40 hover:opacity-70'
             }`}
           >
             {MENTOR_NAMES[id]}
           </button>
         ))}
+        <button
+          onClick={() => setActiveTab('global')}
+          className={`flex-shrink-0 px-3 py-2 font-mono text-xs transition-all ${
+            activeTab === 'global' ? 'border-b-2 border-ink font-bold' : 'opacity-40 hover:opacity-70'
+          }`}
+        >
+          공통
+        </button>
       </div>
 
       {/* 섹션별 편집기 */}
       <div className="flex flex-col gap-8">
-        {SECTIONS.map(({ key, label, hint, rows }) => {
-          const saveKey = `${activeMentor}_${key}`;
-          const isSaving = saving === saveKey;
-          const modified = isModified(activeMentor, key);
-          const dirty = isDirty(activeMentor, key);
-          const justSaved = savedAt[saveKey] && Date.now() - (savedAt[saveKey] ?? 0) < 3000;
+        {isGlobalTab ? (
+          GLOBAL_SECTIONS.map(({ key, label, hint, rows }) => {
+            const saveKey = `global_${key}`;
+            const isSaving = saving === saveKey;
+            const modified = isGlobalModified(key);
+            const dirty = isGlobalDirty(key);
+            const justSaved = savedAt[saveKey] && Date.now() - (savedAt[saveKey] ?? 0) < 3000;
 
-          return (
-            <div key={key} className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-2">
+            return (
+              <div key={key} className="flex flex-col gap-2">
                 <div>
                   <p className="font-serif text-sm">
                     {label}
-                    {modified && (
-                      <span className="ml-2 font-mono text-xs text-amber-700 opacity-80">● 수정됨</span>
-                    )}
+                    {modified && <span className="ml-2 font-mono text-xs text-amber-700 opacity-80">● 수정됨</span>}
                   </p>
                   <p className="font-mono text-xs opacity-35 mt-0.5">{hint}</p>
                 </div>
-              </div>
-
-              <textarea
-                value={getValue(activeMentor, key)}
-                onChange={e => handleChange(activeMentor, key, e.target.value)}
-                rows={rows}
-                className="w-full border border-ink/20 bg-[#fdfbf7] px-3 py-2 font-mono text-xs leading-relaxed focus:outline-none focus:border-ink/50 resize-y"
-                placeholder={`기본값이 사용됩니다 (편집하면 override)\n\n${DEFAULTS[activeMentor][key] ?? ''}`}
-              />
-
-              <div className="flex items-center gap-2 justify-end">
-                {modified && (
+                <textarea
+                  value={getGlobalValue(key)}
+                  onChange={e => handleGlobalChange(key, e.target.value)}
+                  rows={rows}
+                  className="w-full border border-ink/20 bg-[#fdfbf7] px-3 py-2 font-mono text-xs leading-relaxed focus:outline-none focus:border-ink/50 resize-y"
+                />
+                <div className="flex items-center gap-2 justify-end">
+                  {modified && (
+                    <button
+                      onClick={() => handleGlobalReset(key)}
+                      disabled={isSaving}
+                      className="px-3 py-1 border border-ink/20 font-mono text-xs opacity-50 hover:opacity-80 disabled:opacity-20 transition-all"
+                    >
+                      기본값으로 초기화
+                    </button>
+                  )}
                   <button
-                    onClick={() => handleReset(activeMentor, key)}
-                    disabled={isSaving}
-                    className="px-3 py-1 border border-ink/20 font-mono text-xs opacity-50 hover:opacity-80 disabled:opacity-20 transition-all"
+                    onClick={() => handleGlobalSave(key)}
+                    disabled={isSaving || !dirty}
+                    className="px-4 py-1 border border-ink/30 font-mono text-xs hover:bg-ink hover:text-paper disabled:opacity-20 transition-all"
                   >
-                    기본값으로 초기화
+                    {isSaving ? '저장 중...' : justSaved ? '저장됨 ✓' : '저장'}
                   </button>
-                )}
-                <button
-                  onClick={() => handleSave(activeMentor, key)}
-                  disabled={isSaving || !dirty}
-                  className="px-4 py-1 border border-ink/30 font-mono text-xs hover:bg-ink hover:text-paper disabled:opacity-20 transition-all"
-                >
-                  {isSaving ? '저장 중...' : justSaved ? '저장됨 ✓' : '저장'}
-                </button>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        ) : (
+          SECTIONS.map(({ key, label, hint, rows }) => {
+            const mentorId = activeTab as MentorId;
+            const saveKey = `${mentorId}_${key}`;
+            const isSaving = saving === saveKey;
+            const modified = isMentorModified(mentorId, key);
+            const dirty = isMentorDirty(mentorId, key);
+            const justSaved = savedAt[saveKey] && Date.now() - (savedAt[saveKey] ?? 0) < 3000;
+
+            return (
+              <div key={key} className="flex flex-col gap-2">
+                <div>
+                  <p className="font-serif text-sm">
+                    {label}
+                    {modified && <span className="ml-2 font-mono text-xs text-amber-700 opacity-80">● 수정됨</span>}
+                  </p>
+                  <p className="font-mono text-xs opacity-35 mt-0.5">{hint}</p>
+                </div>
+                <textarea
+                  value={getMentorValue(mentorId, key)}
+                  onChange={e => handleMentorChange(mentorId, key, e.target.value)}
+                  rows={rows}
+                  className="w-full border border-ink/20 bg-[#fdfbf7] px-3 py-2 font-mono text-xs leading-relaxed focus:outline-none focus:border-ink/50 resize-y"
+                  placeholder={`기본값이 사용됩니다 (편집하면 override)\n\n${DEFAULTS[mentorId][key] ?? ''}`}
+                />
+                <div className="flex items-center gap-2 justify-end">
+                  {modified && (
+                    <button
+                      onClick={() => handleMentorReset(mentorId, key)}
+                      disabled={isSaving}
+                      className="px-3 py-1 border border-ink/20 font-mono text-xs opacity-50 hover:opacity-80 disabled:opacity-20 transition-all"
+                    >
+                      기본값으로 초기화
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleMentorSave(mentorId, key)}
+                    disabled={isSaving || !dirty}
+                    className="px-4 py-1 border border-ink/30 font-mono text-xs hover:bg-ink hover:text-paper disabled:opacity-20 transition-all"
+                  >
+                    {isSaving ? '저장 중...' : justSaved ? '저장됨 ✓' : '저장'}
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );
