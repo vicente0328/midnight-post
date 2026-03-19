@@ -230,16 +230,6 @@ export default function Layout() {
             {currentLang === 'ko' ? 'EN' : '한'}
           </button>
 
-          {/* 플랜 배지 — 무료 유저만 표시 */}
-          {user && planLoaded && !isStandard && !isAdmin && (
-            <Link
-              to="/account"
-              className="font-mono text-[10px] tracking-widest uppercase px-1.5 py-0.5 border border-ink/15 opacity-35 hover:opacity-60 transition-opacity"
-              title="업그레이드"
-            >
-              FREE
-            </Link>
-          )}
 
           {/* 데스크톱 nav */}
           <nav className="hidden sm:flex gap-4 items-center text-sm tracking-widest uppercase mr-2">
@@ -452,6 +442,11 @@ export default function Layout() {
                     >
                       <UserRound size={14} strokeWidth={1.4} />
                       <span>{t('nav.account')}</span>
+                      {planLoaded && !isStandard && !isAdmin && (
+                        <span className="ml-auto font-mono text-[9px] tracking-widest uppercase px-1 py-0.5 border border-ink/20 opacity-50">
+                          FREE
+                        </span>
+                      )}
                     </Link>
                     {isAdmin && (
                       <Link
