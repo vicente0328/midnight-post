@@ -119,30 +119,6 @@ async function getRecentKnowledgeForDamso(mentorId: MentorId, count = 4): Promis
     }
   }
 
-  // gutenberg_quotes 보충 (베네딕토·테오도르만 — 한문 원문 멘토는 제외)
-  if (GUTENBERG_BOOKS[mentorId] && entries.length < count) {
-    try {
-      const randomVal = Math.random();
-      let gSnap = await db.collection('gutenberg_quotes')
-        .where('mentorId', '==', mentorId)
-        .where('randomOrder', '>=', randomVal)
-        .orderBy('randomOrder')
-        .limit(count - entries.length)
-        .get();
-      if (gSnap.empty) {
-        gSnap = await db.collection('gutenberg_quotes')
-          .where('mentorId', '==', mentorId)
-          .orderBy('randomOrder')
-          .limit(count - entries.length)
-          .get();
-      }
-      gSnap.forEach(d => {
-        const data = d.data();
-        entries.push({ quote: data.quote, source: data.source, translation: data.translation, context: data.context, tags: data.tags ?? [] });
-      });
-    } catch { /* gutenberg_quotes 없거나 인덱스 미생성 시 skip */ }
-  }
-
   // buddhist_quotes 보충 (혜운 스님 전용 한문 불교 경전 구절)
   if (mentorId === 'hyewoon' && entries.length < count) {
     try {
@@ -294,47 +270,6 @@ async function getGlobalPrompts(): Promise<GlobalPromptOverride> {
   } catch { _globalPromptCache = {}; }
   _globalPromptCacheTs = Date.now();
   return _globalPromptCache;
-}
-
-// ── Project Gutenberg 도서 목록 ─────────────────────────────────────────────
-// 혜운(불교 한문)·연암(유교/도가 한문)은 Gutenberg 영역본이 아닌 원문 한문을 써야 하므로 제외.
-// 베네딕토(라틴/영어)·테오도르(영어/라틴)만 Gutenberg 활용.
-
-interface GutenbergBook { id: number; title: string; }
-
-const GUTENBERG_BOOKS: Partial<Record<MentorId, GutenbergBook[]>> = {
-  benedicto: [
-    { id: 3296, title: 'Confessions of Saint Augustine' },
-    { id: 1653, title: 'The Imitation of Christ (Thomas à Kempis)' },
-  ],
-  theodore: [
-    { id: 2680, title: 'Meditations — Marcus Aurelius' },
-    { id: 4135, title: 'The Discourses of Epictetus' },
-  ],
-};
-
-/** Gutenberg 텍스트 본문에서 무작위 ~3000자 청크 추출 */
-async function fetchGutenbergChunk(bookId: number, chunkSize = 3000): Promise<string | null> {
-  try {
-    const url = `https://www.gutenberg.org/cache/epub/${bookId}/pg${bookId}.txt`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
-    if (!res.ok) return null;
-    const text = await res.text();
-    const startMark = text.indexOf('*** START OF');
-    const endMark   = text.lastIndexOf('*** END OF');
-    const body = (startMark !== -1 && endMark !== -1)
-      ? text.slice(text.indexOf('\n', startMark) + 1, endMark)
-      : text;
-    if (body.length <= chunkSize) return body.trim();
-    // 앞 10%는 목차·서문 영역이므로 건너뜀
-    const minStart = Math.floor(body.length * 0.1);
-    const maxStart = body.length - chunkSize - 1;
-    const offset = Math.floor(Math.random() * (maxStart - minStart)) + minStart;
-    const wordBoundary = body.indexOf(' ', offset) + 1;
-    return body.slice(wordBoundary, wordBoundary + chunkSize);
-  } catch {
-    return null;
-  }
 }
 
 // ── 1. 멘토 편지 생성 ─────────────────────────────────────────────────────────
@@ -955,19 +890,6 @@ async function generateKnowledgeEntries(
   // 공통 지침: admin override 우선, 없으면 코드 기본값
   const commonPrompt = globalPrompts.knowledgePromptCommon ?? DEFAULT_KNOWLEDGE_COMMON_PROMPT;
 
-  // Gutenberg 원문 텍스트 선택적 로드 (베네딕토·테오도르만)
-  let gutenbergSection = '';
-  const books = GUTENBERG_BOOKS[mentorId];
-  if (books && books.length > 0) {
-    const book = books[Math.floor(Math.random() * books.length)];
-    const chunk = await fetchGutenbergChunk(book.id);
-    if (chunk) {
-      gutenbergSection = `\n[원문 텍스트 — "${book.title}" 발췌]\n` +
-        `아래 텍스트에 실제로 등장하는 구절을 최우선으로 활용하세요. ` +
-        `텍스트에서 적합한 구절을 찾지 못할 때만 해당 저자의 다른 작품에서 가져오세요.\n\n${chunk}\n`;
-    }
-  }
-
   // 중복 방지: 구절 텍스트 + 출처 모두 제공하여 같은 책·저자 반복도 억제
   const recentSources = [...new Set(avoidItems.map(i => i.source).filter(Boolean))].slice(0, 20);
   const avoidSection = avoidItems.length > 0
@@ -980,7 +902,7 @@ async function generateKnowledgeEntries(
     : '';
 
   const prompt = `오늘(${today}) 심리 위로와 정서 치유에 실제로 도움이 되는 지식 4개를 발굴해주세요.
-${gutenbergSection}
+
 [멘토별 지침]
 ${mentorPrompt}
 ${avoidSection}
@@ -1113,121 +1035,7 @@ export const scheduledKnowledgeGeneration = onSchedule(
   },
 );
 
-// ── 6. Gutenberg 도서 배치 인덱싱 ────────────────────────────────────────────
-// 관리자가 수동으로 실행. 책 한 권의 텍스트를 청크로 나눠 구절을 추출해
-// gutenberg_quotes 컬렉션에 저장. 이후 멘토 편지/담소 생성 시 참고 자료로 활용됨.
-
-export const indexGutenbergBooks = onCall(
-  { timeoutSeconds: 540, memory: '1GiB' },
-  async (request) => {
-    if (!request.auth) throw new HttpsError('unauthenticated', '로그인이 필요합니다.');
-
-    const { mentorId, bookId } = request.data as { mentorId: MentorId; bookId: number };
-    if (!mentorId || !bookId) throw new HttpsError('invalid-argument', 'mentorId와 bookId가 필요합니다.');
-
-    const books = GUTENBERG_BOOKS[mentorId];
-    if (!books) throw new HttpsError('invalid-argument', `${mentorId}에 대한 Gutenberg 도서가 없습니다.`);
-
-    const book = books.find(b => b.id === bookId);
-    if (!book) throw new HttpsError('invalid-argument', `도서 ID ${bookId}를 찾을 수 없습니다.`);
-
-    // 전체 텍스트 로드
-    const url = `https://www.gutenberg.org/cache/epub/${bookId}/pg${bookId}.txt`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(30000) });
-    if (!res.ok) throw new HttpsError('internal', 'Gutenberg 텍스트를 가져오지 못했습니다.');
-
-    const text = await res.text();
-    const startMark = text.indexOf('*** START OF');
-    const endMark   = text.lastIndexOf('*** END OF');
-    const body = (startMark !== -1 && endMark !== -1)
-      ? text.slice(text.indexOf('\n', startMark) + 1, endMark)
-      : text;
-
-    // 앞 5% skip (서문/목차), 8000자 간격으로 청크 분리 (최대 20청크)
-    const CHUNK_SIZE = 4500;
-    const STEP = 8000;
-    const chunks: string[] = [];
-    for (let i = Math.floor(body.length * 0.05); i < body.length - CHUNK_SIZE; i += STEP) {
-      chunks.push(body.slice(i, i + CHUNK_SIZE));
-      if (chunks.length >= 20) break;
-    }
-
-    const adminDb = getDb();
-    const ai = getGemini();
-    let totalIndexed = 0;
-
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      try {
-        const prompt = `다음은 "${book.title}"의 일부입니다.
-이 텍스트에서 심리 위로와 정서 치유에 실제로 도움이 되는 구절 2개를 추출해주세요.
-
-[원문 텍스트]
-${chunk}
-
-[필수 규칙]
-- 반드시 위 텍스트에 실제로 나오는 문장만 사용하세요. 없으면 빈 배열을 반환하세요.
-- quote: 멘토별 원문 언어로 작성 (원문 그대로 — benedicto: 라틴어, theodore: 영어 또는 라틴어)
-- source: 출처 (책 제목 + 권/장 정보)
-- translation: 한국어 직역 (해설 없이 원문 충실하게)
-- context: ${MENTOR_PROFILES[mentorId].name}의 목소리로 이 구절의 의미 해석 (80-120자)
-- tags: 관련 감정/상황 태그 2-3개
-
-JSON 배열만 반환하세요.`;
-
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.0-flash',
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  quote:       { type: Type.STRING },
-                  source:      { type: Type.STRING },
-                  translation: { type: Type.STRING },
-                  context:     { type: Type.STRING },
-                  tags:        { type: Type.ARRAY, items: { type: Type.STRING } },
-                },
-                required: ['quote', 'source', 'translation', 'context', 'tags'],
-              },
-            },
-          },
-        });
-
-        const responseText = response.text;
-        if (!responseText) continue;
-
-        const entries = JSON.parse(responseText) as KnowledgeEntry[];
-        for (const entry of entries) {
-          if (!entry.quote || entry.quote.length < 10) continue;
-          await adminDb.collection('gutenberg_quotes').add({
-            mentorId,
-            bookId,
-            bookTitle: book.title,
-            quote: entry.quote,
-            source: entry.source,
-            translation: entry.translation,
-            context: entry.context,
-            tags: entry.tags ?? [],
-            randomOrder: Math.random(),
-            createdAt: FieldValue.serverTimestamp(),
-          });
-          totalIndexed++;
-        }
-        console.log(`[Gutenberg] ${mentorId} 청크 ${i + 1}/${chunks.length} — ${totalIndexed}개 누적`);
-      } catch (err) {
-        console.error(`[Gutenberg] 청크 ${i} 처리 실패:`, err);
-      }
-    }
-
-    return { success: true, indexed: totalIndexed, book: book.title };
-  }
-);
-
-// ── 7. 불교 경전 사이트 스크래핑 + 인덱싱 (혜운 스님 전용) ──────────────────
+// ── 6. 불교 경전 사이트 스크래핑 + 인덱싱 (혜운 스님 전용) ──────────────────
 // 동국대 ABC 한글대장경 등 URL에서 HTML을 가져와 한문 원문·한국어 번역 쌍을 추출.
 // 결과는 buddhist_quotes 컬렉션에 저장.
 

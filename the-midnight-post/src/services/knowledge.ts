@@ -279,11 +279,6 @@ export async function getRecentKnowledge(
     }
   }
 
-  // Gutenberg 구절 보충 (베네딕토·테오도르)
-  if (mentorId === 'benedicto' || mentorId === 'theodore') {
-    const gutenbergEntries = await getRandomQuotes('gutenberg_quotes', mentorId, 2);
-    allEntries.push(...gutenbergEntries);
-  }
 
   // 불교 경전 구절 보충 (혜운)
   if (mentorId === 'hyewoon') {

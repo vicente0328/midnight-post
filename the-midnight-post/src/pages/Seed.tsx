@@ -141,14 +141,6 @@ const SEED_DATA: Record<MentorId, KnowledgeEntry[]> = {
   ],
 };
 
-// ── Gutenberg 도서 목록 (Seed 페이지용) ─────────────────────────────────────
-
-const GUTENBERG_CATALOG: { mentorId: string; bookId: number; title: string }[] = [
-  { mentorId: 'benedicto', bookId: 3296, title: 'Confessions of Saint Augustine' },
-  { mentorId: 'benedicto', bookId: 1653, title: 'The Imitation of Christ' },
-  { mentorId: 'theodore',  bookId: 2680, title: 'Meditations — Marcus Aurelius' },
-  { mentorId: 'theodore',  bookId: 4135, title: 'The Discourses of Epictetus' },
-];
 
 // ── 혜운 스님 불교 경전 수작업 큐레이션 데이터 ──────────────────────────────
 // 출처: 법구경(法句經)·금강경·화엄경·선종 조사 어록 등 권위 있는 한역 원문
@@ -246,8 +238,6 @@ export default function Seed() {
   const [status, setStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
   const [log, setLog] = useState<string[]>([]);
   const [regenStatus, setRegenStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
-  const [gutenbergStates, setGutenbergStates] = useState<Record<string, 'idle' | 'running' | 'done' | 'error'>>({});
-  const [gutenbergLog, setGutenbergLog] = useState<string[]>([]);
   const [buddhistUploadStatus, setBuddhistUploadStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
   const [buddhistLog, setBuddhistLog] = useState<string[]>([]);
   const [abcUrl, setAbcUrl] = useState('');
@@ -255,7 +245,6 @@ export default function Seed() {
   const [abcStatus, setAbcStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
 
   const addLog = (msg: string) => setLog(prev => [...prev, msg]);
-  const addGutenbergLog = (msg: string) => setGutenbergLog(prev => [...prev, msg]);
   const addBuddhistLog = (msg: string) => setBuddhistLog(prev => [...prev, msg]);
 
   const handleUploadBuddhistCurated = async () => {
@@ -294,21 +283,6 @@ export default function Seed() {
     }
   };
 
-  const handleIndexGutenberg = async (mentorId: string, bookId: number, title: string) => {
-    const key = `${mentorId}_${bookId}`;
-    if (gutenbergStates[key] === 'running') return;
-    setGutenbergStates(prev => ({ ...prev, [key]: 'running' }));
-    addGutenbergLog(`[${mentorId}] "${title}" 인덱싱 시작...`);
-    try {
-      const fn = httpsCallable<{ mentorId: string; bookId: number }, { indexed: number; book: string }>(functions, 'indexGutenbergBooks');
-      const result = await fn({ mentorId, bookId });
-      addGutenbergLog(`✓ [${mentorId}] "${title}" — ${result.data.indexed}개 구절 저장`);
-      setGutenbergStates(prev => ({ ...prev, [key]: 'done' }));
-    } catch (e) {
-      addGutenbergLog(`✗ [${mentorId}] "${title}" 실패: ${String(e)}`);
-      setGutenbergStates(prev => ({ ...prev, [key]: 'error' }));
-    }
-  };
 
   useEffect(() => {
     if (!user || status !== 'idle') return;
@@ -419,37 +393,6 @@ export default function Seed() {
         {buddhistLog.length > 0 && (
           <div className="w-full border border-ink/10 bg-[#fdfbf7] p-4 font-mono text-xs space-y-1 max-h-28 overflow-y-auto">
             {buddhistLog.map((l, i) => <p key={i} className="opacity-70">{l}</p>)}
-          </div>
-        )}
-      </div>
-
-      <div className="w-full border-t border-ink/10 pt-6 flex flex-col items-center gap-4">
-        <p className="font-serif text-sm opacity-50">Project Gutenberg 원문 인덱싱</p>
-        <p className="text-xs opacity-35 text-center font-serif italic leading-relaxed">
-          베네딕토·테오도르 도서만 지원됩니다.<br />
-          혜운·연암은 한문 원문이 필요해 제외됩니다.
-        </p>
-        <div className="w-full flex flex-col gap-2">
-          {GUTENBERG_CATALOG.map(({ mentorId, bookId, title }) => {
-            const key = `${mentorId}_${bookId}`;
-            const state = gutenbergStates[key] ?? 'idle';
-            return (
-              <div key={key} className="flex items-center justify-between gap-3">
-                <p className="font-serif text-xs opacity-60 flex-1 text-left">[{mentorId}] {title}</p>
-                <button
-                  onClick={() => handleIndexGutenberg(mentorId, bookId, title)}
-                  disabled={state === 'running'}
-                  className="px-4 py-1 border border-ink/25 font-mono text-xs hover:bg-ink hover:text-paper transition-all duration-300 disabled:opacity-30 whitespace-nowrap"
-                >
-                  {state === 'running' ? '처리 중...' : state === 'done' ? '완료 ✓' : state === 'error' ? '오류' : '인덱싱'}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-        {gutenbergLog.length > 0 && (
-          <div className="w-full border border-ink/10 bg-[#fdfbf7] p-4 font-mono text-xs space-y-1 max-h-32 overflow-y-auto">
-            {gutenbergLog.map((l, i) => <p key={i} className="opacity-70">{l}</p>)}
           </div>
         )}
       </div>

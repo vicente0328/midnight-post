@@ -109,12 +109,6 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
-    // Gutenberg 인덱싱 구절 — 인증 유저 읽기, 쓰기는 서버(Admin SDK)만
-    match /gutenberg_quotes/{docId} {
-      allow read: if isAuthenticated();
-      allow write: if false;
-    }
-
     // 불교 경전 구절 (혜운 스님) — 인증 유저 읽기·생성, 수정·삭제는 서버(Admin SDK)만
     match /buddhist_quotes/{docId} {
       allow read: if isAuthenticated();
