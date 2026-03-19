@@ -173,40 +173,18 @@ export async function saveKnowledgeEntries(
   });
 }
 
-// 오늘 특정 멘토의 지식 — 현재 시간대 → 반대 시간대 → 구형 키 → 최근 7일 → 내장 fallback
+const ALL_SUFFIXES = ['_h22', '_h17', '_h12', '_h08', '_am', '_pm', ''] as const;
+
+// 오늘 특정 멘토의 지식 — 오늘 모든 슬롯 → 최근 3일 → 내장 fallback
 export async function getTodayKnowledge(
   mentorId: MentorId
 ): Promise<KnowledgeEntry[]> {
-  const today = new Date().toISOString().slice(0, 10);
-  const period = getPeriod();
-  const other = period === 'am' ? 'pm' : 'am';
-
-  // 현재 시간대 → 스케줄 h-키(최신순) → 반대 시간대 → 구형 키
-  for (const key of [
-    `${mentorId}_${today}_${period}`,
-    `${mentorId}_${today}_h22`,
-    `${mentorId}_${today}_h17`,
-    `${mentorId}_${today}_h12`,
-    `${mentorId}_${today}_h08`,
-    `${mentorId}_${today}_${other}`,
-    `${mentorId}_${today}`, // 구형 키 호환
-  ]) {
-    try {
-      const snap = await getDoc(doc(db, 'mentor_knowledge', key));
-      if (snap.exists()) {
-        const data = snap.data();
-        if (Array.isArray(data.entries) && data.entries.length > 0)
-          return data.entries as KnowledgeEntry[];
-      }
-    } catch {}
-  }
-
-  // 최근 7일 fallback
-  for (let i = 1; i < 7; i++) {
+  // 오늘 + 최근 3일
+  for (let i = 0; i <= 3; i++) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().slice(0, 10);
-    for (const suffix of [`_h22`, `_h17`, `_h12`, `_h08`, `_am`, `_pm`, ``]) {
+    for (const suffix of ALL_SUFFIXES) {
       try {
         const snap = await getDoc(doc(db, 'mentor_knowledge', `${mentorId}_${dateStr}${suffix}`));
         if (snap.exists()) {
@@ -295,18 +273,18 @@ export async function forceRegenerateKnowledge(): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
   const mentors: MentorId[] = ['hyewoon', 'benedicto', 'theodore', 'yeonam'];
 
-  // 오늘 잠금 및 지식 문서 모두 삭제
-  for (const period of ['am', 'pm']) {
-    try { await deleteDoc(doc(db, 'meta', `knowledge_${today}_${period}`)); } catch {}
+  // 오늘 잠금 및 지식 문서 모두 삭제 (모든 슬롯 포함)
+  for (const suffix of ALL_SUFFIXES) {
+    const period = suffix.slice(1); // '_h08' → 'h08'
+    if (suffix !== '') {
+      try { await deleteDoc(doc(db, 'meta', `knowledge_${today}_${period}`)); } catch {}
+    }
     for (const mentorId of mentors) {
-      try { await deleteDoc(doc(db, 'mentor_knowledge', `${mentorId}_${today}_${period}`)); } catch {}
+      try { await deleteDoc(doc(db, 'mentor_knowledge', `${mentorId}_${today}${suffix}`)); } catch {}
     }
   }
-  // 구형 키도 삭제
+  // 구형 키 (suffix === '')
   try { await deleteDoc(doc(db, 'meta', `knowledge_${today}`)); } catch {}
-  for (const mentorId of mentors) {
-    try { await deleteDoc(doc(db, 'mentor_knowledge', `${mentorId}_${today}`)); } catch {}
-  }
 
   await triggerDailyKnowledgeGeneration();
 }
