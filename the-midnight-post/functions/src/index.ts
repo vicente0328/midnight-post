@@ -818,7 +818,7 @@ const QUOTE_LANG: Record<MentorId, string> = {
 /** 핵심 생성 로직 — onCall과 스케줄 함수가 공용으로 사용 */
 async function generateKnowledgeEntries(
   mentorId: MentorId,
-  avoidQuotes: string[] = [],
+  avoidItems: { quote: string; source: string }[] = [],
 ): Promise<KnowledgeEntry[]> {
   const today = new Date().toISOString().slice(0, 10);
 
@@ -835,9 +835,15 @@ async function generateKnowledgeEntries(
     }
   }
 
-  const avoidSection = avoidQuotes.length > 0
-    ? `\n[이미 사용된 구절 — 아래 구절들은 반드시 피하세요]\n` +
-      avoidQuotes.slice(0, 28).map((q, i) => `${i + 1}. ${q}`).join('\n') + '\n'
+  // 중복 방지: 구절 텍스트 + 출처 모두 제공하여 같은 책·저자 반복도 억제
+  const recentSources = [...new Set(avoidItems.map(i => i.source).filter(Boolean))].slice(0, 20);
+  const avoidSection = avoidItems.length > 0
+    ? `\n[이미 사용된 구절 — 아래 구절들과 동일하거나 유사한 구절은 반드시 피하세요]\n` +
+      avoidItems.slice(0, 28).map((item, i) => `${i + 1}. ${item.quote}  [출처: ${item.source}]`).join('\n') +
+      (recentSources.length > 0
+        ? `\n\n[최근 사용된 출처 — 아래 책·저서는 가급적 피하고 다른 문헌에서 발굴하세요]\n` +
+          recentSources.map((s, i) => `${i + 1}. ${s}`).join('\n')
+        : '') + '\n'
     : '';
 
   const prompt = `오늘(${today}) 다음 분야에서 심리 위로와 정서 치유에 실제로 도움이 되는,
@@ -899,10 +905,10 @@ ${avoidSection}
   return JSON.parse(text) as KnowledgeEntry[];
 }
 
-/** 최근 N일치 사용된 quote 목록 수집 (중복 방지용) */
-async function collectRecentQuotes(mentorId: MentorId, days = 14): Promise<string[]> {
+/** 최근 N일치 사용된 quote+source 목록 수집 (중복 방지용) */
+async function collectRecentQuotes(mentorId: MentorId, days = 14): Promise<{ quote: string; source: string }[]> {
   const db = getDb();
-  const quotes: string[] = [];
+  const items: { quote: string; source: string }[] = [];
   const now = new Date();
 
   for (let i = 0; i < days; i++) {
@@ -915,12 +921,12 @@ async function collectRecentQuotes(mentorId: MentorId, days = 14): Promise<strin
         const snap = await db.doc(`mentor_knowledge/${key}`).get();
         if (snap.exists) {
           const entries: KnowledgeEntry[] = snap.data()?.entries ?? [];
-          entries.forEach(e => { if (e.quote) quotes.push(e.quote); });
+          entries.forEach(e => { if (e.quote) items.push({ quote: e.quote, source: e.source ?? '' }); });
         }
       } catch { /* 해당 문서 없으면 skip */ }
     }
   }
-  return quotes;
+  return items;
 }
 
 // 5-a. 클라이언트 호출용 (어드민 수동 재생성)
@@ -930,8 +936,8 @@ export const generateKnowledge = onCall(async (request) => {
   const { mentorId } = request.data as { mentorId: MentorId };
   if (!mentorId) throw new HttpsError('invalid-argument', 'mentorId가 필요합니다.');
 
-  const avoidQuotes = await collectRecentQuotes(mentorId);
-  const entries = await generateKnowledgeEntries(mentorId, avoidQuotes);
+  const avoidItems = await collectRecentQuotes(mentorId);
+  const entries = await generateKnowledgeEntries(mentorId, avoidItems);
   return entries;
 });
 
@@ -975,10 +981,10 @@ export const scheduledKnowledgeGeneration = onSchedule(
 
       try {
         // 최근 14일 quote 수집 → 중복 방지
-        const avoidQuotes = await collectRecentQuotes(mentorId, 14);
-        console.log(`[Schedule] ${mentorId} — 회피 구절 ${avoidQuotes.length}개`);
+        const avoidItems = await collectRecentQuotes(mentorId, 14);
+        console.log(`[Schedule] ${mentorId} — 회피 구절 ${avoidItems.length}개`);
 
-        const entries = await generateKnowledgeEntries(mentorId, avoidQuotes);
+        const entries = await generateKnowledgeEntries(mentorId, avoidItems);
 
         await docRef.set({
           mentorId,

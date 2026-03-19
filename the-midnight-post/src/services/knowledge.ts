@@ -181,9 +181,13 @@ export async function getTodayKnowledge(
   const period = getPeriod();
   const other = period === 'am' ? 'pm' : 'am';
 
-  // 현재 시간대 먼저
+  // 현재 시간대 → 스케줄 h-키(최신순) → 반대 시간대 → 구형 키
   for (const key of [
     `${mentorId}_${today}_${period}`,
+    `${mentorId}_${today}_h22`,
+    `${mentorId}_${today}_h17`,
+    `${mentorId}_${today}_h12`,
+    `${mentorId}_${today}_h08`,
     `${mentorId}_${today}_${other}`,
     `${mentorId}_${today}`, // 구형 키 호환
   ]) {
@@ -202,7 +206,7 @@ export async function getTodayKnowledge(
     const d = new Date();
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().slice(0, 10);
-    for (const suffix of [`_am`, `_pm`, ``]) {
+    for (const suffix of [`_h22`, `_h17`, `_h12`, `_h08`, `_am`, `_pm`, ``]) {
       try {
         const snap = await getDoc(doc(db, 'mentor_knowledge', `${mentorId}_${dateStr}${suffix}`));
         if (snap.exists()) {
@@ -262,14 +266,16 @@ export async function getRecentKnowledge(
     const d = new Date(today);
     d.setDate(today.getDate() - i);
     const dateStr = d.toISOString().slice(0, 10);
-    try {
-      const snap = await getDoc(doc(db, 'mentor_knowledge', `${mentorId}_${dateStr}`));
-      if (snap.exists()) {
-        const data = snap.data();
-        if (Array.isArray(data.entries)) allEntries.push(...data.entries);
+    for (const suffix of ['_h08', '_h12', '_h17', '_h22', '_am', '_pm', '']) {
+      try {
+        const snap = await getDoc(doc(db, 'mentor_knowledge', `${mentorId}_${dateStr}${suffix}`));
+        if (snap.exists()) {
+          const data = snap.data();
+          if (Array.isArray(data.entries)) allEntries.push(...data.entries);
+        }
+      } catch {
+        // 해당 날짜 데이터 없으면 skip
       }
-    } catch {
-      // 해당 날짜 데이터 없으면 skip
     }
   }
 
