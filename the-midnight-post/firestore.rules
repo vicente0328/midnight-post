@@ -109,13 +109,6 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
-    // 불교 경전 구절 (혜운 스님) — 인증 유저 읽기·생성, 수정·삭제는 서버(Admin SDK)만
-    match /buddhist_quotes/{docId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update, delete: if false;
-    }
-
     // 일일 생성 잠금 메타 — 인증 유저만 읽기/쓰기
     match /meta/{docId} {
       allow read: if isAuthenticated();

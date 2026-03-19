@@ -1,13 +1,4 @@
 {
-  "indexes": [
-    {
-      "collectionGroup": "buddhist_quotes",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "mentorId",    "order": "ASCENDING" },
-        { "fieldPath": "randomOrder", "order": "ASCENDING" }
-      ]
-    }
-  ],
+  "indexes": [],
   "fieldOverrides": []
 }

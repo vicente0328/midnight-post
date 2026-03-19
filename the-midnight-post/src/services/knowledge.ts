@@ -2,7 +2,6 @@ import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../firebase';
 import {
   doc, getDoc, setDoc, deleteDoc, serverTimestamp,
-  collection, query, where, orderBy, limit, getDocs,
 } from 'firebase/firestore';
 
 // 자정 ~ 11:59 = 'am', 12:00 ~ 23:59 = 'pm'
@@ -202,36 +201,6 @@ export async function getTodayKnowledge(
   return fallback;
 }
 
-// 임의 구절 조회 헬퍼 (randomOrder 필드 활용)
-async function getRandomQuotes(collectionName: string, mentorId: MentorId, count: number): Promise<KnowledgeEntry[]> {
-  try {
-    const randomVal = Math.random();
-    let snap = await getDocs(query(
-      collection(db, collectionName),
-      where('mentorId', '==', mentorId),
-      where('randomOrder', '>=', randomVal),
-      orderBy('randomOrder'),
-      limit(count),
-    ));
-    if (snap.empty) {
-      snap = await getDocs(query(
-        collection(db, collectionName),
-        where('mentorId', '==', mentorId),
-        orderBy('randomOrder'),
-        limit(count),
-      ));
-    }
-    const entries: KnowledgeEntry[] = [];
-    snap.forEach(d => {
-      const data = d.data();
-      entries.push({ quote: data.quote, source: data.source, translation: data.translation, context: data.context, tags: data.tags ?? [] });
-    });
-    return entries;
-  } catch {
-    return [];
-  }
-}
-
 // 최근 N일치 지식 합산 (복합 인덱스 불필요 — 문서 ID로 직접 접근)
 export async function getRecentKnowledge(
   mentorId: MentorId,
@@ -255,13 +224,6 @@ export async function getRecentKnowledge(
         // 해당 날짜 데이터 없으면 skip
       }
     }
-  }
-
-
-  // 불교 경전 구절 보충 (혜운)
-  if (mentorId === 'hyewoon') {
-    const buddhistEntries = await getRandomQuotes('buddhist_quotes', mentorId, 2);
-    allEntries.push(...buddhistEntries);
   }
 
   return allEntries;
