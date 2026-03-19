@@ -943,6 +943,9 @@ async function generateKnowledgeEntries(
   avoidItems: { quote: string; source: string }[] = [],
 ): Promise<KnowledgeEntry[]> {
   const today = new Date().toISOString().slice(0, 10);
+  // 지혜 생성 시에는 항상 최신 admin 프롬프트를 사용 (캐시 무효화)
+  _adminPromptCacheTs = 0;
+  _globalPromptCacheTs = 0;
   const adminOverride = (await getAdminPrompts())[mentorId] ?? {};
   const globalPrompts = await getGlobalPrompts();
 
@@ -970,7 +973,7 @@ async function generateKnowledgeEntries(
     ? `\n[이미 사용된 구절 — 아래 구절들과 동일하거나 유사한 구절은 반드시 피하세요]\n` +
       avoidItems.slice(0, 28).map((item, i) => `${i + 1}. ${item.quote}  [출처: ${item.source}]`).join('\n') +
       (recentSources.length > 0
-        ? `\n\n[최근 사용된 출처 — 아래 책·저서는 가급적 피하고 다른 문헌에서 발굴하세요]\n` +
+        ? `\n\n[최근 사용된 출처 — 아래 책·저서는 반드시 피하세요. 위 목록에 없는 완전히 새로운 출처에서만 발굴하세요]\n` +
           recentSources.map((s, i) => `${i + 1}. ${s}`).join('\n')
         : '') + '\n'
     : '';
