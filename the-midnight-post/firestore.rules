@@ -138,6 +138,29 @@ service cloud.firestore {
       allow write: if isAuthenticated() && request.auth.token.email == 'admin@tmp.com';
     }
 
+    // 편지·지혜카드 피드백 — 본인 생성, 본인+admin 읽기, 반응 변경 허용
+    match /feedback/{feedbackId} {
+      allow read: if isAuthenticated() && (
+        resource.data.uid == request.auth.uid ||
+        request.auth.token.email == 'admin@tmp.com'
+      );
+      allow create: if isAuthenticated() &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.type in ['letter', 'wisdom'] &&
+        request.resource.data.targetId is string &&
+        request.resource.data.targetId.size() > 0 &&
+        request.resource.data.targetId.size() <= 200 &&
+        request.resource.data.mentorId in ['hyewoon', 'benedicto', 'theodore', 'yeonam'] &&
+        request.resource.data.reaction in ['touched', 'comforted', 'neutral'] &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.keys().hasOnly(['uid','type','targetId','mentorId','reaction','createdAt']);
+      allow update: if isAuthenticated() &&
+        resource.data.uid == request.auth.uid &&
+        request.resource.data.uid == resource.data.uid &&
+        request.resource.data.reaction in ['touched', 'comforted', 'neutral'];
+      allow delete: if false;
+    }
+
     // 담소 메시지 — 본인 데이터만 접근
     match /damso_messages/{messageId} {
       allow get: if isDocOwner();

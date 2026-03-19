@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Flower2, Cross, Feather, Brush, Mail, ArrowRight, Bookmark, BookmarkCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useFeedback } from '../hooks/useFeedback';
 
 // ── 멘토 정보 (아이콘·색상만 보관) ──────────────────────────────────────────
 
@@ -228,6 +229,41 @@ export default function Mailbox() {
   );
 }
 
+// ── 편지 피드백 ────────────────────────────────────────────────────────────────
+
+const REACTIONS = [
+  { key: 'touched'   as const, label: '마음에 닿았어요' },
+  { key: 'comforted' as const, label: '위로가 됐어요'   },
+  { key: 'neutral'   as const, label: '그저그랬어요'    },
+];
+
+function LetterFeedback({ replyEntryId, mentorId }: { replyEntryId: string; mentorId: string }) {
+  const targetId = `${replyEntryId}_${mentorId}`;
+  const { reaction, loaded, saving, submitReaction } = useFeedback('letter', targetId, mentorId);
+  if (!loaded) return null;
+  return (
+    <div className="mt-10 flex flex-col items-end gap-2.5">
+      <p className="font-serif text-[11px] italic opacity-30 tracking-wide">이 편지가 마음에 닿았나요?</p>
+      <div className="flex gap-2">
+        {REACTIONS.map(({ key, label }) => (
+          <button
+            key={key}
+            disabled={saving}
+            onClick={() => submitReaction(key)}
+            className={`px-2.5 py-1 border font-serif text-[10px] italic tracking-wide transition-all duration-300
+              ${reaction === key
+                ? 'text-[#D4AF37]/80 border-[#D4AF37]/40 opacity-70'
+                : 'border-ink/10 opacity-25 hover:opacity-50'
+              }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── 편지 읽기 모달 ────────────────────────────────────────────────────────────
 
 function LetterModal({
@@ -405,8 +441,11 @@ function LetterModal({
             <p className="text-base sm:text-lg font-bold">{t('mailbox.letter.from', { name: mentorName })}</p>
           </div>
 
+          {/* 편지 피드백 */}
+          <LetterFeedback replyEntryId={reply.entryId} mentorId={reply.mentorId} />
+
           {/* 나의 편지 보러가기 */}
-          <div className="mt-10 pt-6 border-t border-ink/10 flex items-center justify-between">
+          <div className="mt-8 pt-6 border-t border-ink/10 flex items-center justify-between">
             <button
               onClick={onGoToArchive}
               className="font-serif text-xs italic opacity-38 hover:opacity-65 transition-opacity duration-300 flex items-center gap-1.5 tracking-wide"
@@ -414,13 +453,25 @@ function LetterModal({
               {t('mailbox.letter.goToArchive')}
               <ArrowRight size={11} strokeWidth={1.5} />
             </button>
-            <button
-              onClick={onClose}
-              className="font-serif text-xs italic opacity-25 hover:opacity-55 transition-opacity duration-300 tracking-wide flex items-center gap-1"
-            >
-              {t('mailbox.letter.close')}
-              <X size={11} strokeWidth={1.5} />
-            </button>
+            <div className="flex items-center gap-3">
+              {user && (
+                <button
+                  onClick={toggleBookmark}
+                  disabled={saving}
+                  className={`font-serif text-[11px] italic tracking-wide transition-all duration-300
+                    ${bookmarkId ? 'text-[#D4AF37] opacity-60' : 'opacity-25 hover:opacity-50'}`}
+                >
+                  {bookmarkId ? '간직됨 ✓' : '간직하기'}
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="font-serif text-xs italic opacity-25 hover:opacity-55 transition-opacity duration-300 tracking-wide flex items-center gap-1"
+              >
+                {t('mailbox.letter.close')}
+                <X size={11} strokeWidth={1.5} />
+              </button>
+            </div>
           </div>
         </div>
       </motion.div>

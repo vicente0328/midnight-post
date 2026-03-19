@@ -9,6 +9,7 @@ import { getTodayKnowledge, forceRegenerateKnowledge, KnowledgeEntry } from '../
 import { generateSingleMentorReply } from '../services/ai';
 import { ShareCardButton } from '../utils/shareCard';
 import { useTranslation } from 'react-i18next';
+import { useFeedback } from '../hooks/useFeedback';
 
 // ── 멘토 아이콘/색상 ─────────────────────────────────────────────────────────
 
@@ -601,6 +602,40 @@ function KnowledgeCard({
   );
 }
 
+// ── 지혜카드 피드백 ──────────────────────────────────────────────────────────
+
+const WISDOM_REACTIONS = [
+  { key: 'touched'   as const, label: '마음에 닿았어요' },
+  { key: 'comforted' as const, label: '위로가 됐어요'   },
+  { key: 'neutral'   as const, label: '그저그랬어요'    },
+];
+
+function WisdomFeedback({ entryId, mentorId }: { entryId: string; mentorId: string }) {
+  const { reaction, loaded, saving, submitReaction } = useFeedback('wisdom', entryId, mentorId);
+  if (!loaded) return null;
+  return (
+    <div className="mb-6 flex flex-col items-end gap-2.5">
+      <p className="font-serif text-[11px] italic opacity-30 tracking-wide">이 구절이 마음에 닿았나요?</p>
+      <div className="flex gap-2">
+        {WISDOM_REACTIONS.map(({ key, label }) => (
+          <button
+            key={key}
+            disabled={saving}
+            onClick={() => submitReaction(key)}
+            className={`px-2.5 py-1 border font-serif text-[10px] italic tracking-wide transition-all duration-300
+              ${reaction === key
+                ? 'text-[#D4AF37]/80 border-[#D4AF37]/40 opacity-70'
+                : 'border-ink/10 opacity-25 hover:opacity-50'
+              }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── 지혜 상세 모달 ────────────────────────────────────────────────────────────
 
 function WisdomModal({
@@ -751,10 +786,27 @@ function WisdomModal({
           </p>
         </div>
 
+        {/* 지혜카드 피드백 */}
+        <WisdomFeedback entryId={entryId} mentorId={mentorId} />
+
         {/* 공유 카드 */}
         <div className="flex flex-col items-center gap-3">
           <div className="h-px w-full bg-ink/8" />
-          <div className="mt-3">
+          <div className="mt-3 flex items-center gap-4">
+            {user && (
+              <button
+                onClick={toggleBookmark}
+                disabled={saving}
+                className={`flex items-center gap-1.5 font-serif text-[11px] italic tracking-wide transition-all duration-300
+                  ${bookmarkId ? 'text-[#D4AF37] opacity-65' : 'opacity-30 hover:opacity-60'}`}
+              >
+                {bookmarkId
+                  ? <BookmarkCheck size={12} strokeWidth={1.5} />
+                  : <Bookmark size={12} strokeWidth={1.5} />
+                }
+                {bookmarkId ? '간직된 구절' : '이 구절 간직하기'}
+              </button>
+            )}
             <ShareCardButton
               mentorName={mentorName}
               quote={entry.quote}
