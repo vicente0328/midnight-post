@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   doc,
-  getDoc,
   setDoc,
+  onSnapshot,
   getCountFromServer,
   collection,
   query,
@@ -38,6 +38,8 @@ export function usePlan() {
   const { user } = useAuth();
   const [plan, setPlan] = useState<Plan>('free');
   const [planLoaded, setPlanLoaded] = useState(false);
+  const planRef = useRef<Plan>('free');
+  const isFirstSnap = useRef(true);
 
   const isAdmin = user?.email === ADMIN_EMAIL;
   const isStandard = isAdmin || plan === 'standard';
@@ -45,12 +47,23 @@ export function usePlan() {
   useEffect(() => {
     if (!user) { setPlanLoaded(true); return; }
     if (isAdmin) { setPlan('standard'); setPlanLoaded(true); return; }
-    getDoc(doc(db, 'users', user.uid))
-      .then(snap => {
-        if (snap.exists()) setPlan((snap.data().plan as Plan) ?? 'free');
+
+    const unsubscribe = onSnapshot(
+      doc(db, 'users', user.uid),
+      (snap) => {
+        const newPlan: Plan = snap.exists() ? ((snap.data().plan as Plan) ?? 'free') : 'free';
+        // 초기 로드가 아닌 상태에서 free → standard 변경 시 업그레이드 이벤트 발송
+        if (!isFirstSnap.current && planRef.current === 'free' && newPlan === 'standard') {
+          window.dispatchEvent(new CustomEvent('planUpgraded'));
+        }
+        isFirstSnap.current = false;
+        planRef.current = newPlan;
+        setPlan(newPlan);
         setPlanLoaded(true);
-      })
-      .catch(() => setPlanLoaded(true));
+      },
+      () => setPlanLoaded(true),
+    );
+    return unsubscribe;
   }, [user, isAdmin]);
 
   const upgrade = async () => {

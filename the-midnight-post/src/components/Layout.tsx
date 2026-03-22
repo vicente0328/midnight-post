@@ -22,7 +22,7 @@ interface ToastItem {
   id: string;
   mentorId: string;
   entryId: string;
-  type?: 'letter' | 'knowledge';
+  type?: 'letter' | 'knowledge' | 'upgrade';
 }
 
 interface NotificationItem {
@@ -31,7 +31,7 @@ interface NotificationItem {
   entryId: string;
   arrivedAt: number;
   read: boolean;
-  type?: 'letter' | 'knowledge';
+  type?: 'letter' | 'knowledge' | 'upgrade';
 }
 
 const NOTIF_KEY = 'mp_notifications';
@@ -185,6 +185,15 @@ export default function Layout() {
     };
     window.addEventListener('knowledgeUpdated', handler);
     return () => window.removeEventListener('knowledgeUpdated', handler);
+  }, [addNotification]);
+
+  // Standard 플랜 업그레이드 감지
+  useEffect(() => {
+    const handler = () => {
+      addNotification({ id: `upgrade_${Date.now()}`, mentorId: '', entryId: '', type: 'upgrade' });
+    };
+    window.addEventListener('planUpgraded', handler);
+    return () => window.removeEventListener('planUpgraded', handler);
   }, [addNotification]);
 
   useEffect(() => {
@@ -356,17 +365,20 @@ export default function Layout() {
                             className="flex items-start gap-3 px-4 py-3.5 hover:bg-ink/[0.025] transition-colors cursor-pointer"
                             onClick={() => {
                               setShowNotifPanel(false);
-                              if (n.type === 'knowledge') navigate('/study');
+                              if (n.type === 'upgrade') navigate('/account');
+                              else if (n.type === 'knowledge') navigate('/study');
                               else navigate(`/mailbox?entryId=${n.entryId}`);
                             }}
                           >
                             <div
                               className="w-1.5 h-1.5 rotate-45 shrink-0 mt-[7px]"
-                              style={{ background: MENTOR_COLORS[n.mentorId] ?? '#D4AF37' }}
+                              style={{ background: n.type === 'upgrade' ? '#D4AF37' : (MENTOR_COLORS[n.mentorId] ?? '#D4AF37') }}
                             />
                             <div className="flex-1 min-w-0">
                               <p className="font-serif text-[13px] leading-snug" style={{ color: 'rgba(44,42,41,0.82)' }}>
-                                {n.type === 'knowledge' ? (
+                                {n.type === 'upgrade' ? (
+                                  <>친구가 가입했습니다. <span style={{ fontWeight: 600, color: '#D4AF37' }}>Standard</span> 플랜으로 업그레이드되었습니다.</>
+                                ) : n.type === 'knowledge' ? (
                                   <><span style={{ fontWeight: 600 }}>{getMentorName(n.mentorId)}</span>{' '}{t('notifications.knowledgeArrived', { name: '' }).trim()}</>
                                 ) : (
                                   <><span style={{ fontWeight: 600 }}>{getMentorName(n.mentorId)}</span>{' '}{t('notifications.letterArrived', { name: '' }).trim()}</>

@@ -130,8 +130,8 @@ export default function Account() {
         </div>
       )}
 
-      {/* 친구 초대 */}
-      {!isAdmin && (
+      {/* 친구 초대 — free 유저에게만 표시 */}
+      {!isAdmin && !isStandard && (
         <div className="w-full border border-ink/10 p-6 mb-8 flex flex-col gap-4">
           <p className="font-mono text-[9px] uppercase tracking-widest opacity-30">친구 초대</p>
           <p className="font-serif text-xs italic opacity-50 leading-relaxed">
