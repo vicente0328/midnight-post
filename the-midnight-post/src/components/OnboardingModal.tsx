@@ -433,6 +433,16 @@ export default function OnboardingModal({ onClose, isInitial = false }: Props) {
             <SubButton label={t('onboarding.skipForNow')} onClick={onClose} />
           )}
           {!isInitial && <SubButton label={t('onboarding.close')} onClick={onClose} />}
+
+          {/* AI 생성 안내 */}
+          <p style={{
+            fontFamily: SERIF, fontStyle: 'italic', fontSize: '0.65rem',
+            color: INK, opacity: 0.22, textAlign: 'center',
+            lineHeight: 1.7, marginTop: '14px', wordBreak: 'keep-all',
+          }}>
+            이 서비스의 멘토들은 생성형 AI 기술을 통해 응답합니다.{'\n'}
+            작성하신 일기는 AI 답장 생성에만 사용되며, 전문적 심리 상담을 대체하지 않습니다.
+          </p>
         </div>
       </motion.div>
     </div>

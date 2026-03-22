@@ -557,6 +557,12 @@ export default function Damso() {
                 >
                   {t('damso.sessionTitle', { name: mentorName, particle: mentorParticle })}
                 </h1>
+                <p
+                  className="text-[8px] italic tracking-wide mt-0.5"
+                  style={{ color: 'rgba(44,42,41,0.25)' }}
+                >
+                  AI 생성 대화 · 전문 상담 아님
+                </p>
               </div>
 
               {/* Center: turn counter */}

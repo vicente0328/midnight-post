@@ -576,8 +576,13 @@ export default function Layout() {
         </AnimatePresence>
       </div>
 
-      <footer className="hidden sm:block w-full text-center mt-12 pt-4 border-t border-ink/10 text-xs opacity-50 uppercase tracking-widest">
-        &copy; {new Date().getFullYear()} The Midnight Post. All rights reserved.
+      <footer className="hidden sm:block w-full text-center mt-12 pt-4 border-t border-ink/10">
+        <p className="text-xs opacity-50 uppercase tracking-widest mb-1">
+          &copy; {new Date().getFullYear()} The Midnight Post. All rights reserved.
+        </p>
+        <p className="font-serif text-[10px] italic opacity-20 tracking-wide">
+          이 서비스의 모든 편지와 대화는 생성형 AI가 작성하며, 전문적 심리 상담을 대체하지 않습니다.
+        </p>
       </footer>
     </div>
   );

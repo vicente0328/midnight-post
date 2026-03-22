@@ -154,6 +154,11 @@ export default function MentorLetter() {
             <p className="text-sm sm:text-lg">{t('envelopes.footer')}</p>
             <p className="text-base sm:text-xl mt-1 sm:mt-2 font-bold">{t('envelopes.from', { name: mentorName })}</p>
           </div>
+
+          {/* AI 생성 안내 */}
+          <p className="mt-10 text-center font-serif text-[10px] italic opacity-20 tracking-wide leading-relaxed break-keep">
+            이 편지는 AI 멘토가 문헌을 바탕으로 생성했습니다. 전문적 심리 상담을 대체하지 않습니다.
+          </p>
         </div>
       </div>
     </motion.div>
