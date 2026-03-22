@@ -1071,6 +1071,174 @@ export const scheduledKnowledgeGeneration = onSchedule(
   },
 );
 
+// ── 멘토 먼저 보내는 편지 생성 ──────────────────────────────────────────────────
+
+/** 멘토가 먼저 보내는 편지 AI 생성 (지혜카드 기반 또는 최근 일기 기반) */
+async function generateMentorInitialLetter(
+  mentorId: MentorId,
+  basedOn: 'wisdom' | 'entry',
+  wisdomEntries: KnowledgeEntry[],
+  recentEntries: { content: string; emotion?: string; date?: string }[],
+): Promise<MentorReply> {
+  const adminOverride = (await getAdminPrompts())[mentorId] ?? {};
+  const mentorDescription = adminOverride.description ?? MENTOR_DESCRIPTIONS[mentorId];
+  const profile = MENTOR_PROFILES[mentorId];
+
+  let context = '';
+  if (basedOn === 'wisdom' && wisdomEntries.length > 0) {
+    const entry = wisdomEntries[0];
+    context = `오늘 나누고 싶은 지혜:\n명언: ${entry.quote}\n출처: ${entry.source}\n번역: ${entry.translation}${entry.context ? `\n배경: ${entry.context}` : ''}`;
+  } else if (basedOn === 'entry' && recentEntries.length > 0) {
+    context = `사용자의 최근 일기:\n` +
+      recentEntries.slice(0, 3).map((e, i) =>
+        `${i + 1}. ${e.date ? `(${e.date}) ` : ''}${e.content}`
+      ).join('\n');
+  }
+
+  const wisdomInstruction = basedOn === 'wisdom'
+    ? `위 지혜를 바탕으로, 먼저 따뜻한 편지를 써주세요. 이 구절이 왜 오늘 생각났는지, 어떤 의미가 있는지 ${profile.name}의 목소리로 자연스럽게 전해주세요.`
+    : `이 일기들을 읽고, 안부를 묻는 편지를 먼저 보내주세요. 직접 인용하지 말고, 일기에서 느껴지는 감정을 자연스럽게 담아 따뜻하게 시작해 주세요.`;
+
+  const prompt = `당신은 ${profile.name}입니다. ${mentorDescription}
+
+${context}
+
+${wisdomInstruction}
+
+[작성 지침]
+- 유저가 먼저 일기를 쓴 것에 대한 답장이 아니라, 당신이 먼저 안부를 전하는 편지입니다
+- 3문단, 350~450자 내외
+- ${profile.name}의 목소리와 말투를 처음부터 끝까지 유지하세요
+- 문단 사이에 반드시 빈 줄(\\n\\n)을 넣어주세요
+- 따뜻하게, 오늘 하루를 함께하고 싶다는 마음을 담아주세요
+
+답장은 다음 필드를 포함하는 JSON 객체여야 합니다:
+- mentorId: "${mentorId}"
+- quote: 편지에 담을 철학적 원문 (한자, 라틴어, 영어 등 멘토에 맞는 언어)
+- source: 원문의 출처
+- translation: 원문의 한국어 번역
+- advice: 위 지침에 따라 쓴 편지 본문`;
+
+  const ai = getGemini();
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.1-pro-preview',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            mentorId: { type: Type.STRING },
+            quote: { type: Type.STRING },
+            source: { type: Type.STRING },
+            translation: { type: Type.STRING },
+            advice: { type: Type.STRING },
+          },
+          required: ['mentorId', 'quote', 'source', 'translation', 'advice'],
+        },
+      },
+    });
+    const text = response.text;
+    if (!text) throw new Error('No response from Gemini');
+    return JSON.parse(text) as MentorReply;
+  } catch (geminiError) {
+    console.warn(`[Initial] Gemini 실패 — ${mentorId}, Claude fallback:`, geminiError);
+    const claude = getClaude();
+    const claudeResponse = await claude.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2048,
+      messages: [{ role: 'user', content: prompt + '\n\nJSON 형식으로만 응답하세요.' }],
+    });
+    const text = claudeResponse.content[0].type === 'text' ? claudeResponse.content[0].text : null;
+    if (!text) throw new HttpsError('internal', 'AI 응답을 받지 못했습니다.');
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new HttpsError('internal', 'JSON을 찾을 수 없습니다.');
+    return JSON.parse(jsonMatch[0]) as MentorReply;
+  }
+}
+
+/**
+ * 하루 한 번 멘토가 먼저 보내는 편지 스케줄링.
+ * - doc ID: {uid}_{YYYY-MM-DD KST} (멱등성 보장)
+ * - deliverAt: KST 09:00 ~ 21:00 사이 랜덤
+ */
+export const requestMentorLetter = onCall({ timeoutSeconds: 180, memory: '512MiB' }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', '로그인이 필요합니다.');
+  const uid = request.auth.uid;
+  const db = getDb();
+
+  // KST 기준 오늘 날짜 및 시각
+  const nowMs = Date.now();
+  const kstDate = new Date(nowMs + 9 * 60 * 60 * 1000);
+  const todayKST = kstDate.toISOString().slice(0, 10); // YYYY-MM-DD (KST)
+  const kstHour = kstDate.getUTCHours();
+
+  // 멱등성: 이미 오늘치가 있으면 그대로 반환
+  const docId = `${uid}_${todayKST}`;
+  const existing = await db.collection('mentor_initials').doc(docId).get();
+  if (existing.exists) {
+    const d = existing.data()!;
+    return { letterId: docId, deliverAt: d.deliverAt.toMillis(), mentorId: d.mentorId };
+  }
+
+  // 21:00 KST 이후면 오늘 편지 없음
+  if (kstHour >= 21) return { letterId: null };
+
+  // 발송 시간 계산: KST 09:00 ~ 21:00 사이 랜덤
+  // KST 09:00 = UTC 00:00 of same KST date
+  const hour09am_UTC = Date.UTC(kstDate.getUTCFullYear(), kstDate.getUTCMonth(), kstDate.getUTCDate());
+  const hour09pm_UTC = hour09am_UTC + 12 * 60 * 60 * 1000; // KST 21:00
+  const minDeliverMs = Math.max(nowMs + 2 * 60 * 1000, hour09am_UTC);
+  if (minDeliverMs >= hour09pm_UTC) return { letterId: null };
+
+  const deliverMs = minDeliverMs + Math.random() * (hour09pm_UTC - minDeliverMs);
+
+  // 랜덤 멘토 & 콘텐츠 타입
+  const mentors: MentorId[] = ['hyewoon', 'benedicto', 'theodore', 'yeonam'];
+  const mentorId = mentors[Math.floor(Math.random() * 4)];
+  const basedOn: 'wisdom' | 'entry' = Math.random() < 0.5 ? 'wisdom' : 'entry';
+
+  let letter: MentorReply;
+  if (basedOn === 'wisdom') {
+    const entries = await getRecentKnowledgeForDamso(mentorId, 5).catch(() => [] as KnowledgeEntry[]);
+    if (entries.length > 0) {
+      const picked = entries[Math.floor(Math.random() * entries.length)];
+      letter = await generateMentorInitialLetter(mentorId, 'wisdom', [picked], []);
+    } else {
+      const recent = await fetchRecentEntriesForContext(uid, '').catch(() => []);
+      letter = await generateMentorInitialLetter(mentorId, 'entry', [], recent);
+    }
+  } else {
+    const recent = await fetchRecentEntriesForContext(uid, '').catch(() => []);
+    if (recent.length > 0) {
+      letter = await generateMentorInitialLetter(mentorId, 'entry', [], recent);
+    } else {
+      const entries = await getRecentKnowledgeForDamso(mentorId, 5).catch(() => [] as KnowledgeEntry[]);
+      letter = await generateMentorInitialLetter(mentorId, 'wisdom', entries.slice(0, 1), []);
+    }
+  }
+
+  // Firestore 저장 (doc ID = uid_date)
+  const { Timestamp: AdminTimestamp } = await import('firebase-admin/firestore');
+  await db.collection('mentor_initials').doc(docId).set({
+    uid,
+    mentorId,
+    quote: letter.quote,
+    source: letter.source ?? '',
+    translation: letter.translation,
+    advice: letter.advice,
+    basedOn,
+    deliverAt: AdminTimestamp.fromMillis(deliverMs),
+    date: todayKST,
+    read: false,
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  console.log(`[Initial] 편지 생성 — uid:${uid} mentor:${mentorId} basedOn:${basedOn} deliverAt:${new Date(deliverMs).toISOString()}`);
+  return { letterId: docId, deliverAt: deliverMs, mentorId };
+});
+
 // ── 레퍼럴 이벤트 처리 — 신규 유저 가입 시 추천인을 Standard로 업그레이드 ──────────
 export const onReferralEvent = onDocumentCreated(
   { document: 'referral_events/{newUserId}', database: TRIGGER_DB_ID },

@@ -19,6 +19,7 @@ const Account       = lazy(() => import('./pages/Account'));
 const Damso         = lazy(() => import('./pages/Damso'));
 const Seed          = lazy(() => import('./pages/Seed'));
 const Admin         = lazy(() => import('./pages/Admin'));
+const MentorLetter  = lazy(() => import('./pages/MentorLetter'));
 const OnboardingModal = lazy(() => import('./components/OnboardingModal'));
 
 function AppRoutes() {
@@ -46,6 +47,8 @@ function AppRoutes() {
           </Route>
           {/* 담소: 전체화면 소설 인터페이스 — Layout 밖에 배치 */}
           <Route path="damso/:entryId/:mentorId" element={<Damso />} />
+          {/* 멘토 먼저 보내는 편지 — 전체화면 */}
+          <Route path="mentor-letter/:letterId" element={<MentorLetter />} />
         </Routes>
 
         {/* 신규 유저: 온보딩 자동 표시 */}

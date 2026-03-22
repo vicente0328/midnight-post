@@ -6,7 +6,8 @@ import { LogOut, BookOpen, PenTool, Feather, Mail, Menu, X, UserRound, Inbox, Be
 import { motion, AnimatePresence } from 'motion/react';
 import BottomNav from './BottomNav';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../firebase';
 import { useTranslation } from 'react-i18next';
 import { setLanguage, type Language } from '../i18n';
 import { usePlan } from '../hooks/usePlan';
@@ -22,7 +23,7 @@ interface ToastItem {
   id: string;
   mentorId: string;
   entryId: string;
-  type?: 'letter' | 'knowledge' | 'upgrade';
+  type?: 'letter' | 'knowledge' | 'upgrade' | 'initial';
 }
 
 interface NotificationItem {
@@ -31,7 +32,25 @@ interface NotificationItem {
   entryId: string;
   arrivedAt: number;
   read: boolean;
-  type?: 'letter' | 'knowledge' | 'upgrade';
+  type?: 'letter' | 'knowledge' | 'upgrade' | 'initial';
+}
+
+interface MentorInitialState {
+  date: string;
+  letterId: string | null;
+  deliverAt?: number;
+  mentorId?: string;
+  notified?: boolean;
+}
+
+function getTodayKST(): string {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+function loadMentorInitial(): MentorInitialState | null {
+  try { return JSON.parse(localStorage.getItem('mp_mentor_initial') ?? 'null'); } catch { return null; }
+}
+function saveMentorInitial(v: MentorInitialState) {
+  localStorage.setItem('mp_mentor_initial', JSON.stringify(v));
 }
 
 const NOTIF_KEY = 'mp_notifications';
@@ -195,6 +214,39 @@ export default function Layout() {
     window.addEventListener('planUpgraded', handler);
     return () => window.removeEventListener('planUpgraded', handler);
   }, [addNotification]);
+
+  // 멘토 먼저 보내는 편지 — 하루 1회 스케줄링
+  useEffect(() => {
+    if (!user) return;
+    const today = getTodayKST();
+    const stored = loadMentorInitial();
+    if (stored?.date === today) return; // 오늘 이미 처리함
+    const fn = httpsCallable<object, { letterId: string | null; deliverAt?: number; mentorId?: string }>(
+      functions, 'requestMentorLetter'
+    );
+    fn({}).then(result => {
+      const { letterId, deliverAt, mentorId } = result.data;
+      saveMentorInitial({ date: today, letterId: letterId ?? null, deliverAt, mentorId, notified: false });
+    }).catch(() => {
+      // non-fatal: 오늘 날짜만 마킹해 반복 호출 방지
+      saveMentorInitial({ date: today, letterId: null });
+    });
+  }, [user]);
+
+  // 멘토 편지 도착 폴링 (5초마다)
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(() => {
+      const stored = loadMentorInitial();
+      if (!stored?.letterId || stored.notified || !stored.deliverAt || !stored.mentorId) return;
+      if (Date.now() < stored.deliverAt) return;
+      const toast: ToastItem = { id: stored.letterId, mentorId: stored.mentorId, entryId: stored.letterId, type: 'initial' };
+      setToasts(prev => (prev.some(t => t.id === toast.id) ? prev : [...prev, toast]));
+      addNotification(toast);
+      saveMentorInitial({ ...stored, notified: true });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [user, addNotification]);
 
   useEffect(() => {
     if (!showMobileMenu && !showNotifPanel) return;
@@ -366,6 +418,7 @@ export default function Layout() {
                             onClick={() => {
                               setShowNotifPanel(false);
                               if (n.type === 'upgrade') navigate('/account');
+                              else if (n.type === 'initial') navigate(`/mentor-letter/${n.entryId}`);
                               else if (n.type === 'knowledge') navigate('/study');
                               else navigate(`/mailbox?entryId=${n.entryId}`);
                             }}
@@ -378,6 +431,8 @@ export default function Layout() {
                               <p className="font-serif text-[13px] leading-snug" style={{ color: 'rgba(44,42,41,0.82)' }}>
                                 {n.type === 'upgrade' ? (
                                   <>친구가 가입했습니다. <span style={{ fontWeight: 600, color: '#D4AF37' }}>Standard</span> 플랜으로 업그레이드되었습니다.</>
+                                ) : n.type === 'initial' ? (
+                                  <><span style={{ fontWeight: 600 }}>{getMentorName(n.mentorId)}</span>{'에게서 편지가 왔습니다.'}</>
                                 ) : n.type === 'knowledge' ? (
                                   <><span style={{ fontWeight: 600 }}>{getMentorName(n.mentorId)}</span>{' '}{t('notifications.knowledgeArrived', { name: '' }).trim()}</>
                                 ) : (
@@ -510,7 +565,11 @@ export default function Layout() {
             <LetterToast
               key={toast.id}
               mentorName={getMentorName(toast.mentorId)}
-              onOpen={() => { dismissToast(toast.id); navigate(`/mailbox?entryId=${toast.entryId}`); }}
+              onOpen={() => {
+                dismissToast(toast.id);
+                if (toast.type === 'initial') navigate(`/mentor-letter/${toast.entryId}`);
+                else navigate(`/mailbox?entryId=${toast.entryId}`);
+              }}
               onDismiss={() => dismissToast(toast.id)}
             />
           ))}

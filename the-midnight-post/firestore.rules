@@ -162,6 +162,15 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // 멘토 먼저 보내는 편지 — Cloud Function만 생성, 본인만 읽기/읽음 표시
+    match /mentor_initials/{docId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.uid == request.auth.uid &&
+                    request.resource.data.keys().hasOnly(['read']) &&
+                    request.resource.data.read is bool;
+      allow create, delete: if false;
+    }
+
     // 레퍼럴 이벤트 — 신규 유저가 1회 생성 (doc ID = newUserId)
     match /referral_events/{newUserId} {
       allow create: if isAuthenticated() &&
