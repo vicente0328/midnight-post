@@ -786,8 +786,8 @@ function WisdomModal({
           </p>
         </div>
 
-        {/* 지혜카드 피드백 */}
-        <WisdomFeedback entryId={entryId} mentorId={mentorId} />
+        {/* 지혜카드 피드백 — 비활성화 */}
+        {/* <WisdomFeedback entryId={entryId} mentorId={mentorId} /> */}
 
         {/* 공유 카드 */}
         <div className="flex flex-col items-center gap-3">
