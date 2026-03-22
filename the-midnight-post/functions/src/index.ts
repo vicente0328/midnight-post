@@ -1071,3 +1071,23 @@ export const scheduledKnowledgeGeneration = onSchedule(
   },
 );
 
+// ── 레퍼럴 이벤트 처리 — 신규 유저 가입 시 추천인을 Standard로 업그레이드 ──────────
+export const onReferralEvent = onDocumentCreated(
+  'referral_events/{newUserId}',
+  async (event) => {
+    const data = event.data?.data();
+    if (!data?.referrerId || !data?.newUserId) return;
+
+    const db = getDb();
+    const referrerRef = db.collection('users').doc(data.referrerId);
+    const referrerSnap = await referrerRef.get();
+    if (!referrerSnap.exists) {
+      console.log(`[Referral] 추천인 없음 — referrerId: ${data.referrerId}`);
+      return;
+    }
+
+    await referrerRef.update({ plan: 'standard' });
+    console.log(`[Referral] 추천인 업그레이드 완료 — ${data.referrerId} (추천받은 유저: ${data.newUserId})`);
+  },
+);
+

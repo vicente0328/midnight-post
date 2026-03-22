@@ -16,6 +16,7 @@ export default function Account() {
   const { plan, planLoaded, isAdmin, isStandard, upgrade } = usePlan();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -126,6 +127,26 @@ export default function Account() {
               Standard로 업그레이드
             </button>
           )}
+        </div>
+      )}
+
+      {/* 친구 초대 */}
+      {!isAdmin && (
+        <div className="w-full border border-ink/10 p-6 mb-8 flex flex-col gap-4">
+          <p className="font-mono text-[9px] uppercase tracking-widest opacity-30">친구 초대</p>
+          <p className="font-serif text-xs italic opacity-50 leading-relaxed">
+            친구 한 명이 이 링크로 가입하면 Standard 플랜으로 업그레이드됩니다.
+          </p>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(`${window.location.origin}/?ref=${user.uid}`);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            }}
+            className="w-full py-2.5 border border-ink/20 font-serif text-sm italic tracking-wide opacity-60 hover:opacity-90 transition-all duration-300"
+          >
+            {copied ? '링크 복사됨 ✓' : '초대 링크 복사'}
+          </button>
         </div>
       )}
 

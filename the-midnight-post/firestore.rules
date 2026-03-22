@@ -162,6 +162,18 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // 레퍼럴 이벤트 — 신규 유저가 1회 생성 (doc ID = newUserId)
+    match /referral_events/{newUserId} {
+      allow create: if isAuthenticated() &&
+                    request.auth.uid == newUserId &&
+                    request.resource.data.referrerId is string &&
+                    request.resource.data.referrerId != request.auth.uid &&
+                    request.resource.data.newUserId == request.auth.uid &&
+                    request.resource.data.createdAt is timestamp &&
+                    request.resource.data.keys().hasOnly(['referrerId', 'newUserId', 'createdAt']);
+      allow read, update, delete: if false;
+    }
+
     // 담소 메시지 — 본인 데이터만 접근
     match /damso_messages/{messageId} {
       allow get: if isDocOwner();

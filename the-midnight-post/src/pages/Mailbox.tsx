@@ -471,8 +471,8 @@ function LetterModal({
             <p className="text-base sm:text-lg font-bold">{t('mailbox.letter.from', { name: mentorName })}</p>
           </div>
 
-          {/* 편지 피드백 */}
-          <LetterFeedback replyEntryId={reply.entryId} mentorId={reply.mentorId} />
+          {/* 편지 피드백 — 비활성화 */}
+          {/* <LetterFeedback replyEntryId={reply.entryId} mentorId={reply.mentorId} /> */}
 
           {/* 나의 편지 보러가기 */}
           <div className="mt-8 pt-6 border-t border-ink/10 flex items-center justify-between">
