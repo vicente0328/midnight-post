@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   doc,
   getDoc,
-  updateDoc,
+  setDoc,
   getCountFromServer,
   collection,
   query,
@@ -55,7 +55,7 @@ export function usePlan() {
 
   const upgrade = async () => {
     if (!user) return;
-    await updateDoc(doc(db, 'users', user.uid), { plan: 'standard' });
+    await setDoc(doc(db, 'users', user.uid), { plan: 'standard' }, { merge: true });
     setPlan('standard');
   };
 
