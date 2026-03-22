@@ -1073,7 +1073,7 @@ export const scheduledKnowledgeGeneration = onSchedule(
 
 // ── 레퍼럴 이벤트 처리 — 신규 유저 가입 시 추천인을 Standard로 업그레이드 ──────────
 export const onReferralEvent = onDocumentCreated(
-  'referral_events/{newUserId}',
+  { document: 'referral_events/{newUserId}', database: TRIGGER_DB_ID },
   async (event) => {
     const data = event.data?.data();
     if (!data?.referrerId || !data?.newUserId) return;
